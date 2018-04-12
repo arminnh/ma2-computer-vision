@@ -158,13 +158,13 @@ def save_reconstructed_images(show, name, results, shape):
             if e < classification[i][1]:
                 classification[i] = (model_name, e)
 
-        reconstructions = [r.reshape(shape) for r in rec]
+        reconstructions = np.concatenate([r.reshape(shape) for r in rec], axis=1).astype(np.int)
 
         img_name = os.path.join(dir_reconstructions, "model_{}.jpg".format(model_name))
-        cv2.imwrite(img_name, np.concatenate(reconstructions, axis=1))
+        cv2.imwrite(img_name, reconstructions)
         if show:
             img_name = "Reconstructions of {} images using model for {}".format(name, model_name)
-            cv2.imshow(img_name, np.concatenate(reconstructions, axis=1))
+            cv2.imshow(img_name, reconstructions / 255)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 
