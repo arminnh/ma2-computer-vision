@@ -66,7 +66,6 @@ def pca(X, number_of_components):
     mean = np.mean(X, axis=0) / 255
     eigenvalues = np.array([])
     _, eigenvectors = cv2.PCACompute(X, mean=None, maxComponents=number_of_components)
-    eigenvectors = (eigenvectors + abs(eigenvectors.min())) / eigenvectors.max()
 
     return [mean, eigenvalues, eigenvectors]
 
@@ -92,7 +91,8 @@ def save_model_images(show, name, model, shape):
         os.makedirs(dir_model)
 
     mean = (m * 255).astype(np.uint8)
-    eigenvectors = (e_vec * 255).astype(np.uint8)
+    eigenvectors = (e_vec + abs(e_vec.min())) / e_vec.max()
+    eigenvectors = (eigenvectors * 255).astype(np.uint8)
 
     cv2.imwrite(os.path.join(dir_model, "mean.jpg"), mean.reshape(shape))
     if show:
@@ -115,18 +115,14 @@ def project_and_reconstruct(X, model):
     projections = []
     reconstructions = np.zeros(X.shape)
 
-    for i, img in enumerate(X):
-        projection = []
-        reconstruction = mean
+    for i, image in enumerate(X):
+        img = image / 255
+        reconstruction = mean.copy()
 
         for ev in eigenvectors:
-            # np.vdot(ev, (img - mean))
-            projection.append(ev.transpose() * (img - mean))
-            reconstruction += ev.transpose() * (img - mean) * ev
+            reconstruction += (np.vdot(ev, (img - mean)) * ev)
 
-        projections.append(projection)
-        reconstruction = (reconstruction + abs(reconstruction.min())) / reconstruction.max()
-        reconstructions[i] = reconstruction
+        reconstructions[i] = (reconstruction * 255).round().astype(np.int)
 
     return projections, reconstructions
 
@@ -143,7 +139,7 @@ def ttest_images(name, shape, images, models):
     results = {}
     for name, model in models.items():
         projections, reconstructions = project_and_reconstruct(X, model)
-        mse = np.mean((X - reconstructions) ** 2, axis=1)
+        mse = np.mean((X - reconstructions) ** 2, axis=1).round(1)
         results[name] = [reconstructions, mse]
 
     return results
@@ -154,8 +150,13 @@ def save_reconstructed_images(show, name, results, shape):
     if not os.path.isdir(dir_reconstructions):
         os.makedirs(dir_reconstructions)
 
+    classification = [('none', np.inf)] * len(list(results.values())[0][1])
+
     for model_name, (rec, mse) in sorted(results.items()):
         print("Reconstruction MSE for {} images using model_{}: {}".format(name, model_name, mse))
+        for i, e in enumerate(mse):
+            if e < classification[i][1]:
+                classification[i] = (model_name, e)
 
         reconstructions = (rec * 255).astype(np.uint8)
         reconstructions = [r.reshape(shape) for r in reconstructions]
@@ -167,6 +168,8 @@ def save_reconstructed_images(show, name, results, shape):
             cv2.imshow(img_name, np.concatenate(reconstructions, axis=1))
             cv2.waitKey(0)
             cv2.destroyAllWindows()
+
+    print("Classification:", classification)
 
 
 if __name__ == '__main__':
