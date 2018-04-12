@@ -24,21 +24,25 @@ def detect_and_save_faces(name, roi_size):
         faces = face_cascade.detectMultiScale(img, scaleFactor=1.2, minNeighbors=7, minSize=roi_size)
         rectangles[filename] = faces
         x, y, w, h = faces[0]
-        face = img[y:y+h, x:x+w]
+        face = img[y:y + h, x:x + w]
         cv2.imwrite(new_filename, face)
 
     return rectangles
 
 
 def save_rectangles_on_images(show, image_names, rectangles):
+    dir_rectangles = os.path.join(os.path.dirname(image_names[0]), "rectangles")
+    if not os.path.isdir(dir_rectangles):
+        os.makedirs(dir_rectangles)
+
     for filename in image_names:
         img = cv2.imread(filename)
-        subpath, img_name = os.path.split(filename)
+        _, img_name = os.path.split(filename)
 
         for (x, y, w, h) in rectangles[filename]:
-            cv2.rectangle(img, (x, y), (x+w, y+h), (0, 0, 255), 2)
+            cv2.rectangle(img, (x, y), (x + w, y + h), (0, 0, 255), 2)
 
-        cv2.imwrite(os.path.join(subpath, "rectangles", img_name), img)
+        cv2.imwrite(os.path.join(dir_rectangles, img_name), img)
         if show:
             cv2.imshow("Rectangle on {}".format(img_name), img)
             cv2.waitKey(0)
@@ -59,14 +63,10 @@ def load_images_as_rows(image_paths, shape):
 
 
 def pca(X, number_of_components):
-    mean = np.mean(X, axis=0).astype(np.uint8)
-    eigenvalues = []
+    mean = np.mean(X, axis=0) / 255
+    eigenvalues = np.array([])
     _, eigenvectors = cv2.PCACompute(X, mean=None, maxComponents=number_of_components)
-
-    eigenvectors += abs(eigenvectors.min())
-    eigenvectors /= eigenvectors.max()
-    eigenvectors *= 255
-    eigenvectors = eigenvectors.astype(np.uint8)
+    eigenvectors = (eigenvectors + abs(eigenvectors.min())) / eigenvectors.max()
 
     return [mean, eigenvalues, eigenvectors]
 
@@ -86,8 +86,13 @@ def do_pca_and_build_model(name, shape, images):
 
 
 def save_model_images(show, name, model, shape):
-    mean, eigenvalues, eigenvectors = model
+    m, e_val, e_vec = model
     dir_model = os.path.join("data", name, "model")
+    if not os.path.isdir(dir_model):
+        os.makedirs(dir_model)
+
+    mean = (m * 255).astype(np.uint8)
+    eigenvectors = (e_vec * 255).astype(np.uint8)
 
     cv2.imwrite(os.path.join(dir_model, "mean.jpg"), mean.reshape(shape))
     if show:
@@ -106,9 +111,24 @@ def save_model_images(show, name, model, shape):
 
 
 def project_and_reconstruct(X, model):
-    # TODO
+    mean, eigenvalues, eigenvectors = model
+    projections = []
+    reconstructions = np.zeros(X.shape)
 
-    return [projections, reconstructions]
+    for i, img in enumerate(X):
+        projection = []
+        reconstruction = mean
+
+        for ev in eigenvectors:
+            # np.vdot(ev, (img - mean))
+            projection.append(ev.transpose() * (img - mean))
+            reconstruction += ev.transpose() * (img - mean) * ev
+
+        projections.append(projection)
+        reconstruction = (reconstruction + abs(reconstruction.min())) / reconstruction.max()
+        reconstructions[i] = reconstruction
+
+    return projections, reconstructions
 
 
 def ttest_images(name, shape, images, models):
@@ -120,33 +140,48 @@ def ttest_images(name, shape, images, models):
     X = load_images_as_rows(faces_paths, shape)
 
     # reconstruct the images in X with each of the models provided and also calculate the MSE
-    # store the results as a list of [results_model_reconstructed_X, results_model_MSE]
-    results = []
-    for model in models:
+    results = {}
+    for name, model in models.items():
         projections, reconstructions = project_and_reconstruct(X, model)
         mse = np.mean((X - reconstructions) ** 2, axis=1)
-        results.append([reconstructions, mse])
+        results[name] = [reconstructions, mse]
 
     return results
 
 
-def save_reconstructed_images(show, results):
-    print("TODO show reconstructed", results)
+def save_reconstructed_images(show, name, results, shape):
+    dir_reconstructions = os.path.join("data", name, "reconstructions")
+    if not os.path.isdir(dir_reconstructions):
+        os.makedirs(dir_reconstructions)
+
+    for model_name, (rec, mse) in sorted(results.items()):
+        print("Reconstruction MSE for {} images using model_{}: {}".format(name, model_name, mse))
+
+        reconstructions = (rec * 255).astype(np.uint8)
+        reconstructions = [r.reshape(shape) for r in reconstructions]
+
+        img_name = os.path.join(dir_reconstructions, "model_{}.jpg".format(model_name))
+        cv2.imwrite(img_name, np.concatenate(reconstructions, axis=1))
+        if show:
+            img_name = "Reconstructions of {} images using model for {}".format(name, model_name)
+            cv2.imshow(img_name, np.concatenate(reconstructions, axis=1))
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
 
 
 if __name__ == '__main__':
     ROI_SIZE = (50, 50)  # reasonably quick computation time
 
     SHOW_IMAGES = False
-    SHOW_IMAGES = True  # TODO: comment this line when submitting
+    # SHOW_IMAGES = True  # TODO: comment this line when submitting
 
     # Detect all faces in all the images of arnold and barack and save them in a subdirectory "faces"
-    # rectangles_arnold = detect_and_save_faces("arnold", ROI_SIZE)
-    # rectangles_barack = detect_and_save_faces("barack", ROI_SIZE)
+    rectangles_arnold = detect_and_save_faces("arnold", ROI_SIZE)
+    rectangles_barack = detect_and_save_faces("barack", ROI_SIZE)
 
     # visualize detected ROIs overlaid on the original images and copy paste these figures in a document
-    # save_rectangles_on_images(SHOW_IMAGES, rectangles_arnold.keys(), rectangles_arnold)
-    # save_rectangles_on_images(SHOW_IMAGES, rectangles_barack.keys(), rectangles_barack)
+    save_rectangles_on_images(SHOW_IMAGES, list(rectangles_arnold.keys()), rectangles_arnold)
+    save_rectangles_on_images(SHOW_IMAGES, list(rectangles_barack.keys()), rectangles_barack)
 
     # Perform PCA on the previously saved ROIs and build a model for the corresponding person's face
     # making use of a training set. model = [mean, eigenvalues, eigenvectors]
@@ -154,15 +189,16 @@ if __name__ == '__main__':
     model_barack = do_pca_and_build_model("barack", ROI_SIZE, images=[1, 2, 3, 4, 5, 6])
 
     # visualize these "models" in some way (of your choice) and copy paste these figures in a document
-    # save_model_images(SHOW_IMAGES, "arnold", model_arnold, ROI_SIZE)
-    # save_model_images(SHOW_IMAGES, "barack", model_barack, ROI_SIZE)
+    save_model_images(SHOW_IMAGES, "arnold", model_arnold, ROI_SIZE)
+    save_model_images(SHOW_IMAGES, "barack", model_barack, ROI_SIZE)
 
     # Test and reconstruct "unseen" images and check which model best describes it (wrt MSE)
-    # results are lists of [results_model_reconstructed_X, results_model_MSE]
     # The correct model-person combination should give best reconstructed images and therefore the lowest MSEs
-    results_arnold = ttest_images("arnold", ROI_SIZE, images=[7, 8], models=[model_arnold, model_barack])
-    # results_barack = ttest_images("barack", ROI_SIZE, images=[7, 8, 9, 10], models=[model_arnold, model_barack])
+    models = {"arnold": model_arnold, "barack": model_barack}
+    results_arnold = ttest_images("arnold", ROI_SIZE, images=[7, 8], models=models)
+    results_barack = ttest_images("barack", ROI_SIZE, images=[7, 8, 9, 10], models=models)
 
     # visualize the reconstructed images and copy paste these figures in a document
-    save_reconstructed_images(SHOW_IMAGES, results_arnold)
-    # save_reconstructed_images(SHOW_IMAGES, results_barack)
+    save_reconstructed_images(SHOW_IMAGES, "arnold", results_arnold, ROI_SIZE)
+    print()
+    save_reconstructed_images(SHOW_IMAGES, "barack", results_barack, ROI_SIZE)
