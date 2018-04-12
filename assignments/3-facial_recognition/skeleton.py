@@ -158,8 +158,7 @@ def save_reconstructed_images(show, name, results, shape):
             if e < classification[i][1]:
                 classification[i] = (model_name, e)
 
-        reconstructions = (rec * 255).astype(np.uint8)
-        reconstructions = [r.reshape(shape) for r in reconstructions]
+        reconstructions = [r.reshape(shape) for r in rec]
 
         img_name = os.path.join(dir_reconstructions, "model_{}.jpg".format(model_name))
         cv2.imwrite(img_name, np.concatenate(reconstructions, axis=1))
