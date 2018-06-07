@@ -1,4 +1,4 @@
-from PIL import Image
+from PIL import Image, ImageDraw
 import os, inspect
 import glob
 from Landmark import Landmark
@@ -74,12 +74,20 @@ class Radiograph:
 
         return landMarks
 
-    def showRadiograph(self):
+    def showRawRadiograph(self):
         """
         Shows the radiograph
         :return:
         """
         self.photo.show()
 
+    def showRadiographWithLandMarks(self):
+        draw = ImageDraw.Draw(self.photo)
+        for k, landMark in self.landMarks.items():
+            draw.line(landMark.getPoints(), fill=(255,0,0), width=2)
+
+        self.photo.show()
+
     def showSegmentationNr(self, nr):
-        self.segmentations[nr].show()
+        if nr in self.segmentations:
+            self.segmentations[nr].show()

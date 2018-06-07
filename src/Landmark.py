@@ -7,4 +7,7 @@ class Landmark:
     def _loadPoints(self, fileName):
         f = open(fileName, "r")
         p = f.readlines()
-        return [float(x) for x in p]
+        return [(float(p[2*j]),float(p[2*j+1])) for j in range(len(p)/2)]
+
+    def getPoints(self):
+        return self.points + [self.points[0]]
