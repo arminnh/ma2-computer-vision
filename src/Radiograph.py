@@ -84,10 +84,16 @@ class Radiograph:
     def showRadiographWithLandMarks(self):
         draw = ImageDraw.Draw(self.photo)
         for k, landMark in self.landMarks.items():
-            draw.line(landMark.getPoints(), fill=(255,0,0), width=2)
+            points = landMark.getPointsAsTuples()
+            draw.line(points + [points[0]], fill=(255,0,0), width=2)
 
         self.photo.show()
 
     def showSegmentationNr(self, nr):
         if nr in self.segmentations:
             self.segmentations[nr].show()
+
+
+    def M(self, s, theta, X):
+        pass
+
