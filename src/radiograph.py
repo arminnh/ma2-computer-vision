@@ -1,5 +1,5 @@
 from typing import Dict
-
+import numpy as np
 from PIL import Image, ImageDraw
 import os, inspect
 import glob
@@ -84,18 +84,21 @@ class Radiograph:
         self.photo.show()
 
     def showRadiographWithLandMarks(self):
-        draw = ImageDraw.Draw(self.photo)
-        for k, landMark in self.landMarks.items():
-            points = landMark.getPointsAsTuples()
-            draw.line(points + [points[0]], fill=(255,0,0), width=2)
+        img = self.photo.copy()
+        draw = ImageDraw.Draw(img)
+        for k, l in self.landMarks.items():
+            p = l.getPointsAsTuples().flatten()
+            # Apparently PIL can't work with numpy arrays...
+            p = [(float(p[2*j]),float(p[2*j+1])) for j in range(int(len(p)/2))]
+            draw.line(p + [p[0]], fill="red", width=2)
 
-        self.photo.show()
+        img.show()
 
     def showSegmentationNr(self, nr):
         if nr in self.segmentations:
             self.segmentations[nr].show()
 
 
-    def M(self, s, theta, X):
-        pass
-
+    def _preprocessRadiograph(self, transformations):
+        for transform in transformations:
+            self.photo = transform(self.photo)

@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 def listToTuples(p):
     return np.asarray([(float(p[2*j]),float(p[2*j+1])) for j in range(int(len(p)/2))])
 
-
 def drawLandmarks(landmarks: List[Landmark], title):
     plt.title(title)
     for l in landmarks:
@@ -20,17 +19,15 @@ def drawLandmarks(landmarks: List[Landmark], title):
     #plt.plot(x1, y1, x2, y2, marker='o')
     plt.show()
 
-
-def performProcrusteAnaylsis(landmarks: List[Landmark]):
+def performProcrustesAnaylsis(landmarks: List[Landmark]):
     """
     # https://github.com/prlz77/prlz77.cvtools/blob/master/procrustes_align.py
     :param landmarks: list of landmarks
     :return:
     """
-
     # First standardize all landmarks
     for l in landmarks:
-        l.standardize()
+        l.normalize()
 
     drawLandmarks(landmarks, "pre")
 
@@ -45,7 +42,7 @@ def performProcrusteAnaylsis(landmarks: List[Landmark]):
         for l in landmarks:
             # Moet dit hier?
             # Volgens "Active shape modelling - their training and applications" wel.
-            #l.standardize()
+            l.normalize()
 
             theta = l.getThetaForReference(listToTuples(ref))
             l.rotate(theta)

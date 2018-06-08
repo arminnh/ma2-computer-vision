@@ -1,34 +1,18 @@
-from typing import List
-
-from radiograph import Radiograph
-from procrustes_analysis import performProcrusteAnaylsis
+from procrustes_analysis import performProcrustesAnaylsis
 from sklearn.decomposition import PCA
-
-
-def loadAllRadiographs():
-    radiographs = []
-    for i in range(1,31):
-        radiographs.append(Radiograph(i))
-    return radiographs
-
-def getAllLandmarks(radiographs: List[Radiograph]):
-    landmarks = []
-    for r in radiographs:
-        landmarks += list(r.landMarks.values())
-    return landmarks
+from helpers import *
 
 def runExercise():
-    allRadioGraphs = loadAllRadiographs()
+    allRadiographs = getAllRadiographs()
     # 1.1 load all provided landmarks
-    allLandmarks = getAllLandmarks(allRadioGraphs)
+    allLandmarks = getAllLandmarks(allRadiographs)
 
     # 1.2 pre-process landmarks
-    newLandmarks = performProcrusteAnaylsis(allLandmarks)
+    newLandmarks = performProcrustesAnaylsis(allLandmarks)
 
     # 1.3 perform PCA
     pca = PCA(n_components=3)
 
     data = [l.getPointsAsList() for l in newLandmarks]
     pca.fit(data)
-
 

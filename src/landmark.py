@@ -8,7 +8,7 @@ class Landmark:
     def __init__(self, fileName, id):
         self.id = id
 
-        # This is a list of point coordinates in the form [x_0, y_0, x_1, y_1
+        # This is a list of point coordinates in the form [x_0, y_0, x_1, y_1, ... ]
         self.points = self._loadPoints(fileName)
 
     def _loadPoints(self, fileName):
@@ -19,6 +19,7 @@ class Landmark:
 
     def getPointsAsTuples(self):
         p = self.points
+        # [ [x_0, y_0], [x_1, y_1] ... ]
         return np.asarray([(float(p[2*j]),float(p[2*j+1])) for j in range(int(len(p)/2))])
 
     def getPointsAsList(self):
@@ -26,33 +27,34 @@ class Landmark:
 
     def getTranslatedPoints(self):
         """
-        Get's the translation of this shape
+        Gets the translation of this shape
         The translation is the mean x and mean y
         :return:
         """
         # https://en.wikipedia.org/wiki/Procrustes_analysis
-        t = np.mean(self.getPointsAsTuples(), axis=0)
-        return self.getPointsAsTuples() - t
+        p = self.getPointsAsTuples()
+        t = np.mean(p, axis=0)
+        return p - t
 
     def getScale(self):
         """
-        Get's the scale of the shape
+        Gets the scale of the shape
         :return:
         """
         # https://en.wikipedia.org/wiki/Procrustes_analysis
         points = self.getTranslatedPoints()
 
         s = np.sqrt(np.sum(np.square(points))/float(len(points)))
+
         return s
 
-    def getPointsWithoutScaleAndTranslation(self):
+    def getNormalizedPoints(self):
         points = self.getTranslatedPoints()
         s = self.getScale()
-        return (points) / s
+        return points / s
 
-    def standardize(self):
-        p = self.getPointsWithoutScaleAndTranslation()
-        self.points = p.flatten()
+    def normalize(self):
+        self.points = self.getNormalizedPoints().flatten()
 
     def getThetaForReference(self, ref_p):
         """
@@ -60,7 +62,7 @@ class Landmark:
         :param other:
         :return:
         """
-        current_p = self.getPointsAsTuples()
+        current_p = self.getNormalizedPoints()
 
         s1 = 0
         s2 = 0
@@ -69,13 +71,14 @@ class Landmark:
             #     w_i * y_i - z_i * x_i
             s1 += current_p[i][0] * p[1]  - current_p[i][1] * p[0]
             s2 += p[0]* current_p[i][0]  + p[1]*current_p[i][1]
+
         theta = math.atan(s1/s2)
 
         return theta
 
     def rotate(self, theta):
         new_points = []
-        for p in self.getPointsAsTuples():
+        for p in self.getNormalizedPoints():
             u = math.cos(theta) * p[0] - math.sin(theta) * p[1]
             v = math.sin(theta) * p[0] + math.cos(theta) * p[1]
 
