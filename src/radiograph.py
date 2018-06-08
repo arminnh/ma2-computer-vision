@@ -1,7 +1,9 @@
+from typing import Dict
+
 from PIL import Image, ImageDraw
 import os, inspect
 import glob
-from Landmark import Landmark
+from landmark import Landmark
 import re
 
 here = os.path.dirname(os.path.abspath(inspect.stack()[0][1]))
@@ -17,7 +19,7 @@ class Radiograph:
         # "%02d" % radioID => creates a double digit numberstring, ex: radioID = 1 then this value is "01"
         self.radioID = "%02d" % radioID
         self.photo = self._load_tif(self.radioID)
-        self.landMarks = self._load_landmarks(radioID)
+        self.landMarks: Dict[int, Landmark] = self._load_landmarks(radioID)
         self.segmentations = self._load_segmentations(self.radioID)
 
     def _load_segmentations(self, radioID):

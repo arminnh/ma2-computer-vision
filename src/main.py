@@ -1,5 +1,4 @@
-from Radiograph import Radiograph
-from ProcrustesAnalysis import performProcrusteAnaylsis
-r = Radiograph(1)
-#r.showRadiographWithLandMarks()
-performProcrusteAnaylsis(r.landMarks.values())
+import exercise1
+
+# Run first exercise
+exercise1.runExercise()
