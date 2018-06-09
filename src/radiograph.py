@@ -102,3 +102,6 @@ class Radiograph:
     def _preprocessRadiograph(self, transformations):
         for transform in transformations:
             self.photo = transform(self.photo)
+
+    def save_img(self):
+        self.photo.save("/Users/thierryderuyttere/Downloads/pycococreator-master/examples/shapes/train/" + "{}.jpg".format(self.radioID))

@@ -3,6 +3,7 @@ from preprocess_img import *
 def runExercise():
     allRadiographs = getAllRadiographs()
 
+
     r = allRadiographs[0]
     r.showRawRadiograph()
     r._preprocessRadiograph([PILtoCV,
