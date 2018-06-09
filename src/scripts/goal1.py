@@ -21,3 +21,7 @@ def runExercise():
 
     data = [l.getPointsAsList() for l in newLandmarks]
     pca.fit(data)
+
+
+if __name__ == '__main__':
+    runExercise()

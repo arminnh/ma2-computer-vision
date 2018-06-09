@@ -1,11 +1,14 @@
 from typing import List
 
-from radiograph import Radiograph
+from src.radiograph import Radiograph
+
+
 def getAllRadiographs():
     radiographs = []
-    for i in range(1,31):
+    for i in range(1, 31):
         radiographs.append(Radiograph(i))
     return radiographs
+
 
 def getAllLandmarks(radiographs: List[Radiograph]):
     landmarks = []

@@ -1,3 +1,5 @@
+import scipy
+
 from radiograph import Radiograph
 from landmark import Landmark
 from typing import List
@@ -25,40 +27,31 @@ def performProcrustesAnaylsis(landmarks: List[Landmark]):
     :param landmarks: list of landmarks
     :return:
     """
-    # First standardize all landmarks
-    for l in landmarks:
-        l.normalize()
+    drawLandmarks(landmarks, "procrustes input")
 
-    drawLandmarks(landmarks, "pre")
+    # First standardize all landmarks
+    landmarks = [l.normalize() for l in landmarks]
+
+    drawLandmarks(landmarks, "normalized")
 
     # Get a reference
-    ref = random.choice(landmarks).getPointsAsList()
+    reference = random.choice(landmarks)
 
     d = 10000
     iteration = 1
     while d > 0.0001:
         print("Iteration: {}".format(iteration))
-        mean = []
-        for l in landmarks:
-            # Moet dit hier?
-            # Volgens "Active shape modelling - their training and applications" wel.
-            l.normalize()
-
-            theta = l.getThetaForReference(listToTuples(ref))
-            l.rotate(theta)
-            mean.append(l.getPointsAsList())
+        # Superimpose all landmarks over the reference
+        landmarks = [l.superimpose(reference) for l in landmarks]
 
         # Get the new mean
-        new_mean = np.mean(np.asarray(mean), axis=0)
-        # Check for convergence
-        # Convergence is defined as not changing that much between old mean and curr mean
-        d = getDistance(ref, new_mean)
+        meanPoints = np.mean(np.asarray([l.getPointsAsList() for l in landmarks]), axis=0)
+        meanLandmark = Landmark(-1, points=meanPoints)
 
-        ref = new_mean
+        # Update distance for convergence check
+        d = meanLandmark.getShapeDistance(reference)
+        reference = meanLandmark
         iteration += 1
 
-    drawLandmarks(landmarks, "post")
+    drawLandmarks(landmarks, "after Procrustes")
     return landmarks
-
-def getDistance(ref, mean):
-    return np.sqrt(np.sum(np.square(ref - mean)))

@@ -3,8 +3,15 @@ import numpy as np
 from PIL import Image, ImageDraw
 import os, inspect
 import glob
-from landmark import Landmark
+
+from src.landmark import Landmark
 import re
+
+
+UPPER_TEETH = {1, 2, 3, 4}
+LOWER_TEETH = {5, 6, 7, 8}
+LEFT_TEETH = {1, 2, 5, 6}
+RIGHT_TEETH = {3, 4, 7, 8}
 
 here = os.path.dirname(os.path.abspath(inspect.stack()[0][1]))
 
@@ -19,8 +26,11 @@ class Radiograph:
         # "%02d" % radioID => creates a double digit numberstring, ex: radioID = 1 then this value is "01"
         self.radioID = "%02d" % radioID
         self.photo = self._load_tif(self.radioID)
-        self.landMarks: Dict[int, Landmark] = self._load_landmarks(radioID)
+        self.landMarks = self._load_landmarks(radioID)  # type: Dict[int, Landmark]
         self.segmentations = self._load_segmentations(self.radioID)
+
+    def getTeeth(self, toothNumbers):
+        return [v for k, v in self.landMarks if k in toothNumbers]
 
     def _load_segmentations(self, radioID):
         segmLoc = here + "/../resources/data/segmentations/"
@@ -72,7 +82,7 @@ class Radiograph:
         for landMark in allLandMarks:
             fileName = landMark.split("/")[-1]
             nr = int(re.match("landmarks{}-([0-9]).txt".format(radioID), fileName).group(1))
-            landMarks[nr] = Landmark(landMark, nr)
+            landMarks[nr] = Landmark(nr, filename=landMark)
 
         return landMarks
 
@@ -99,7 +109,7 @@ class Radiograph:
             self.segmentations[nr].show()
 
 
-    def _preprocessRadiograph(self, transformations):
+    def preprocessRadiograph(self, transformations):
         for transform in transformations:
             self.photo = transform(self.photo)
 
