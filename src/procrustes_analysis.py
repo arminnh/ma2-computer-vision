@@ -1,15 +1,16 @@
-import scipy
-
-from radiograph import Radiograph
-from landmark import Landmark
-from typing import List
-import numpy as np
 import random
-from scipy.spatial import procrustes
+from typing import List
+
 import matplotlib.pyplot as plt
+import numpy as np
+from scipy.spatial import procrustes
+
+from landmark import Landmark
+
 
 def listToTuples(p):
-    return np.asarray([(float(p[2*j]),float(p[2*j+1])) for j in range(int(len(p)/2))])
+    return np.asarray([(float(p[2 * j]), float(p[2 * j + 1])) for j in range(int(len(p) / 2))])
+
 
 def drawLandmarks(landmarks: List[Landmark], title):
     plt.title(title)
@@ -18,24 +19,25 @@ def drawLandmarks(landmarks: List[Landmark], title):
         points.append(points[0])
         points = np.asarray(points)
         plt.plot(points[:, 0], points[:, 1])
-    #plt.plot(x1, y1, x2, y2, marker='o')
+    # plt.plot(x1, y1, x2, y2, marker='o')
     plt.show()
 
-def performProcrustesAnaylsis(landmarks: List[Landmark]):
+
+def performProcrustesAnalysis(landmarks: List[Landmark]):
     """
     # https://github.com/prlz77/prlz77.cvtools/blob/master/procrustes_align.py
     :param landmarks: list of landmarks
-    :return:
     """
-    drawLandmarks(landmarks, "procrustes input")
+    # drawLandmarks(landmarks, "procrustes input")
 
     # First standardize all landmarks
     landmarks = [l.normalize() for l in landmarks]
 
-    drawLandmarks(landmarks, "normalized")
+    # drawLandmarks(landmarks, "normalized")
 
     # Get a reference
     reference = random.choice(landmarks)
+    # scipyProcrustesAnalysis(reference, landmarks)
 
     d = 10000
     iteration = 1
@@ -53,5 +55,29 @@ def performProcrustesAnaylsis(landmarks: List[Landmark]):
         reference = meanLandmark
         iteration += 1
 
-    drawLandmarks(landmarks, "after Procrustes")
-    return landmarks
+    # drawLandmarks(landmarks, "after Procrustes")
+
+    return landmarks, meanLandmark
+
+
+def scipyProcrustesAnalysis(reference, landmarks):
+    input = landmarks
+
+    d = 1
+    while d > 0.0001:
+        tempPoints = []
+        for l in input:
+            m1, m2, diff = procrustes(reference.getPointsAsTuples(), l.getPointsAsTuples())
+            tempPoints.append(Landmark(-1, points=m2.flatten()))
+            print(diff)
+        input = tempPoints
+
+        # Get the new mean
+        meanPoints = np.mean(np.asarray([l.getPointsAsList() for l in tempPoints]), axis=0)
+        meanLandmark = Landmark(-1, points=meanPoints)
+
+        # Update distance for convergence check
+        d = meanLandmark.getShapeDistance(reference)
+        reference = meanLandmark
+
+    drawLandmarks(input, "scipy normalized")

@@ -12,6 +12,16 @@ UPPER_TEETH = {1, 2, 3, 4}
 LOWER_TEETH = {5, 6, 7, 8}
 LEFT_TEETH = {1, 2, 5, 6}
 RIGHT_TEETH = {3, 4, 7, 8}
+CENTRAL_TEETH = {2, 3, 6, 7}
+LATERAL_TEETH = {1, 4, 5, 8}
+TOOTH_TYPES1 = {
+    "CENTRAL": CENTRAL_TEETH,
+    "LATERAL": LATERAL_TEETH,
+}
+TOOTH_TYPES2 = {
+    "UPPER": UPPER_TEETH,
+    "LOWER": LOWER_TEETH,
+}
 
 here = os.path.dirname(os.path.abspath(inspect.stack()[0][1]))
 

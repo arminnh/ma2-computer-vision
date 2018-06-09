@@ -15,15 +15,21 @@ class Landmark:
 
     def __init__(self, toothNumber, filename=None, points=None):
         assert filename is not None or points is not None
-        self.id = toothNumber
+        self.toothNumber = toothNumber
         if filename is not None:
             # This is a list of point coordinates in the form [x_0, y_0, x_1, y_1, ... ]
             self.points = loadLandmarkPoints(filename)
         if points is not None:
-            self.points = points
+            if not isinstance(points, np.ndarray):
+                self.points = np.array(points)
+            else:
+                self.points = points
+
+    def __str__(self):
+        return "Landmark for {}".format(self.toothNumber)
 
     def getPointsAsTuples(self):
-        p = self.points
+        p = list(self.points)
         # [ [x_0, y_0], [x_1, y_1] ... ]
         return np.asarray([(float(p[2 * j]), float(p[2 * j + 1])) for j in range(int(len(p) / 2))])
 
@@ -40,6 +46,7 @@ class Landmark:
     def getScale(self):
         """ Returns a statistical measure of the object's scale, root mean square distance (RMSD). """
         # https://en.wikipedia.org/wiki/Procrustes_analysis
+        # TODO: check if this scaling factor is correct, maybe scale using SVD
         distance = self.getMeanShiftedPoints()
         return np.sqrt(np.mean(np.square(distance)))
 
@@ -49,7 +56,7 @@ class Landmark:
 
     def normalize(self):
         """ Normalizes the points in the landmark. """
-        return Landmark(self.id, points=self.getNormalizedPoints().flatten())
+        return Landmark(self.toothNumber, points=self.getNormalizedPoints().flatten())
 
     def getThetaForReference(self, reference):
         """
@@ -80,14 +87,14 @@ class Landmark:
             new_points.append(u)
             new_points.append(v)
 
-        return Landmark(self.id, points=np.asarray(new_points))
+        return Landmark(self.toothNumber, points=np.asarray(new_points))
 
     def superimpose(self, other):
         """ Returns this landmark superimposed (translated, scaled, and rotated) over another. """
         theta = self.getThetaForReference(other)
         superimposed = self.normalize().rotate(theta)
 
-        return Landmark(self.id, points=superimposed.points)
+        return Landmark(self.toothNumber, points=superimposed.points)
 
     def getShapeDistance(self, other):
         """ Returns the SSD from an other landmark.
