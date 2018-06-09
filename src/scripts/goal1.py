@@ -1,6 +1,12 @@
-from procrustes_analysis import performProcrustesAnaylsis
+import os
+import sys
+
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+
 from sklearn.decomposition import PCA
 from helpers import *
+from procrustes_analysis import performProcrustesAnaylsis
+
 
 def runExercise():
     allRadiographs = getAllRadiographs()
@@ -15,4 +21,3 @@ def runExercise():
 
     data = [l.getPointsAsList() for l in newLandmarks]
     pca.fit(data)
-
