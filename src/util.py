@@ -21,24 +21,33 @@ TOOTH_TYPES2 = {
 }
 
 
-def getLandmarkFilenames(radiographID):
-    landmarkDir = os.path.join(DATA_DIR, "landmarks", "**", "{}-*.png".format(radiographID))
+def getRadiographFilenames(extra=True):
+    radiographDir = os.path.join(DATA_DIR, "radiographs")
+    if extra:
+        radiographDir = os.path.join(radiographDir, "**")
+    radiographDir = os.path.join(radiographDir, "*.tif")
+
+    return glob.glob(radiographDir, recursive=True)
+
+
+def getLandmarkFilenames(radiographFilename):
+    landmarkDir = os.path.join(DATA_DIR, "landmarks", "**", "landmarks{}-*.txt".format(radiographFilename))
 
     return glob.glob(landmarkDir, recursive=True)
 
 
-def getSegmentationFilenames(radiographID):
-    segDir = os.path.join(DATA_DIR, "segmentations", "{}-*.png".format(radiographID))
+def getSegmentationFilenames(radiographFilename):
+    segDir = os.path.join(DATA_DIR, "segmentations", "{}-*.png".format(radiographFilename))
 
     return glob.glob(segDir)
 
 
-def loadRadiographImage(radiographID):
+def loadRadiographImage(radiographFilename):
     """ Returns a tif file from the radiographs directory """
     radioDir = os.path.join(DATA_DIR, "radiographs")
 
     # Find tif for radiograph number.
-    filename = glob.glob(os.path.join(radioDir, "**", "{}.tif".format(radiographID)), recursive=True)[0]
+    filename = glob.glob(os.path.join(radioDir, "**", "{}.tif".format(radiographFilename)), recursive=True)[0]
 
     # Check if the tif of the current radioID is present in our current tifs
     img = Image.open(filename)
