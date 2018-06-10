@@ -43,8 +43,10 @@ class Radiograph:
             segment.image.show()
 
     def preprocessRadiograph(self, transformations):
+        img = self.image
         for transform in transformations:
-            self.image = transform(self.image)
+            img = transform(img)
+        return img
 
     def save_img(self):
         self.image.save(
