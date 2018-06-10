@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.spatial import procrustes
 
-from landmark import Landmark
+from Landmark import Landmark
 
 
 def listToTuples(p):

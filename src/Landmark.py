@@ -4,7 +4,7 @@ import re
 
 import numpy as np
 
-import helpers
+import util
 
 
 class Landmark:
@@ -107,7 +107,7 @@ def loadAllForRadiograph(radiographFilename):
     """
     landMarks = {}
 
-    for filepath in helpers.getLandmarkFilenames(radiographFilename):
+    for filepath in util.getLandmarkFilenames(radiographFilename):
         filename = os.path.split(filepath)[-1]
         toothNumber = int(re.match("landmarks{}-([0-9]).txt".format(int(radiographFilename)), filename).group(1))
         landMarks[toothNumber] = Landmark(loadLandmarkPoints(filepath), radiographFilename, toothNumber)

@@ -1,18 +1,17 @@
 import os
 import sys
 
-
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-from helpers import *
-import radiograph
+from util import *
+import Radiograph
 from Model import Model
 
 
 def buildActiveShapeModel():
-    allRadiographs = radiograph.getAllRadiographs()
+    allRadiographs = Radiograph.getAllRadiographs()
     # 1.1 Load the provided landmarks into your program
-    allLandmarks = radiograph.getAllLandmarksInRadiographs(allRadiographs)
+    allLandmarks = Radiograph.getAllLandmarksInRadiographs(allRadiographs)
 
     # 1.2 Pre-process the landmarks to normalize translation, rotation, and scale differences
     models = []

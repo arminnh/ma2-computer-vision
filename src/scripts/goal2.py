@@ -3,12 +3,12 @@ import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-from helpers import *
+import Radiograph
 from preprocess_img import *
 
 
 def runExercise():
-    allRadiographs = getAllRadiographs()
+    allRadiographs = Radiograph.getAllRadiographs()
 
     r = allRadiographs[0]
     r.showRawRadiograph()

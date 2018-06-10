@@ -1,11 +1,11 @@
+import os
 from typing import Dict
 
-import os
 from PIL import ImageDraw, Image
 
-import helpers
-import landmark
-import segment
+import Landmark
+import Segment
+import util
 
 
 class Radiograph:
@@ -15,9 +15,9 @@ class Radiograph:
         :param filename: the filename/id of the Radiograph
         """
         self.filename = filename
-        self.image = helpers.loadRadiographImage(filename)  # type: Image
-        self.landMarks = landmark.loadAllForRadiograph(filename)  # type: Dict[int, landmark.Landmark]
-        self.segments = segment.loadAllForRadiograph(filename)  # type: Dict[int, segment.Segment]
+        self.image = util.loadRadiographImage(filename)  # type: Image
+        self.landMarks = Landmark.loadAllForRadiograph(filename)  # type: Dict[int, Landmark.Landmark]
+        self.segments = Segment.loadAllForRadiograph(filename)  # type: Dict[int, Segment.Segment]
 
     def getLandmarksForTeeth(self, toothNumbers):
         return [v for k, v in self.landMarks if k in toothNumbers]
@@ -48,13 +48,14 @@ class Radiograph:
 
     def save_img(self):
         self.image.save(
-            "/Users/thierryderuyttere/Downloads/pycococreator-master/examples/shapes/train/" + "{}.jpg".format(self.filename))
+            "/Users/thierryderuyttere/Downloads/pycococreator-master/examples/shapes/train/" + "{}.jpg".format(
+                self.filename))
 
 
 def getAllRadiographs():
     radiographs = []
 
-    for filepath in helpers.getRadiographFilenames():
+    for filepath in util.getRadiographFilenames():
         filename = os.path.splitext(os.path.split(filepath)[-1])[0]
 
         radiographs.append(Radiograph(filename))
