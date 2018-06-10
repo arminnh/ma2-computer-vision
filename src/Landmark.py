@@ -15,7 +15,12 @@ class Landmark:
         self.points = points if isinstance(points, np.ndarray) else np.array(points)
 
     def __str__(self):
-        return "Landmark for tooth {}".format(self.toothNumber)
+        return "Landmark for tooth {} for radiograph {}".format(self.toothNumber, self.radiographFilename)
+
+    def addToXValues(self, offset):
+        p = self.points.copy()
+        p[0::2] = p[0::2] + offset
+        return Landmark(p, self.radiographFilename, self.toothNumber)
 
     def getPointsAsTuples(self):
         p = list(self.points)
@@ -94,7 +99,6 @@ class Landmark:
 
 
 def loadLandmarkPoints(filename):
-    print(filename)
     f = open(filename, "r")
     p = f.readlines()
     return np.asarray([float(x) for x in p])
@@ -106,11 +110,11 @@ def loadAllForRadiograph(radiographFilename):
     :return: Dictionary of toothNumber -> Landmark
     """
     radiographFilename = int(radiographFilename)
-    landMarks = {}
+    landmarks = {}
 
     for filepath in util.getLandmarkFilenames(radiographFilename):
         filename = os.path.split(filepath)[-1]
         toothNumber = int(re.match("landmarks{}-([0-9]).txt".format(radiographFilename), filename).group(1))
-        landMarks[toothNumber] = Landmark(loadLandmarkPoints(filepath), radiographFilename, toothNumber)
+        landmarks[toothNumber] = Landmark(loadLandmarkPoints(filepath), radiographFilename, toothNumber)
 
-    return landMarks
+    return landmarks

@@ -23,6 +23,7 @@ def loadAllForRadiograph(radiographFilename):
     for filepath in util.getSegmentationFilenames(radiographFilename):
         filename = os.path.split(filepath)[-1]
         toothNumber = int(re.match("[0-9]{2}-([0-7]).png", filename).group(1)) + 1
-        segments[toothNumber] = Segment(radiographFilename, toothNumber, Image.open(filepath))
+        img = Image.open(filepath)
+        segments[toothNumber] = Segment(radiographFilename, toothNumber, img)
 
     return segments

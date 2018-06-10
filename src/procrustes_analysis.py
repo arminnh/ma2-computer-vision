@@ -42,7 +42,6 @@ def performProcrustesAnalysis(landmarks: List[Landmark]):
     d = 10000
     iteration = 1
     while d > 0.0001:
-        print("Iteration: {}".format(iteration))
         # Superimpose all landmarks over the reference
         landmarks = [l.superimpose(reference) for l in landmarks]
 
@@ -54,6 +53,7 @@ def performProcrustesAnalysis(landmarks: List[Landmark]):
         d = meanLandmark.shapeDistance(reference)
         reference = meanLandmark
         iteration += 1
+    print("Procrustes analysis iterations: ", iteration)
 
     # drawLandmarks(landmarks, "after Procrustes")
 
