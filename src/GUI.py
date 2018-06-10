@@ -1,17 +1,18 @@
 ## Based on code from: https://github.com/Cartucho/OpenLabeling
 import cv2
 import numpy as np
-
+from preprocess_img import *
 class GUI:
 
     def __init__(self, radiographs):
         self.GUI_NAME = 'Computer Vision KU Leuven'
         self.radiographs = radiographs
-        self.last_img_index = len(radiographs) - 1
+        self.last_radiograph_index = len(radiographs) - 1
         self.current_radiograph_index = 0
         self.img = None
         self.mouse_x = 0
         self.mouse_y = 0
+        self.preprocess = False
 
     def open(self):
         self._createWindow()
@@ -23,12 +24,12 @@ class GUI:
         # loop
         while True:
             # clone the img
-            tmp_img = img.copy()
+            tmp_img = self.img.copy()
             height, width = tmp_img.shape[:2]
             if edges_on == True:
                 # draw edges
                 tmp_img = self.drawEdges(tmp_img)
-            img_path = image_list[img_index]
+
             cv2.imshow(self.GUI_NAME, tmp_img)
             pressed_key = cv2.waitKey(50)
 
@@ -36,10 +37,10 @@ class GUI:
             if pressed_key == ord('a') or pressed_key == ord('z'):
                 # show previous image key listener
                 if pressed_key == ord('a'):
-                    img_index = self.decreaseIndex(img_index, last_img_index)
+                    img_index = self.decreaseIndex(self.current_radiograph_index, self.last_radiograph_index)
                 # show next image key listener
                 elif pressed_key == ord('z'):
-                    img_index = self.increaseIndex(img_index, last_img_index)
+                    img_index = self.increaseIndex(self.current_radiograph_index, self.last_radiograph_index)
                 cv2.setTrackbarPos(TRACKBAR_IMG, self.GUI_NAME, img_index)
             # show edges key listener
             elif pressed_key == ord('e'):
@@ -50,7 +51,8 @@ class GUI:
                 else:
                     edges_on = True
                     cv2.displayOverlay(self.GUI_NAME, "Edges turned ON!", 1000)
-
+            elif pressed_key == ord("p"):
+                self.preprocessCurrentRadiograph()
 
             # quit key listener
             elif pressed_key == ord('q'):
@@ -65,7 +67,7 @@ class GUI:
     def _initTrackBar(self):
         # selected image
         TRACKBAR_IMG = 'Image'
-        cv2.createTrackbar(TRACKBAR_IMG, self.GUI_NAME, 0, self.last_img_index, self.changeImgIndex)
+        cv2.createTrackbar(TRACKBAR_IMG, self.GUI_NAME, 0, self.last_radiograph_index, self.changeImgIndex)
         # initialize
         self.changeImgIndex(0)
         return TRACKBAR_IMG
@@ -79,11 +81,11 @@ class GUI:
     def changeImgIndex(self, x):
         self.current_radiograph_index = x
         # TODO laad de foto in van radiograph
-        img_path = image_list[self.current_radiograph_index]
-        img = cv2.imread(img_path)
-        cv2.displayOverlay(WINDOW_NAME, "Showing image "
-                                        "" + str(img_index) + "/"
-                                                              "" + str(last_img_index), 1000)
+        radiograph = self.radiographs[self.current_radiograph_index]
+        self.img = PILtoCV(radiograph.image)
+        cv2.displayOverlay(self.GUI_NAME, "Showing image "
+                                        "" + str(self.current_radiograph_index) + "/"
+                                                              "" + str(self.last_radiograph_index), 1000)
 
     def drawEdges(self,tmp_img):
         blur = cv2.bilateralFilter(tmp_img, 3, 75, 75)
@@ -95,6 +97,7 @@ class GUI:
         return tmp_img
 
     def decreaseIndex(self,current_index, last_index):
+        self.preprocess = False
         current_index -= 1
         if current_index < 0:
             current_index = last_index
@@ -103,6 +106,8 @@ class GUI:
 
     def increaseIndex(self,current_index, last_index):
         current_index += 1
+        self.preprocess = False
+
         if current_index > last_index:
             current_index = 0
         return current_index
@@ -118,5 +123,14 @@ class GUI:
         elif event == cv2.EVENT_LBUTTONDOWN:
             print("click x: {}, y: {}".format(mouse_x, mouse_y))
 
+    def preprocessCurrentRadiograph(self):
+        radiograph = self.radiographs[self.current_radiograph_index]
+        if not self.preprocess:
+            self.img = radiograph.preprocessRadiograph([
+            PILtoCV,
+            bilateralFilter,
+            applyCLAHE])
+        else:
+            self.img = PILtoCV(radiograph.image)
 
-
+        self.preprocess = not self.preprocess
