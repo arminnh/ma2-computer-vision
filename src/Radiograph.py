@@ -56,10 +56,10 @@ class Radiograph:
 
 
 def getRadiographs(numbers=None, extra=False):
-    number = ["%02d" % n for n in numbers] if numbers is not None else []
+    numbers = ["%02d" % n for n in numbers] if numbers is not None else [numbers]
     radiographs = []
 
-    for n in number:
+    for n in numbers:
         for filepath in util.getRadiographFilenames(n, extra):
             filename = os.path.splitext(os.path.split(filepath)[-1])[0]
             print("Loading radiograph {}, {}".format(n, filepath))

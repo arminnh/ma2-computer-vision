@@ -15,7 +15,7 @@ class Model:
         self.eigenvectors = []
 
     def doProcrustesAnalysis(self):
-        # procrustes_analysis.drawLandmarks(self.landmarks, "before")
+        procrustes_analysis.drawLandmarks(self.landmarks, "before")
 
         newLandmarks, meanLandmark = procrustes_analysis.performProcrustesAnalysis(self.landmarks)
         self.preprocessedLandmarks = newLandmarks
