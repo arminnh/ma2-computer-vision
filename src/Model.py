@@ -2,6 +2,7 @@ import numpy as np
 import scipy.spatial.distance
 from sklearn.decomposition import PCA
 
+import Landmark
 import procrustes_analysis
 
 
@@ -9,19 +10,32 @@ class Model:
     def __init__(self, name, landmarks, pcaComponents=20):
         self.name = name
         self.landmarks = landmarks
-        self.meanLandmark = None
+        self.meanLandmark = None # type: Landmark
         self.preprocessedLandmarks = []
         self.pcaComponents = pcaComponents
         self.eigenvectors = []
+        self.meanTheta = None
+        self.meanScale = None
 
     def doProcrustesAnalysis(self):
-        procrustes_analysis.drawLandmarks(self.landmarks, "before")
+        #procrustes_analysis.drawLandmarks(self.landmarks, "before")
 
-        newLandmarks, meanLandmark = procrustes_analysis.performProcrustesAnalysis(self.landmarks)
-        self.preprocessedLandmarks = newLandmarks
-        self.meanLandmark = meanLandmark
+        self.preprocessedLandmarks, self.meanLandmark, self.meanTheta, self.meanScale \
+            = procrustes_analysis.performProcrustesAnalysis(self.landmarks)
 
-        procrustes_analysis.drawLandmarks(newLandmarks, "after")
+        #procrustes_analysis.drawLandmarks(self.preprocessedLandmarks, "after")
+
+    def translateMean(self, x, y):
+        self.meanLandmark = self.meanLandmark.translatePoints(x,y)
+        return self.meanLandmark
+
+    def translateAndRescaleMean(self, x, y):
+        print(self.meanScale)
+        self.meanLandmark.points *= self.meanScale
+
+        mean = self.translateMean(x,y)
+        print(mean.points)
+        return mean
 
     def doPCA(self):
         data = [l.getPointsAsList() for l in self.landmarks]

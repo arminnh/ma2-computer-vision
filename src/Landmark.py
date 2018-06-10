@@ -17,9 +17,11 @@ class Landmark:
     def __str__(self):
         return "Landmark for tooth {} for radiograph {}".format(self.toothNumber, self.radiographFilename)
 
-    def addToXValues(self, offset):
+    def translatePoints(self, x,y):
         p = self.points.copy()
-        p[0::2] = p[0::2] + offset
+        p[0::2] = p[0::2] + x
+        p[1::2] = p[1::2] + y
+
         return Landmark(p, self.radiographFilename, self.toothNumber)
 
     def getPointsAsTuples(self):
@@ -76,7 +78,7 @@ class Landmark:
 
     def normalize(self):
         """ Normalizes the points in the landmark. """
-        return Landmark(self.getNormalizedPoints().flatten(), self.radiographFilename, self.toothNumber, )
+        return Landmark(self.getNormalizedPoints().flatten(), self.radiographFilename, self.toothNumber)
 
     def rotate(self, theta):
         """ Rotates the points in the landmark. """
@@ -93,9 +95,10 @@ class Landmark:
     def superimpose(self, other):
         """ Returns this landmark superimposed (translated, scaled, and rotated) over another. """
         theta = self.getThetaForReference(other)
+        s = self.getScale()
         superimposed = self.normalize().rotate(theta)
 
-        return Landmark(superimposed.points, self.radiographFilename, self.toothNumber)
+        return Landmark(superimposed.points, self.radiographFilename, self.toothNumber), theta, s
 
 
 def loadLandmarkPoints(filename):

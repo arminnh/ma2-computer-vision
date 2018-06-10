@@ -31,19 +31,30 @@ def performProcrustesAnalysis(landmarks: List[Landmark]):
     # drawLandmarks(landmarks, "procrustes input")
 
     # First standardize all landmarks
-    landmarks = [l.normalize() for l in landmarks]
+    #landmarks = [l.normalize() for l in landmarks]
 
     # drawLandmarks(landmarks, "normalized")
 
     # Get a reference
     reference = random.choice(landmarks)
     # scipyProcrustesAnalysis(reference, landmarks)
+    mean_theta = 0
+    mean_scale = reference.getScale()
+    reference.normalize()
 
     d = 10000
     iteration = 1
+
     while d > 0.0001:
         # Superimpose all landmarks over the reference
-        landmarks = [l.superimpose(reference) for l in landmarks]
+        newLandmarks = []
+        for l in landmarks:
+            landmark, theta, scale = l.superimpose(reference)
+            newLandmarks.append(landmark)
+            mean_theta += theta
+            mean_scale += scale
+
+        landmarks = newLandmarks
 
         # Get the new mean
         meanPoints = np.mean(np.asarray([l.getPointsAsList() for l in landmarks]), axis=0)
@@ -57,7 +68,9 @@ def performProcrustesAnalysis(landmarks: List[Landmark]):
 
     # drawLandmarks(landmarks, "after Procrustes")
 
-    return landmarks, meanLandmark
+    mean_theta /= len(landmarks)
+    mean_scale /= len(landmarks)
+    return landmarks, meanLandmark, mean_theta , mean_scale
 
 
 def scipyProcrustesAnalysis(reference, landmarks):

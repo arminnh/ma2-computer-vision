@@ -74,24 +74,25 @@ def getRadiographs(numbers=None, extra=False):
                 segments=segments
             ))
 
+            # TODO: do image mirroring in radiograph
             # Load a mirrored version
-            mirrorXOffset = img.size[0]
-            landmarks = {}
-            for k, v in Landmark.loadAllForRadiograph(int(filename) + 14).items():
-                # Correct mirrored landmark toothNumber and add offset to X values to put landmark in correct position
-                landmarks[util.flipToothNumber(v.toothNumber)] = v.addToXValues(mirrorXOffset)
-
-            for segment in segments.values():
-                segment.image = ImageOps.mirror(segment.image)
-                segment.toothNumber = util.flipToothNumber(segment.toothNumber)
-
-            radiographs.append(Radiograph(
-                filename=filename,
-                image=ImageOps.mirror(img),
-                landmarks=landmarks,
-                segments=segments,
-                mirrored=True
-            ))
+            # mirrorXOffset = img.size[0]
+            # landmarks = {}
+            # for k, v in Landmark.loadAllForRadiograph(int(filename) + 14).items():
+            #     # Correct mirrored landmark toothNumber and add offset to X values to put landmark in correct position
+            #     landmarks[util.flipToothNumber(v.toothNumber)] = v.addToXValues(mirrorXOffset)
+            #
+            # for segment in segments.values():
+            #     segment.image = ImageOps.mirror(segment.image)
+            #     segment.toothNumber = util.flipToothNumber(segment.toothNumber)
+            #
+            # radiographs.append(Radiograph(
+            #     filename=filename,
+            #     image=ImageOps.mirror(img),
+            #     landmarks=landmarks,
+            #     segments=segments,
+            #     mirrored=True
+            # ))
 
     return radiographs
 

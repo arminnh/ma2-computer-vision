@@ -4,7 +4,7 @@ import numpy as np
 from preprocess_img import *
 class GUI:
 
-    def __init__(self, radiographs):
+    def __init__(self, radiographs, models):
         self.GUI_NAME = 'Computer Vision KU Leuven'
         self.radiographs = radiographs
         self.last_radiograph_index = len(radiographs) - 1
@@ -13,6 +13,7 @@ class GUI:
         self.mouse_x = 0
         self.mouse_y = 0
         self.preprocess = False
+        self.models = models
 
     def open(self):
         self._createWindow()
@@ -89,7 +90,7 @@ class GUI:
 
     def drawEdges(self,tmp_img):
         blur = cv2.bilateralFilter(tmp_img, 3, 75, 75)
-        edges = cv2.Canny(blur, 0, 60, 3)
+        edges = cv2.Canny(blur, 20, 60)
         edges = cv2.cvtColor(edges, cv2.COLOR_GRAY2RGB)
         # Overlap image and edges together
         tmp_img = np.bitwise_or(tmp_img, edges)
@@ -103,7 +104,6 @@ class GUI:
             current_index = last_index
         return current_index
 
-
     def increaseIndex(self,current_index, last_index):
         current_index += 1
         self.preprocess = False
@@ -111,7 +111,6 @@ class GUI:
         if current_index > last_index:
             current_index = 0
         return current_index
-
 
     # mouse callback function
     def mouseListener(self,event, x, y, flags, param):
@@ -122,6 +121,15 @@ class GUI:
             mouse_y = y
         elif event == cv2.EVENT_LBUTTONDOWN:
             print("click x: {}, y: {}".format(mouse_x, mouse_y))
+            # Check contours?
+            for m in self.models:
+                movedMean = m.translateAndRescaleMean(x, y).getPointsAsTuples()
+
+                for i in range(len(movedMean)):
+                    origin = (int(movedMean[i][0]), int(movedMean[i][1]))
+                    end = (int(movedMean[(i+1)%len(movedMean)][0]), int(movedMean[(i+1)%len(movedMean)][1]))
+
+                    cv2.line(self.img, origin, end, (0,0,255), 3)
 
     def preprocessCurrentRadiograph(self):
         radiograph = self.radiographs[self.current_radiograph_index]
