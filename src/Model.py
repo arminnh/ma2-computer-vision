@@ -30,11 +30,9 @@ class Model:
         return self.meanLandmark
 
     def translateAndRescaleMean(self, x, y):
-        print(self.meanScale)
+        self.meanLandmark = self.meanLandmark.normalize()
         self.meanLandmark.points *= self.meanScale
-
         mean = self.translateMean(x,y)
-        print(mean.points)
         return mean
 
     def doPCA(self):
