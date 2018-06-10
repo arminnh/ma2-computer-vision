@@ -15,13 +15,13 @@ class Model:
         self.eigenvectors = []
 
     def doProcrustesAnalysis(self):
-        procrustes_analysis.drawLandmarks(self.landmarks, "before")
+        # procrustes_analysis.drawLandmarks(self.landmarks, "before")
 
         newLandmarks, meanLandmark = procrustes_analysis.performProcrustesAnalysis(self.landmarks)
         self.preprocessedLandmarks = newLandmarks
         self.meanLandmark = meanLandmark
 
-        procrustes_analysis.drawLandmarks(newLandmarks, "after")
+        # procrustes_analysis.drawLandmarks(newLandmarks, "after")
 
     def doPCA(self):
         data = [l.getPointsAsList() for l in self.landmarks]

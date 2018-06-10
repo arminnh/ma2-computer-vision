@@ -1,16 +1,16 @@
 import os
 import sys
 
-from Model import Model
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 from helpers import *
-from radiograph import *
+import radiograph
+from Model import Model
 
 
 def buildActiveShapeModel():
-    allRadiographs = getAllRadiographs()
+    allRadiographs = radiograph.getAllRadiographs()
     # 1.1 Load the provided landmarks into your program
     allLandmarks = getAllLandmarks(allRadiographs)
 
