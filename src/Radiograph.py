@@ -22,11 +22,11 @@ class Radiograph:
     def getLandmarksForTeeth(self, toothNumbers):
         return [v for k, v in self.landMarks if k in toothNumbers]
 
-    def showRawRadiograph(self):
+    def showRaw(self):
         """ Shows the radiograph """
         self.image.show()
 
-    def showRadiographWithLandMarks(self):
+    def showWithLandMarks(self):
         img = self.image.copy()
         draw = ImageDraw.Draw(img)
 
@@ -38,9 +38,9 @@ class Radiograph:
 
         img.show()
 
-    def showSegmentationForTooth(self, toothNumber):
-        if toothNumber in self.segments:
-            self.segments[toothNumber].image.show()
+    def showWithSegments(self):
+        for segment in self.segments.values():
+            segment.image.show()
 
     def preprocessRadiograph(self, transformations):
         for transform in transformations:
@@ -52,10 +52,11 @@ class Radiograph:
                 self.filename))
 
 
-def getAllRadiographs():
+def getRadiographs(number=None):
+    number = "%02d" % number if number is not None else None
     radiographs = []
 
-    for filepath in util.getRadiographFilenames():
+    for filepath in util.getRadiographFilenames(number):
         filename = os.path.splitext(os.path.split(filepath)[-1])[0]
 
         radiographs.append(Radiograph(filename))

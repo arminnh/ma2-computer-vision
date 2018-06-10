@@ -9,7 +9,7 @@ from Model import Model
 
 
 def buildActiveShapeModel():
-    allRadiographs = Radiograph.getAllRadiographs()
+    allRadiographs = Radiograph.getRadiographs()
     # 1.1 Load the provided landmarks into your program
     allLandmarks = Radiograph.getAllLandmarksInRadiographs(allRadiographs)
 

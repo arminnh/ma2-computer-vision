@@ -105,11 +105,12 @@ def loadAllForRadiograph(radiographFilename):
     Loads all the landmarks for a given radiograph.
     :return: Dictionary of toothNumber -> Landmark
     """
+    radiographFilename = int(radiographFilename)
     landMarks = {}
 
     for filepath in util.getLandmarkFilenames(radiographFilename):
         filename = os.path.split(filepath)[-1]
-        toothNumber = int(re.match("landmarks{}-([0-9]).txt".format(int(radiographFilename)), filename).group(1))
+        toothNumber = int(re.match("landmarks{}-([0-9]).txt".format(radiographFilename), filename).group(1))
         landMarks[toothNumber] = Landmark(loadLandmarkPoints(filepath), radiographFilename, toothNumber)
 
     return landMarks

@@ -21,11 +21,15 @@ TOOTH_TYPES2 = {
 }
 
 
-def getRadiographFilenames(extra=True):
+def getRadiographFilenames(number=None, extra=True):
     radiographDir = os.path.join(DATA_DIR, "radiographs")
     if extra:
         radiographDir = os.path.join(radiographDir, "**")
-    radiographDir = os.path.join(radiographDir, "*.tif")
+
+    if number is None:
+        radiographDir = os.path.join(radiographDir, "*.tif")
+    else:
+        radiographDir = os.path.join(radiographDir, "{}.tif".format(number))
 
     return glob.glob(radiographDir, recursive=True)
 

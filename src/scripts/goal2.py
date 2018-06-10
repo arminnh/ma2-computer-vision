@@ -8,10 +8,10 @@ from preprocess_img import *
 
 
 def runExercise():
-    allRadiographs = Radiograph.getAllRadiographs()
+    allRadiographs = Radiograph.getRadiographs()
 
     r = allRadiographs[0]
-    r.showRawRadiograph()
+    r.showRaw()
     r.preprocessRadiograph([
         PILtoCV,
         bilateralFilter,
@@ -21,4 +21,4 @@ def runExercise():
         # showImg,
         cvToPIL
     ])
-    r.showRawRadiograph()
+    r.showRaw()
