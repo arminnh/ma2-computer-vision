@@ -3,26 +3,26 @@ import re
 
 from PIL import Image
 
-from helpers import getSegmentationFilenames
+import helpers
 
 
 class Segment:
-    def __init__(self, radiographID, toothID, image):
-        self.radiographID = radiographID
-        self.toothID = toothID
+    def __init__(self, radiographFilename, toothNumber, image):
+        self.radiographFilename = radiographFilename
+        self.toothNumber = toothNumber
         self.image = image  # type: image
 
 
-def loadAllForRadiograph(radiographID):
+def loadAllForRadiograph(radiographFilename):
     """
     Loads all the segments for a given radiograph.
     :return: Dictionary of toothNumber -> Segment
     """
     segments = {}
 
-    for filepath in getSegmentationFilenames(radiographID):
+    for filepath in helpers.getSegmentationFilenames(radiographFilename):
         filename = os.path.split(filepath)[-1]
-        toothNumber = int(re.match("{}-([0-9]).png".format(radiographID), filename).group(1))
-        segments[toothNumber] = Segment(radiographID, toothNumber, Image.open(filepath))
+        toothNumber = int(re.match("[0-9]{2}-([0-7]).png", filename).group(1)) + 1
+        segments[toothNumber] = Segment(radiographFilename, toothNumber, Image.open(filepath))
 
     return segments

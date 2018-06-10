@@ -1,5 +1,6 @@
 from typing import Dict
 
+import os
 from PIL import ImageDraw, Image
 
 import helpers
@@ -9,14 +10,14 @@ import segment
 
 class Radiograph:
 
-    def __init__(self, radiographID):
+    def __init__(self, filename):
         """
-        :param radiographID: the id of the Radiograph
+        :param filename: the filename/id of the Radiograph
         """
-        self.id = "%02d" % radiographID  # "%02d" for double digit string, e.g. "01" for radioID 1
-        self.image = helpers.loadRadiographImage(self.id)  # type: Image
-        self.landMarks = landmark.loadAllForRadiograph(radiographID)  # type: Dict[int, landmark.Landmark]
-        self.segmentations = segment.loadAllForRadiograph(radiographID)  # type: Dict[int, segment.Segment]
+        self.filename = filename
+        self.image = helpers.loadRadiographImage(filename)  # type: Image
+        self.landMarks = landmark.loadAllForRadiograph(filename)  # type: Dict[int, landmark.Landmark]
+        self.segments = segment.loadAllForRadiograph(filename)  # type: Dict[int, segment.Segment]
 
     def getLandmarksForTeeth(self, toothNumbers):
         return [v for k, v in self.landMarks if k in toothNumbers]
@@ -38,8 +39,8 @@ class Radiograph:
         img.show()
 
     def showSegmentationForTooth(self, toothNumber):
-        if toothNumber in self.segmentations:
-            self.segmentations[toothNumber].image.show()
+        if toothNumber in self.segments:
+            self.segments[toothNumber].image.show()
 
     def preprocessRadiograph(self, transformations):
         for transform in transformations:
@@ -47,11 +48,18 @@ class Radiograph:
 
     def save_img(self):
         self.image.save(
-            "/Users/thierryderuyttere/Downloads/pycococreator-master/examples/shapes/train/" + "{}.jpg".format(self.id))
+            "/Users/thierryderuyttere/Downloads/pycococreator-master/examples/shapes/train/" + "{}.jpg".format(self.filename))
 
 
 def getAllRadiographs():
-    return [Radiograph(i) for i in range(1, 31)]
+    radiographs = []
+
+    for filepath in helpers.getRadiographFilenames():
+        filename = os.path.splitext(os.path.split(filepath)[-1])[0]
+
+        radiographs.append(Radiograph(filename))
+
+    return radiographs
 
 
 def getAllLandmarksInRadiographs(radiographs):

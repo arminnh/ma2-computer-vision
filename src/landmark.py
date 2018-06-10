@@ -9,7 +9,8 @@ import helpers
 
 class Landmark:
 
-    def __init__(self, toothNumber, points):
+    def __init__(self, points, radiographFilename=None, toothNumber=None):
+        self.radiographFilename = radiographFilename
         self.toothNumber = toothNumber
         self.points = points if isinstance(points, np.ndarray) else np.array(points)
 
@@ -70,7 +71,7 @@ class Landmark:
 
     def normalize(self):
         """ Normalizes the points in the landmark. """
-        return Landmark(self.toothNumber, points=self.getNormalizedPoints().flatten())
+        return Landmark(self.getNormalizedPoints().flatten(), self.radiographFilename, self.toothNumber, )
 
     def rotate(self, theta):
         """ Rotates the points in the landmark. """
@@ -82,14 +83,14 @@ class Landmark:
             new_points.append(u)
             new_points.append(v)
 
-        return Landmark(self.toothNumber, points=np.asarray(new_points))
+        return Landmark(np.asarray(new_points), self.radiographFilename, self.toothNumber)
 
     def superimpose(self, other):
         """ Returns this landmark superimposed (translated, scaled, and rotated) over another. """
         theta = self.getThetaForReference(other)
         superimposed = self.normalize().rotate(theta)
 
-        return Landmark(self.toothNumber, points=superimposed.points)
+        return Landmark(superimposed.points, self.radiographFilename, self.toothNumber)
 
 
 def loadLandmarkPoints(filename):
@@ -99,16 +100,16 @@ def loadLandmarkPoints(filename):
     return np.asarray([float(x) for x in p])
 
 
-def loadAllForRadiograph(radiographID):
+def loadAllForRadiograph(radiographFilename):
     """
     Loads all the landmarks for a given radiograph.
     :return: Dictionary of toothNumber -> Landmark
     """
     landMarks = {}
 
-    for filepath in helpers.getLandmarkFilenames(radiographID):
+    for filepath in helpers.getLandmarkFilenames(radiographFilename):
         filename = os.path.split(filepath)[-1]
-        toothNumber = int(re.match("landmarks{}-([0-9]).txt".format(radiographID), filename).group(1))
-        landMarks[toothNumber] = Landmark(toothNumber, points=loadLandmarkPoints(filepath))
+        toothNumber = int(re.match("landmarks{}-([0-9]).txt".format(int(radiographFilename)), filename).group(1))
+        landMarks[toothNumber] = Landmark(loadLandmarkPoints(filepath), radiographFilename, toothNumber)
 
     return landMarks

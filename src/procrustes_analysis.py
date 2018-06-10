@@ -48,7 +48,7 @@ def performProcrustesAnalysis(landmarks: List[Landmark]):
 
         # Get the new mean
         meanPoints = np.mean(np.asarray([l.getPointsAsList() for l in landmarks]), axis=0)
-        meanLandmark = Landmark(-1, points=meanPoints)
+        meanLandmark = Landmark(points=meanPoints)
 
         # Update distance for convergence check
         d = meanLandmark.shapeDistance(reference)
@@ -68,13 +68,13 @@ def scipyProcrustesAnalysis(reference, landmarks):
         tempPoints = []
         for l in input:
             m1, m2, diff = procrustes(reference.getPointsAsTuples(), l.getPointsAsTuples())
-            tempPoints.append(Landmark(-1, points=m2.flatten()))
+            tempPoints.append(Landmark(m2.flatten()))
             print(diff)
         input = tempPoints
 
         # Get the new mean
         meanPoints = np.mean(np.asarray([l.getPointsAsList() for l in tempPoints]), axis=0)
-        meanLandmark = Landmark(-1, points=meanPoints)
+        meanLandmark = Landmark(meanPoints)
 
         # Update distance for convergence check
         d = meanLandmark.shapeDistance(reference)
