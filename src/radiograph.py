@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw
 import os, inspect
 import glob
 
-from src.landmark import Landmark
+from landmark import Landmark
 import re
 
 
@@ -86,7 +86,10 @@ class Radiograph:
         landmarkLoc = here + "/../resources/data/landmarks"
         landmarkName = "landmarks{}-*.txt".format(radioID)
 
-        allLandMarks = glob.glob(landmarkLoc + "/original/" + landmarkName) + glob.glob(landmarkLoc + "/mirrored/" + landmarkName)
+        allLandMarks = glob.glob(landmarkLoc + "/original/" + landmarkName)
+        mirrored = False
+        if mirrored:
+            allLandMarks += glob.glob(landmarkLoc + "/mirrored/" + landmarkName)
 
         landMarks = {}
         for landMark in allLandMarks:

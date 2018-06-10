@@ -1,6 +1,6 @@
 from typing import List
 
-from src.radiograph import Radiograph
+from radiograph import Radiograph
 
 
 def getAllRadiographs():
