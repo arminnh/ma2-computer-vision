@@ -1,32 +1,20 @@
 import math
+import os
+import re
 
 import numpy as np
 
-
-def loadLandmarkPoints(filename):
-    print(filename)
-    f = open(filename, "r")
-    p = f.readlines()
-    return np.asarray([float(x) for x in p])
-    # return [(float(p[2*j]),float(p[2*j+1])) for j in range(len(p)/2)]
+import helpers
 
 
 class Landmark:
 
-    def __init__(self, toothNumber, filename=None, points=None):
-        assert filename is not None or points is not None
+    def __init__(self, toothNumber, points):
         self.toothNumber = toothNumber
-        if filename is not None:
-            # This is a list of point coordinates in the form [x_0, y_0, x_1, y_1, ... ]
-            self.points = loadLandmarkPoints(filename)
-        if points is not None:
-            if not isinstance(points, np.ndarray):
-                self.points = np.array(points)
-            else:
-                self.points = points
+        self.points = points if isinstance(points, np.ndarray) else np.array(points)
 
     def __str__(self):
-        return "Landmark for {}".format(self.toothNumber)
+        return "Landmark for tooth {}".format(self.toothNumber)
 
     def getPointsAsTuples(self):
         p = list(self.points)
@@ -54,10 +42,6 @@ class Landmark:
         """ Returns an array of normalized landmark points.  """
         return self.getMeanShiftedPoints() / self.getScale()
 
-    def normalize(self):
-        """ Normalizes the points in the landmark. """
-        return Landmark(self.toothNumber, points=self.getNormalizedPoints().flatten())
-
     def getThetaForReference(self, reference):
         """
         Superimpose
@@ -76,6 +60,17 @@ class Landmark:
         theta = math.atan(s1 / s2)
 
         return theta
+
+    def shapeDistance(self, other):
+        """ Returns the SSD from an other landmark.
+        Should be done on superimposed (translated, scaled, and rotated) objects.
+        :type other: Landmark
+        """
+        return np.sqrt(np.sum(np.square(self.getPointsAsList() - other.getPointsAsList())))
+
+    def normalize(self):
+        """ Normalizes the points in the landmark. """
+        return Landmark(self.toothNumber, points=self.getNormalizedPoints().flatten())
 
     def rotate(self, theta):
         """ Rotates the points in the landmark. """
@@ -96,9 +91,24 @@ class Landmark:
 
         return Landmark(self.toothNumber, points=superimposed.points)
 
-    def getShapeDistance(self, other):
-        """ Returns the SSD from an other landmark.
-        Should be done on superimposed (translated, scaled, and rotated) objects.
-        :type other: Landmark
-        """
-        return np.sqrt(np.sum(np.square(self.getPointsAsList() - other.getPointsAsList())))
+
+def loadLandmarkPoints(filename):
+    print(filename)
+    f = open(filename, "r")
+    p = f.readlines()
+    return np.asarray([float(x) for x in p])
+
+
+def loadAllForRadiograph(radiographID):
+    """
+    Loads all the landmarks for a given radiograph.
+    :return: Dictionary of toothNumber -> Landmark
+    """
+    landMarks = {}
+
+    for filepath in helpers.getLandmarkFilenames(radiographID):
+        filename = os.path.split(filepath)[-1]
+        toothNumber = int(re.match("landmarks{}-([0-9]).txt".format(radiographID), filename).group(1))
+        landMarks[toothNumber] = Landmark(toothNumber, points=loadLandmarkPoints(filepath))
+
+    return landMarks

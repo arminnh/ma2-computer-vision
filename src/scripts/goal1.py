@@ -12,7 +12,7 @@ from Model import Model
 def buildActiveShapeModel():
     allRadiographs = radiograph.getAllRadiographs()
     # 1.1 Load the provided landmarks into your program
-    allLandmarks = getAllLandmarks(allRadiographs)
+    allLandmarks = radiograph.getAllLandmarksInRadiographs(allRadiographs)
 
     # 1.2 Pre-process the landmarks to normalize translation, rotation, and scale differences
     models = []

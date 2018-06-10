@@ -1,16 +1,11 @@
-import glob
-import inspect
-import re
 from typing import Dict
 
-import os
-from PIL import ImageDraw
+from PIL import ImageDraw, Image
 
-import segmentation
-from landmark import Landmark
 import helpers
+import landmark
+import segment
 
-here = os.path.dirname(os.path.abspath(inspect.stack()[0][1]))
 
 class Radiograph:
 
@@ -18,48 +13,22 @@ class Radiograph:
         """
         :param radiographID: the id of the Radiograph
         """
+        self.id = "%02d" % radiographID  # "%02d" for double digit string, e.g. "01" for radioID 1
+        self.image = helpers.loadRadiographImage(self.id)  # type: Image
+        self.landMarks = landmark.loadAllForRadiograph(radiographID)  # type: Dict[int, landmark.Landmark]
+        self.segmentations = segment.loadAllForRadiograph(radiographID)  # type: Dict[int, segment.Segment]
 
-        # "%02d" % radioID => creates a double digit numberstring, ex: radioID = 1 then this value is "01"
-        self.id = "%02d" % radiographID
-        self.photo = helpers.getRadiographImage(self.id)
-        self.landMarks = self._load_landmarks(radiographID)  # type: Dict[int, Landmark]
-        self.segmentations = segmentation.loadForRadiograph(radiographID)
-
-    def getTeeth(self, toothNumbers):
+    def getLandmarksForTeeth(self, toothNumbers):
         return [v for k, v in self.landMarks if k in toothNumbers]
 
-    def _load_landmarks(self, radioID):
-        """
-        Loads all the landmarks on a radiograph for a given radioID
-        :param radioID: the id of the radiograph
-        :return: returns a dictionary of ID -> landmark
-        """
-        landmarkLoc = here + "/../resources/data/landmarks"
-        landmarkName = "landmarks{}-*.txt".format(radioID)
-
-        allLandMarks = glob.glob(landmarkLoc + "/original/" + landmarkName)
-        mirrored = False
-        if mirrored:
-            allLandMarks += glob.glob(landmarkLoc + "/mirrored/" + landmarkName)
-
-        landMarks = {}
-        for landMark in allLandMarks:
-            fileName = landMark.split("/")[-1]
-            nr = int(re.match("landmarks{}-([0-9]).txt".format(radioID), fileName).group(1))
-            landMarks[nr] = Landmark(nr, filename=landMark)
-
-        return landMarks
-
     def showRawRadiograph(self):
-        """
-        Shows the radiograph
-        :return:
-        """
-        self.photo.show()
+        """ Shows the radiograph """
+        self.image.show()
 
     def showRadiographWithLandMarks(self):
-        img = self.photo.copy()
+        img = self.image.copy()
         draw = ImageDraw.Draw(img)
+
         for k, l in self.landMarks.items():
             p = l.getPointsAsTuples().flatten()
             # Apparently PIL can't work with numpy arrays...
@@ -68,19 +37,25 @@ class Radiograph:
 
         img.show()
 
-    def showSegmentationNr(self, nr):
-        if nr in self.segmentations:
-            self.segmentations[nr].show()
+    def showSegmentationForTooth(self, toothNumber):
+        if toothNumber in self.segmentations:
+            self.segmentations[toothNumber].image.show()
 
     def preprocessRadiograph(self, transformations):
         for transform in transformations:
-            self.photo = transform(self.photo)
+            self.image = transform(self.image)
 
     def save_img(self):
-        self.photo.save(
-            "/Users/thierryderuyttere/Downloads/pycococreator-master/examples/shapes/train/" + "{}.jpg".format(
-                self.id))
+        self.image.save(
+            "/Users/thierryderuyttere/Downloads/pycococreator-master/examples/shapes/train/" + "{}.jpg".format(self.id))
 
 
 def getAllRadiographs():
     return [Radiograph(i) for i in range(1, 31)]
+
+
+def getAllLandmarksInRadiographs(radiographs):
+    landmarks = []
+    for r in radiographs:
+        landmarks += list(r.landMarks.values())
+    return landmarks

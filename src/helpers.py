@@ -21,11 +21,10 @@ TOOTH_TYPES2 = {
 }
 
 
-def getAllLandmarks(radiographs):
-    landmarks = []
-    for r in radiographs:
-        landmarks += list(r.landMarks.values())
-    return landmarks
+def getLandmarkFilenames(radiographID):
+    landmarkDir = os.path.join(DATA_DIR, "landmarks", "**", "{}-*.png".format(radiographID))
+
+    return glob.glob(landmarkDir, recursive=True)
 
 
 def getSegmentationFilenames(radiographID):
@@ -34,7 +33,7 @@ def getSegmentationFilenames(radiographID):
     return glob.glob(segDir)
 
 
-def getRadiographImage(radiographID):
+def loadRadiographImage(radiographID):
     """ Returns a tif file from the radiographs directory """
     radioDir = os.path.join(DATA_DIR, "radiographs")
 
@@ -43,3 +42,4 @@ def getRadiographImage(radiographID):
 
     # Check if the tif of the current radioID is present in our current tifs
     img = Image.open(filename)
+    return img

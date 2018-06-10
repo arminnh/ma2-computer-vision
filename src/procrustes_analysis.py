@@ -51,7 +51,7 @@ def performProcrustesAnalysis(landmarks: List[Landmark]):
         meanLandmark = Landmark(-1, points=meanPoints)
 
         # Update distance for convergence check
-        d = meanLandmark.getShapeDistance(reference)
+        d = meanLandmark.shapeDistance(reference)
         reference = meanLandmark
         iteration += 1
 
@@ -77,7 +77,7 @@ def scipyProcrustesAnalysis(reference, landmarks):
         meanLandmark = Landmark(-1, points=meanPoints)
 
         # Update distance for convergence check
-        d = meanLandmark.getShapeDistance(reference)
+        d = meanLandmark.shapeDistance(reference)
         reference = meanLandmark
 
     drawLandmarks(input, "scipy normalized")
