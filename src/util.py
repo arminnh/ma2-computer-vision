@@ -4,6 +4,7 @@ import os
 
 import numpy as np
 from PIL import Image
+import scipy.interpolate
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "resources", "data")
 
@@ -113,16 +114,22 @@ def sampleNormalLine(before, current, nextt, pixels=None):
     Returns points on the normal line that goes through `current` by calculating the angle between `before` and `next`.
     :param pixels: If given, samples a certain amount of pixels on each side of `current`
     """
-    m1 = getSlope(before, current)
-    m2 = getSlope(current, nextt)
-    m3 = getSlopeOfInnerBisector(m1, m2)
+    xx = np.asarray([before[0], current[0], nextt[0]])
+    yy = np.asarray([before[1],current[1],nextt[1]])
+    sorted_xx = xx.argsort()
+    # Fuck you scipy and your strictly increasing x values
+    xx = xx[sorted_xx] + [0, 0.00000001, 0.00000002]
+    yy = yy[sorted_xx]
+
+    f = scipy.interpolate.CubicSpline(xx, yy).derivative()
+    m = -1/f(current[0])
 
     if pixels is not None:
         # Sample a certain amount of pixels on each side of `current`. Needs to happen relative to size of slope.
         print("TODO")
 
     X = np.linspace(int(current[0]) - 10, current[0] + 10, 500)
-    Y = m3 * (X - current[0]) + current[1]
+    Y = m * (X - current[0]) + current[1]
 
     filterr = (Y > current[1] - 10) & (Y < current[1] + 10)
     X = X[filterr]
