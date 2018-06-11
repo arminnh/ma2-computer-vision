@@ -25,6 +25,8 @@ def buildActiveShapeModel():
     # 1.3 Analyze the data using a Principal Component Analysis (PCA), exposing shape class variations
     for model in models:
         model.doPCA()
+        model.reconstruct()
+
 
     return models
 

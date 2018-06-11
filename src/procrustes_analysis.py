@@ -6,7 +6,7 @@ import numpy as np
 from scipy.spatial import procrustes
 
 from Landmark import Landmark
-
+random.seed(123)
 
 def listToTuples(p):
     return np.asarray([(float(p[2 * j]), float(p[2 * j + 1])) for j in range(int(len(p) / 2))])
