@@ -145,35 +145,31 @@ class GUI:
                 movedMean = m.translateAndRescaleMean(x, y).getPointsAsTuples()
 
                 for i in range(len(movedMean)):
-
                     m1 = self.getSlope(movedMean[i - 1], movedMean[i])
                     m2 = self.getSlope(movedMean[i], movedMean[(i + 1) % len(movedMean)])
                     theta = math.atan(abs((m1 - m2) / (1 + m1 * m2)))
 
-                    x2, y2 = self.getXYForSlope(i, m1, m2, movedMean, theta, y)
+                    x2, y2 = self.normalLine(m1, m2, movedMean[i], theta)
 
-                    for k in range(len(x2) - 1):
-                        cv2.line(self.img,
-                                 (int(x2[k]), int(y2[k])),
-                                 (int(x2[k + 1]), int(y2[k + 1])),
-                                 (255, 0, 0), 3)
+                    cv2.line(self.img,
+                             (int(x2[0]), int(y2[0])),
+                             (int(x2[-1]), int(y2[-1])),
+                             (255, 0, 0), 3)
 
                     origin = (int(movedMean[i][0]), int(movedMean[i][1]))
                     end = (int(movedMean[(i + 1) % len(movedMean)][0]), int(movedMean[(i + 1) % len(movedMean)][1]))
 
                     cv2.line(self.img, origin, end, (0, 0, 255), 3)
 
-    def getXYForSlope(self, i, m1, m2, movedMean, theta, y):
-        x2 = []
-        y2 = []
-        start = int(movedMean[i][0]) - 10
-        while start < movedMean[i][0] + 10:
-            y = -1 / self._getMyPerpendicular(m1, m2, theta) * (start - movedMean[i][0]) + movedMean[i][1]
-            if (y > movedMean[i][1] - 10 and y < movedMean[i][1] + 10):
-                x2.append(start)
-                y2.append(y)
-            start += 0.01
-        return x2, y2
+    def normalLine(self, m1, m2, movedMean, theta):
+        X = np.linspace(int(movedMean[0]) - 10, movedMean[0] + 10, 500)
+        Y = -1 / self._getMyPerpendicular(m1, m2, theta) * (X - movedMean[0]) + movedMean[1]
+
+        filterr = (Y > movedMean[1] - 10) & (Y < movedMean[1] + 10)
+        X = X[filterr]
+        Y = Y[filterr]
+
+        return X, Y
 
     def preprocessCurrentRadiograph(self):
         radiograph = self.radiographs[self.current_radiograph_index]
