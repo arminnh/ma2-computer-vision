@@ -13,7 +13,7 @@ def fitModelToImage():
 
 
 if __name__ == '__main__':
-    models = scripts.goal1.buildActiveShapeModel()
+    models = scripts.goal1.buildActiveShapeModel(list(range(1, 3)))
 
     r = getRadiographs(list(range(1, 3)))
     gui = GUI(r, models)

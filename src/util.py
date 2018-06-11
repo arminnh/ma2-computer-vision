@@ -121,21 +121,24 @@ def sampleNormalLine(before, current, nextt, pixelsToSample=None):
     xx = xx[sorted_xx] + [0, 0.00000001, 0.00000002]
     yy = yy[sorted_xx]
 
+    # y = m x + b
     f = scipy.interpolate.CubicSpline(xx, yy).derivative()
-    m = -1 / f(current[0])
+    tangentLineSlope = f(current[0])
+    # m = slope of normal line
+    m = -1 / tangentLineSlope if tangentLineSlope != 0 else 0
+    x = current[0]
+    b = current[1]
+    # dx = the distance that can be moved in X for there to be a max distance of 1 in Y
+    dx = 1 / m if m != 0 else 1
 
-    samples = 500
-    X = np.linspace(int(current[0]) - 10, current[0] + 10, samples)
-    Y = m * (X - current[0]) + current[1]
+    pixels = 20
+    xOffset = pixels * dx if -1 < dx < 1 else pixels
+    X = np.linspace(x - xOffset, x + xOffset, 2 * pixels)
+    Y = m * (X - current[0]) + b
 
-    filterr = (Y > current[1] - 10) & (Y < current[1] + 10)
-    X = X[filterr]
-    Y = Y[filterr]
-
-    if len(X):
-        x1, y1 = X[0], Y[0]
-        x2, y2 = X[-1], Y[-1]
-        print("LINE LENGTH: ", math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2))
+    x1, y1 = X[0], Y[0]
+    x2, y2 = X[-1], Y[-1]
+    print("\nm: {}, dx: {}, line length: {}".format(m, dx, math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)))
 
     if pixelsToSample is not None:
         # TODO: sample in a better way

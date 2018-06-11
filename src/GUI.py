@@ -130,7 +130,7 @@ class GUI:
                 points = m.translateAndRescaleMean(x, y).getPointsAsTuples()
 
                 for i in range(len(points)):
-                    x2, y2 = util.sampleNormalLine(points[i - 1], points[i], points[(i + 1) % len(points)])
+                    x2, y2 = util.sampleNormalLine(0, points[i - 1], points[i], points[(i + 1) % len(points)])
 
                     cv2.line(self.img,
                              (int(x2[0]), int(y2[0])),

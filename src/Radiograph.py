@@ -1,7 +1,7 @@
 import os
 from typing import Dict
 
-from PIL import ImageDraw, Image, ImageOps
+from PIL import ImageDraw, Image
 
 import Landmark
 import Segment
@@ -50,18 +50,30 @@ class Radiograph:
 
         for toothNumber, landmark in self.landmarks.items():
             # PIL can't work with numpy arrays so convert to list of tuples
-            p = landmark.getPointsAsTuples()
-            plt.plot(p[:, 0], p[:, 1], 'x', label="tooth " + str(toothNumber))
+            points = landmark.getPointsAsTuples()
+            X = points[:, 0]
+            Y = points[:, 1]
+            plt.plot(X, Y, 'x', label="tooth " + str(toothNumber))
+            for i in range(len(points)):
+                plt.text(X[i] - 10, Y[i], i)
 
-            pixelsToSample = 10
+            pixelsToSample = 3
+            normals = landmark.normalSamplesForAllPoints(pixelsToSample)
             profiles = landmark.grayLevelProfileForAllPoints(pixelsToSample)
+
             for i, profile in profiles.items():
-                x = p[i, 0]
-                y = np.repeat(p[i, 1], pixelsToSample)
-                Xs = np.arange(x-pixelsToSample/2, x+pixelsToSample/2)
-                plt.scatter(x=Xs, y=y, c=profile)
+                plt.plot(normals[i][0], normals[i][1])
+
+                Xs = np.arange(X[i] - pixelsToSample, X[i] + pixelsToSample)
+                y = np.repeat(Y[i], 2 * pixelsToSample)
+                profile = profile + abs(profile.min())
+                profile = [str(p) for p in profile]
+                plt.scatter(x=Xs, y=y, c=profile, s=10, zorder=3)
 
         plt.legend()
+        plt.title("Tooters of radiograph {}".format(self.filename))
+        ax = plt.gca()
+        ax.set_ylim(ax.get_ylim()[::-1])
         plt.show()
 
     def showWithSegments(self):

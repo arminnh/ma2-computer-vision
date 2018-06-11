@@ -25,7 +25,7 @@ def buildActiveShapeModel(radiographs=None):
                 model = Model(k1 + "-" + k2,
                               landmarks=[l for l in allLandmarks if l.toothNumber in v1 & v2 & LEFT_TEETH])
                 model.doProcrustesAnalysis()
-                model.buildGrayLevelModels()
+                # model.buildGrayLevelModels()
                 models.append(model)
 
     # 1.3 Analyze the data using a Principal Component Analysis (PCA), exposing shape class variations

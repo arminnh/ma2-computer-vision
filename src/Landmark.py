@@ -3,6 +3,7 @@ import os
 import re
 
 import numpy as np
+from PIL import Image
 
 import util
 
@@ -101,6 +102,21 @@ class Landmark:
 
         return Landmark(superimposed.points, self.radiographFilename, self.toothNumber), theta, s
 
+    def normalSamplesForAllPoints(self, pixelsToSample):
+        """
+        Returns samples from the normal lines on the landmark points
+        """
+        lines = {}
+
+        points = self.getPointsAsTuples()
+        for i, point in enumerate(points):
+            normalX, normalY = util.sampleNormalLine(points[i - 1], point, points[(i + 1) % len(points)],
+                                                       pixelsToSample=pixelsToSample)
+
+            lines[i] = normalX, normalY
+
+        return lines
+
     def grayLevelProfileForAllPoints(self, pixelsToSample):
         """
         For every landmark point j (all points in this landmark) in the image i (the radiograph of this landmark) of
@@ -120,16 +136,24 @@ class Landmark:
             # Build gray level profile by sampling a few points on each side of the point.
 
             # Sample points on normal line of the current landmark point
-            pointsOnNormalLine = util.sampleNormalLine(points[i - 1], point, points[(i + 1) % len(points)],
+            normalX, normalY = util.sampleNormalLine(points[i - 1], point, points[(i + 1) % len(points)],
                                                        pixelsToSample=pixelsToSample)
 
             # Get pixel values on the sampled positions
-
+            img = self.radiograph.image.convert("L")  # type: Image
+            pixels = np.asarray([img.getpixel((x, y)) for (x, y) in zip(normalY, normalY)])
 
             # Derivative profile of length n_p - 1
+            pixels = np.diff(pixels)
 
             # Normalized derivative profile
-            grayLevelProfiles[i] = profile
+            print("i {}, derivated profile: {}, divisor: {}".format(i, list(pixels), np.sum(np.abs(pixels))), end=", ")
+            scale = np.sum(np.abs(pixels))
+            if scale != 0:
+                pixels = pixels / scale
+            print("normalized profile: {}".format(list(pixels)))
+
+            grayLevelProfiles[i] = pixels
 
         return grayLevelProfiles
 

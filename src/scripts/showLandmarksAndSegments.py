@@ -8,9 +8,10 @@ import util
 import Radiograph
 
 if __name__ == '__main__':
-    radiographs = Radiograph.getRadiographs(list(range(1, 5)))  # type: Radiograph
+    radiographs = Radiograph.getRadiographs([1])  # type: Radiograph
 
     for r in radiographs:
         r.landmarks = {k: v for k, v in r.landmarks.items() if k in util.UPPER_TEETH & util.CENTRAL_TEETH}
+        # r.showWithLandMarks()
         r.plotLandMarksWithGrayLevelModels()
         time.sleep(0.5)
