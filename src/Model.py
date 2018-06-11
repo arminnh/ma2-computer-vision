@@ -17,6 +17,7 @@ class Model:
         self.meanTheta = None
         self.meanScale = None
         self.grayLevelModels = {}
+        self.sampleAmount = 5
 
     def doProcrustesAnalysis(self):
         # procrustes_analysis.drawLandmarks(self.landmarks, "before")
@@ -52,9 +53,12 @@ class Model:
         return self
 
     def buildGrayLevelModels(self):
-        for i, point in enumerate(self.meanLandmark.points):
+        for i, points in enumerate(self.meanLandmark.getPointsAsTuples()):
             # Model gray level appearance
-            self.grayLevelModels[i] = point
+
+            # Get gray level model for each landmark and add it
+            for landmark in self.landmarks:
+                grayLevelProfiles = landmark.grayLevelProfileForAllPoints(self.sampleAmount)
 
         return self
 

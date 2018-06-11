@@ -13,11 +13,12 @@ class Landmark:
         self.radiographFilename = radiographFilename
         self.toothNumber = toothNumber
         self.points = points if isinstance(points, np.ndarray) else np.array(points)
+        self.radiograph = None
 
     def __str__(self):
         return "Landmark for tooth {} for radiograph {}".format(self.toothNumber, self.radiographFilename)
 
-    def translatePoints(self, x,y):
+    def translatePoints(self, x, y):
         p = self.points.copy()
         p[0::2] = p[0::2] + x
         p[1::2] = p[1::2] + y
@@ -99,6 +100,34 @@ class Landmark:
         superimposed = self.normalize().rotate(theta)
 
         return Landmark(superimposed.points, self.radiographFilename, self.toothNumber), theta, s
+
+    def grayLevelProfileForAllPoints(self, sampleAmount):
+        """
+        For every landmark point j (all points in this landmark) in the image i (the radiograph of this landmark) of
+        the training set, we extract a gray level profile g_ij of length n_p pixels, centered around the landmark point.
+        Not the actual gray level profile but its normalized derivative to get invariance to the offsets and uniform
+        scaling of the gray level.
+        The gray level profile of a landmark point j is a vector of n_p values.
+        ~ "Active Shape Models - Part I: Modeling Shape and Gray Level Variations"
+        """
+        if self.radiograph is None:
+            raise Exception("Need radiograph for gray level profile")
+
+        grayLevelProfiles = {}
+
+        points = self.getPointsAsTuples()
+        for i, point in enumerate(points):
+            # Build gray level profile by sampling a few points on each side of the point.
+            profile = util.sampleNormalLine(points[i - 1], point, points[(i + 1) % len(points)], pixels=sampleAmount)
+
+            # Create X sampling values based on size of slope.
+
+            # Derivative profile of length n_p - 1
+
+            # Normalized derivative profile
+            grayLevelProfiles[i] = profile
+
+        return grayLevelProfiles
 
 
 def loadLandmarkPoints(filename):

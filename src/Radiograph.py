@@ -19,6 +19,8 @@ class Radiograph:
         self.landmarks = landmarks  # type: Dict[int, Landmark.Landmark]
         self.segments = segments  # type: Dict[int, Segment.Segment]
         self.mirrored = mirrored
+        for landmark in self.landmarks.values():
+            landmark.radiograph = self
 
     def getLandmarksForTeeth(self, toothNumbers):
         return [v for k, v in self.landmarks if k in toothNumbers]
@@ -31,11 +33,13 @@ class Radiograph:
         img = self.image.copy()
         draw = ImageDraw.Draw(img)
 
-        for k, l in self.landmarks.items():
+        for toothNumber, landmark in self.landmarks.items():
             # PIL can't work with numpy arrays so convert to list of tuples
-            p = l.getPointsAsList()
+            p = landmark.getPointsAsList()
             p = [(float(p[2 * j]), float(p[2 * j + 1])) for j in range(int(len(p) / 2))]
             draw.line(p + [p[0]], fill="red", width=2)
+            for i, point in enumerate(p):
+                draw.text(point, str(i))
 
         img.show()
 

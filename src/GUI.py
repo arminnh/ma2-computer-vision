@@ -1,6 +1,7 @@
 ## Based on code from: https://github.com/Cartucho/OpenLabeling
 import math
 
+import util
 from preprocess_img import *
 
 
@@ -115,22 +116,6 @@ class GUI:
             current_index = 0
         return current_index
 
-    def getSlope(self, p1, p2):
-        (x1, y1) = p1
-        (x2, y2) = p2
-        return (y2 - y1) / (x2 - x1)
-
-    def _rotate(self, m, theta):
-        return (math.sin(theta) + m * math.cos(theta)) / (math.cos(theta) - m * math.sin(theta))
-
-    def _getMyPerpendicular(self, m1, m2, theta):
-        m3 = self._rotate(m2, theta / 2)
-        m4 = self._rotate(m2, -theta / 2)
-        if round(math.atan(abs((m1 - m3) / (1 + m1 * m3))), 6) == round(theta / 2, 6):
-            return m3
-        elif round(math.atan(abs((m1 - m4) / (1 + m1 * m4))), 6) == round(theta / 2, 6):
-            return m4
-
     # mouse callback function
     def mouseListener(self, event, x, y, flags, param):
         global mouse_x, mouse_y
@@ -145,11 +130,7 @@ class GUI:
                 movedMean = m.translateAndRescaleMean(x, y).getPointsAsTuples()
 
                 for i in range(len(movedMean)):
-                    m1 = self.getSlope(movedMean[i - 1], movedMean[i])
-                    m2 = self.getSlope(movedMean[i], movedMean[(i + 1) % len(movedMean)])
-                    theta = math.atan(abs((m1 - m2) / (1 + m1 * m2)))
-
-                    x2, y2 = self.normalLine(m1, m2, movedMean[i], theta)
+                    x2, y2 = util.sampleNormalLine(movedMean[i - 1], movedMean[i], movedMean[(i + 1) % len(movedMean)])
 
                     cv2.line(self.img,
                              (int(x2[0]), int(y2[0])),
@@ -160,16 +141,6 @@ class GUI:
                     end = (int(movedMean[(i + 1) % len(movedMean)][0]), int(movedMean[(i + 1) % len(movedMean)][1]))
 
                     cv2.line(self.img, origin, end, (0, 0, 255), 3)
-
-    def normalLine(self, m1, m2, movedMean, theta):
-        X = np.linspace(int(movedMean[0]) - 10, movedMean[0] + 10, 500)
-        Y = -1 / self._getMyPerpendicular(m1, m2, theta) * (X - movedMean[0]) + movedMean[1]
-
-        filterr = (Y > movedMean[1] - 10) & (Y < movedMean[1] + 10)
-        X = X[filterr]
-        Y = Y[filterr]
-
-        return X, Y
 
     def preprocessCurrentRadiograph(self):
         radiograph = self.radiographs[self.current_radiograph_index]

@@ -24,6 +24,7 @@ def drawLandmarks(landmarks: List[Landmark], title):
 
 
 def performProcrustesAnalysis(landmarks: List[Landmark]):
+    print(landmarks)
     """
     # https://github.com/prlz77/prlz77.cvtools/blob/master/procrustes_align.py
     :param landmarks: list of landmarks
