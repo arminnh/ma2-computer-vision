@@ -3,7 +3,7 @@ import scipy.spatial.distance
 
 import procrustes_analysis
 from Landmark import Landmark
-
+from scipy import linalg
 
 class Model:
     def __init__(self, name, landmarks, pcaComponents=20):
@@ -53,14 +53,34 @@ class Model:
         return self
 
     def buildGrayLevelModels(self):
+        self.meanGrayLevelModels = {}
+        self.normalizedGrayLevels = {}
+        self.grayLevelsCovariances = {}
         for i, points in enumerate(self.meanLandmark.getPointsAsTuples()):
             # Model gray level appearance
+            self.normalizedGrayLevels[i] = []
 
             # Get gray level model for each landmark and add it
             for landmark in self.landmarks:
-                grayLevelProfiles = landmark.grayLevelProfileForAllPoints(self.sampleAmount)
+                # TODO: rekening houden met tooth?
+                grayLevelProfiles, normalizedGrayLevelProfiles = landmark.grayLevelProfileForAllPoints(self.sampleAmount)
+                for pointIndex, profile in grayLevelProfiles.items():
+                    if pointIndex not in self.meanGrayLevelModels:
+                        self.meanGrayLevelModels[pointIndex] = []
+                    self.meanGrayLevelModels[pointIndex].append(profile)
+                    self.normalizedGrayLevels[i].append(normalizedGrayLevelProfiles[pointIndex])
+
+        for pointIndex, means in self.meanGrayLevelModels.items():
+            mean = np.mean(means, axis=0)
+            self.meanGrayLevelModels[pointIndex] = mean
+            self.grayLevelsCovariances[pointIndex] = np.cov(self.normalizedGrayLevels[pointIndex])
 
         return self
+
+    def MahalanobisDistance(self, profile, landmarkPointIndex):
+        Sp = self.grayLevelsCovariances[landmarkPointIndex]
+        pMinusMeanTrans = (profile - self.meanGrayLevelModels[landmarkPointIndex]).T
+        return pMinusMeanTrans * linalg.inv(Sp) * pMinusMeanTrans
 
     def matchModelPointsToTargetPoints(self, landmarkY):
         # 1. initialize the shape parameters, b, to zero

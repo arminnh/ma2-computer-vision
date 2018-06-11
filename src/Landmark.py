@@ -130,6 +130,7 @@ class Landmark:
             raise Exception("Need radiograph for gray level profile")
 
         grayLevelProfiles = {}
+        normalizedGrayLevelProfiles = {}
 
         points = self.getPointsAsTuples()
         for i, point in enumerate(points):
@@ -146,6 +147,8 @@ class Landmark:
             # Derivative profile of length n_p - 1
             pixels = np.diff(pixels)
 
+            grayLevelProfiles[i] = pixels
+
             # Normalized derivative profile
             print("i {}, derivated profile: {}, divisor: {}".format(i, list(pixels), np.sum(np.abs(pixels))), end=", ")
             scale = np.sum(np.abs(pixels))
@@ -153,9 +156,9 @@ class Landmark:
                 pixels = pixels / scale
             print("normalized profile: {}".format(list(pixels)))
 
-            grayLevelProfiles[i] = pixels
+            normalizedGrayLevelProfiles[i] = pixels
 
-        return grayLevelProfiles
+        return grayLevelProfiles, normalizedGrayLevelProfiles
 
 
 def loadLandmarkPoints(filename):
