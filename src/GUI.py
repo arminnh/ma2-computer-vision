@@ -1,9 +1,9 @@
 ## Based on code from: https://github.com/Cartucho/OpenLabeling
-import cv2
-import numpy as np
-from preprocess_img import *
-import scipy.interpolate
 import math
+
+from preprocess_img import *
+
+
 class GUI:
 
     def __init__(self, radiographs, models):
@@ -87,10 +87,11 @@ class GUI:
         radiograph = self.radiographs[self.current_radiograph_index]
         self.img = PILtoCV(radiograph.image)
         cv2.displayOverlay(self.GUI_NAME, "Showing image "
-                                        "" + str(self.current_radiograph_index) + "/"
-                                                              "" + str(self.last_radiograph_index), 1000)
+                                          "" + str(self.current_radiograph_index) + "/"
+                                                                                    "" + str(
+            self.last_radiograph_index), 1000)
 
-    def drawEdges(self,tmp_img):
+    def drawEdges(self, tmp_img):
         blur = cv2.bilateralFilter(tmp_img, 3, 75, 75)
         edges = cv2.Canny(blur, 20, 60)
         edges = cv2.cvtColor(edges, cv2.COLOR_GRAY2RGB)
@@ -99,14 +100,14 @@ class GUI:
         # tmp_img = cv2.addWeighted(tmp_img, 1 - edges_val, edges, edges_val, 0)
         return tmp_img
 
-    def decreaseIndex(self,current_index, last_index):
+    def decreaseIndex(self, current_index, last_index):
         self.preprocess = False
         current_index -= 1
         if current_index < 0:
             current_index = last_index
         return current_index
 
-    def increaseIndex(self,current_index, last_index):
+    def increaseIndex(self, current_index, last_index):
         current_index += 1
         self.preprocess = False
 
@@ -115,14 +116,14 @@ class GUI:
         return current_index
 
     def getSlope(self, p1, p2):
-        (x1,y1) = p1
-        (x2,y2) = p2
-        return (y2-y1)/(x2-x1)
+        (x1, y1) = p1
+        (x2, y2) = p2
+        return (y2 - y1) / (x2 - x1)
 
-    def _rotate(self,m, theta):
+    def _rotate(self, m, theta):
         return (math.sin(theta) + m * math.cos(theta)) / (math.cos(theta) - m * math.sin(theta))
 
-    def _getMyPerpendicular(self,m1, m2, theta):
+    def _getMyPerpendicular(self, m1, m2, theta):
         m3 = self._rotate(m2, theta / 2)
         m4 = self._rotate(m2, -theta / 2)
         if round(math.atan(abs((m1 - m3) / (1 + m1 * m3))), 6) == round(theta / 2, 6):
@@ -131,7 +132,7 @@ class GUI:
             return m4
 
     # mouse callback function
-    def mouseListener(self,event, x, y, flags, param):
+    def mouseListener(self, event, x, y, flags, param):
         global mouse_x, mouse_y
 
         if event == cv2.EVENT_MOUSEMOVE:
@@ -145,9 +146,9 @@ class GUI:
 
                 for i in range(len(movedMean)):
 
-                    m1 = self.getSlope(movedMean[i-1], movedMean[i])
-                    m2 = self.getSlope(movedMean[i], movedMean[(i+1)%len(movedMean)])
-                    theta = math.atan(abs( (m1-m2)/(1+m1*m2) ))
+                    m1 = self.getSlope(movedMean[i - 1], movedMean[i])
+                    m2 = self.getSlope(movedMean[i], movedMean[(i + 1) % len(movedMean)])
+                    theta = math.atan(abs((m1 - m2) / (1 + m1 * m2)))
 
                     x2, y2 = self.getXYForSlope(i, m1, m2, movedMean, theta, y)
 
@@ -158,9 +159,9 @@ class GUI:
                                  (255, 0, 0), 3)
 
                     origin = (int(movedMean[i][0]), int(movedMean[i][1]))
-                    end = (int(movedMean[(i+1)%len(movedMean)][0]), int(movedMean[(i+1)%len(movedMean)][1]))
+                    end = (int(movedMean[(i + 1) % len(movedMean)][0]), int(movedMean[(i + 1) % len(movedMean)][1]))
 
-                    cv2.line(self.img, origin, end, (0,0,255), 3)
+                    cv2.line(self.img, origin, end, (0, 0, 255), 3)
 
     def getXYForSlope(self, i, m1, m2, movedMean, theta, y):
         x2 = []
@@ -178,9 +179,9 @@ class GUI:
         radiograph = self.radiographs[self.current_radiograph_index]
         if not self.preprocess:
             self.img = radiograph.preprocessRadiograph([
-            PILtoCV,
-            bilateralFilter,
-            applyCLAHE])
+                PILtoCV,
+                bilateralFilter,
+                applyCLAHE])
         else:
             self.img = PILtoCV(radiograph.image)
 
