@@ -43,6 +43,27 @@ class Radiograph:
 
         img.show()
 
+    def plotLandMarksWithGrayLevelModels(self):
+        import matplotlib.pyplot as plt
+        import numpy as np
+        plt.figure()
+
+        for toothNumber, landmark in self.landmarks.items():
+            # PIL can't work with numpy arrays so convert to list of tuples
+            p = landmark.getPointsAsTuples()
+            plt.plot(p[:, 0], p[:, 1], 'x', label="tooth " + str(toothNumber))
+
+            pixelsToSample = 10
+            profiles = landmark.grayLevelProfileForAllPoints(pixelsToSample)
+            for i, profile in profiles.items():
+                x = p[i, 0]
+                y = np.repeat(p[i, 1], pixelsToSample)
+                Xs = np.arange(x-pixelsToSample/2, x+pixelsToSample/2)
+                plt.scatter(x=Xs, y=y, c=profile)
+
+        plt.legend()
+        plt.show()
+
     def showWithSegments(self):
         for segment in self.segments.values():
             segment.image.show()

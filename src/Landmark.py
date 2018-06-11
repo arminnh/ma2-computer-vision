@@ -101,7 +101,7 @@ class Landmark:
 
         return Landmark(superimposed.points, self.radiographFilename, self.toothNumber), theta, s
 
-    def grayLevelProfileForAllPoints(self, sampleAmount):
+    def grayLevelProfileForAllPoints(self, pixelsToSample):
         """
         For every landmark point j (all points in this landmark) in the image i (the radiograph of this landmark) of
         the training set, we extract a gray level profile g_ij of length n_p pixels, centered around the landmark point.
@@ -118,9 +118,13 @@ class Landmark:
         points = self.getPointsAsTuples()
         for i, point in enumerate(points):
             # Build gray level profile by sampling a few points on each side of the point.
-            profile = util.sampleNormalLine(points[i - 1], point, points[(i + 1) % len(points)], pixels=sampleAmount)
 
-            # Create X sampling values based on size of slope.
+            # Sample points on normal line of the current landmark point
+            pointsOnNormalLine = util.sampleNormalLine(points[i - 1], point, points[(i + 1) % len(points)],
+                                                       pixelsToSample=pixelsToSample)
+
+            # Get pixel values on the sampled positions
+
 
             # Derivative profile of length n_p - 1
 

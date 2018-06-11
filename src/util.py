@@ -3,8 +3,8 @@ import math
 import os
 
 import numpy as np
-from PIL import Image
 import scipy.interpolate
+from PIL import Image
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "resources", "data")
 
@@ -109,26 +109,23 @@ def getSlopeOfInnerBisector(m1, m2):
         return -1 / m4
 
 
-def sampleNormalLine(before, current, nextt, pixels=None):
+def sampleNormalLine(before, current, nextt, pixelsToSample=None):
     """
     Returns points on the normal line that goes through `current` by calculating the angle between `before` and `next`.
-    :param pixels: If given, samples a certain amount of pixels on each side of `current`
+    :param pixelsToSample: If given, samples a certain amount of pixels on each side of `current`
     """
     xx = np.asarray([before[0], current[0], nextt[0]])
-    yy = np.asarray([before[1],current[1],nextt[1]])
+    yy = np.asarray([before[1], current[1], nextt[1]])
     sorted_xx = xx.argsort()
     # Fuck you scipy and your strictly increasing x values
     xx = xx[sorted_xx] + [0, 0.00000001, 0.00000002]
     yy = yy[sorted_xx]
 
     f = scipy.interpolate.CubicSpline(xx, yy).derivative()
-    m = -1/f(current[0])
+    m = -1 / f(current[0])
 
-    if pixels is not None:
-        # Sample a certain amount of pixels on each side of `current`. Needs to happen relative to size of slope.
-        print("TODO")
-
-    X = np.linspace(int(current[0]) - 10, current[0] + 10, 500)
+    samples = 500
+    X = np.linspace(int(current[0]) - 10, current[0] + 10, samples)
     Y = m * (X - current[0]) + current[1]
 
     filterr = (Y > current[1] - 10) & (Y < current[1] + 10)
@@ -138,5 +135,15 @@ def sampleNormalLine(before, current, nextt, pixels=None):
     if len(X):
         x1, y1 = X[0], Y[0]
         x2, y2 = X[-1], Y[-1]
-        print("LINE LENGTH: ", math.sqrt((x2 - x1)**2 + (y2 - y1)**2))
+        print("LINE LENGTH: ", math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2))
+
+    if pixelsToSample is not None:
+        # TODO: sample in a better way
+        beforeCurrentIdx = np.random.randint(0, round(len(X) / 2), pixelsToSample)
+        afterCurrentIdx = np.random.randint(round(len(X) / 2), len(X), pixelsToSample)
+        beforeCurrentIdx.sort()
+        afterCurrentIdx.sort()
+        X = np.concatenate((X[beforeCurrentIdx], X[afterCurrentIdx]))
+        Y = np.concatenate((Y[beforeCurrentIdx], Y[afterCurrentIdx]))
+
     return X, Y

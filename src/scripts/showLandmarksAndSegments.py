@@ -12,5 +12,5 @@ if __name__ == '__main__':
 
     for r in radiographs:
         r.landmarks = {k: v for k, v in r.landmarks.items() if k in util.UPPER_TEETH & util.CENTRAL_TEETH}
-        r.showWithLandMarks()
+        r.plotLandMarksWithGrayLevelModels()
         time.sleep(0.5)

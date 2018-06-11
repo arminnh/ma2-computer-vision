@@ -127,18 +127,18 @@ class GUI:
             print("click x: {}, y: {}".format(mouse_x, mouse_y))
             # Check contours?
             for m in self.models:
-                movedMean = m.translateAndRescaleMean(x, y).getPointsAsTuples()
+                points = m.translateAndRescaleMean(x, y).getPointsAsTuples()
 
-                for i in range(len(movedMean)):
-                    x2, y2 = util.sampleNormalLine(movedMean[i - 1], movedMean[i], movedMean[(i + 1) % len(movedMean)])
+                for i in range(len(points)):
+                    x2, y2 = util.sampleNormalLine(points[i - 1], points[i], points[(i + 1) % len(points)])
 
                     cv2.line(self.img,
                              (int(x2[0]), int(y2[0])),
                              (int(x2[-1]), int(y2[-1])),
                              (255, 0, 0), 3)
 
-                    origin = (int(movedMean[i][0]), int(movedMean[i][1]))
-                    end = (int(movedMean[(i + 1) % len(movedMean)][0]), int(movedMean[(i + 1) % len(movedMean)][1]))
+                    origin = (int(points[i][0]), int(points[i][1]))
+                    end = (int(points[(i + 1) % len(points)][0]), int(points[(i + 1) % len(points)][1]))
 
                     cv2.line(self.img, origin, end, (0, 0, 255), 3)
 
