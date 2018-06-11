@@ -2,6 +2,8 @@
 import cv2
 import numpy as np
 from preprocess_img import *
+import scipy.interpolate
+import math
 class GUI:
 
     def __init__(self, radiographs, models):
@@ -112,6 +114,11 @@ class GUI:
             current_index = 0
         return current_index
 
+    def getSlope(self, p1, p2):
+        (x1,y1) = p1
+        (x2,y2) = p2
+        return (y2-y1)/(x2-x1)
+
     # mouse callback function
     def mouseListener(self,event, x, y, flags, param):
         global mouse_x, mouse_y
@@ -124,8 +131,35 @@ class GUI:
             # Check contours?
             for m in self.models:
                 movedMean = m.translateAndRescaleMean(x, y).getPointsAsTuples()
+                extendedMean = np.concatenate((movedMean, [movedMean[0]]))
+                dydx = np.diff(extendedMean[:,1]) / np.diff(extendedMean[:,0])
+                #dydx2 = np.flip(np.diff(np.flip(extendedMean[:, 1], axis=0)) / np.diff(np.flip(extendedMean[:, 0], axis=0)), axis=0)
 
                 for i in range(len(movedMean)):
+                    x2 = np.linspace(int(movedMean[i][0]- 10),int(movedMean[i][0]+10),num=20)
+                    # y = -1/(dydx2[i]) * (x2- movedMean[i][0]) + movedMean[i][1]
+                    # for k in range(len(x2)-1):
+                    #     cv2.line(self.img, (int(x2[k]), int(y[k])), (int(x2[k+1]), int(y[k+1])), (0, 255, 0), 3)
+
+                    m1,m2 = self.getSlope(movedMean[i-1], movedMean[i]), self.getSlope(movedMean[i], movedMean[(i+1)%len(movedMean)])
+                    theta = math.atan(abs( (m1-m2)/(1+m1*m2) ))
+                    def rotate(m, theta):
+                        return (math.sin(theta)  + m *math.cos(theta))/(math.cos(theta) - m * math.sin(theta))
+
+                    def getMyPerpendicular(m1, m2, theta):
+                        m3 = rotate(m2, theta/2)
+                        m4 = rotate(m2, -theta/2)
+                        if round(math.atan(abs( (m1-m3)/(1+m1*m3) )),6) == round(theta /2,6):
+                            return m3
+                        elif round(math.atan(abs( (m1-m4)/(1+m1*m4) )),6) == round(theta /2,6):
+                            return m4
+                        else:
+                            print("WHTTTTTF")
+
+                    y = -1/getMyPerpendicular(m1,m2,theta) * (x2 - movedMean[i][0]) + movedMean[i][1]
+                    for k in range(len(x2) - 1):
+                        cv2.line(self.img, (int(x2[k]), int(y[k])), (int(x2[k + 1]), int(y[k + 1])), (255, 0, 0), 3)
+
                     origin = (int(movedMean[i][0]), int(movedMean[i][1]))
                     end = (int(movedMean[(i+1)%len(movedMean)][0]), int(movedMean[(i+1)%len(movedMean)][1]))
 
