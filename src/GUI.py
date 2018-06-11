@@ -119,6 +119,17 @@ class GUI:
         (x2,y2) = p2
         return (y2-y1)/(x2-x1)
 
+    def _rotate(self,m, theta):
+        return (math.sin(theta) + m * math.cos(theta)) / (math.cos(theta) - m * math.sin(theta))
+
+    def _getMyPerpendicular(self,m1, m2, theta):
+        m3 = self._rotate(m2, theta / 2)
+        m4 = self._rotate(m2, -theta / 2)
+        if round(math.atan(abs((m1 - m3) / (1 + m1 * m3))), 6) == round(theta / 2, 6):
+            return m3
+        elif round(math.atan(abs((m1 - m4) / (1 + m1 * m4))), 6) == round(theta / 2, 6):
+            return m4
+
     # mouse callback function
     def mouseListener(self,event, x, y, flags, param):
         global mouse_x, mouse_y
@@ -131,54 +142,37 @@ class GUI:
             # Check contours?
             for m in self.models:
                 movedMean = m.translateAndRescaleMean(x, y).getPointsAsTuples()
-                extendedMean = np.concatenate((movedMean, [movedMean[0]]))
-                #dydx = np.diff(extendedMean[:,1]) / np.diff(extendedMean[:,0])
-                #dydx2 = np.flip(np.diff(np.flip(extendedMean[:, 1], axis=0)) / np.diff(np.flip(extendedMean[:, 0], axis=0)), axis=0)
 
                 for i in range(len(movedMean)):
-                    # y = -1/(dydx2[i]) * (x2- movedMean[i][0]) + movedMean[i][1]
-                    # for k in range(len(x2)-1):
-                    #     cv2.line(self.img, (int(x2[k]), int(y[k])), (int(x2[k+1]), int(y[k+1])), (0, 255, 0), 3)
 
-                    m1,m2 = self.getSlope(movedMean[i-1], movedMean[i]), self.getSlope(movedMean[i], movedMean[(i+1)%len(movedMean)])
+                    m1 = self.getSlope(movedMean[i-1], movedMean[i])
+                    m2 = self.getSlope(movedMean[i], movedMean[(i+1)%len(movedMean)])
                     theta = math.atan(abs( (m1-m2)/(1+m1*m2) ))
-                    def rotate(m, theta):
-                        return (math.sin(theta)  + m *math.cos(theta))/(math.cos(theta) - m * math.sin(theta))
 
-                    def getMyPerpendicular(m1, m2, theta):
-                        m3 = rotate(m2, theta/2)
-                        m4 = rotate(m2, -theta/2)
-                        if round(math.atan(abs( (m1-m3)/(1+m1*m3) )),6) == round(theta /2,6):
-                            return m3
-                        elif round(math.atan(abs( (m1-m4)/(1+m1*m4) )),6) == round(theta /2,6):
-                            return m4
-
-                    def clipval(v, center, margin=10):
-                        return int(v)#int(np.clip(v, center-margin, center+margin))
-
-                    x2=[]
-                    start = int(movedMean[i][0]) - 10
-                    while start < movedMean[i][0] + 10:
-                        y = -1/getMyPerpendicular(m1,m2,theta) * (start - movedMean[i][0]) + movedMean[i][1]
-                        if(y>movedMean[i][1]-10 and y<movedMean[i][1]+10):
-                            x2.append(start)
-                        start += 0.01
-
-                    y = -1 / getMyPerpendicular(m1, m2, theta) * (np.asarray(x2) - movedMean[i][0]) + movedMean[i][1]
-                    #x2 = x2[(y > movedMean[i][1]-10) & (y < movedMean[i][1]+10) ]
-                    #y = y[(y > movedMean[i][1]-10) & (y < movedMean[i][1]+10) ]
+                    x2, y2 = self.getXYForSlope(i, m1, m2, movedMean, theta, y)
 
                     for k in range(len(x2) - 1):
                         cv2.line(self.img,
-                                 (int(x2[k]), int(y[k])),
-                                 (int(x2[k + 1]), int(y[k + 1])),
+                                 (int(x2[k]), int(y2[k])),
+                                 (int(x2[k + 1]), int(y2[k + 1])),
                                  (255, 0, 0), 3)
-
 
                     origin = (int(movedMean[i][0]), int(movedMean[i][1]))
                     end = (int(movedMean[(i+1)%len(movedMean)][0]), int(movedMean[(i+1)%len(movedMean)][1]))
 
                     cv2.line(self.img, origin, end, (0,0,255), 3)
+
+    def getXYForSlope(self, i, m1, m2, movedMean, theta, y):
+        x2 = []
+        y2 = []
+        start = int(movedMean[i][0]) - 10
+        while start < movedMean[i][0] + 10:
+            y = -1 / self._getMyPerpendicular(m1, m2, theta) * (start - movedMean[i][0]) + movedMean[i][1]
+            if (y > movedMean[i][1] - 10 and y < movedMean[i][1] + 10):
+                x2.append(start)
+                y2.append(y)
+            start += 0.01
+        return x2, y2
 
     def preprocessCurrentRadiograph(self):
         radiograph = self.radiographs[self.current_radiograph_index]
