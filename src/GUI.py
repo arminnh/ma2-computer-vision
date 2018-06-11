@@ -1,7 +1,9 @@
-## Based on code from: https://github.com/Cartucho/OpenLabeling
-import cv2
-import numpy as np
+import matplotlib.pyplot as plt
+import scipy.interpolate
+
 from preprocess_img import *
+
+
 class GUI:
 
     def __init__(self, radiographs, models):
@@ -27,7 +29,7 @@ class GUI:
             # clone the img
             tmp_img = self.img.copy()
             height, width = tmp_img.shape[:2]
-            if edges_on == True:
+            if edges_on:
                 # draw edges
                 tmp_img = self.drawEdges(tmp_img)
 
@@ -85,10 +87,11 @@ class GUI:
         radiograph = self.radiographs[self.current_radiograph_index]
         self.img = PILtoCV(radiograph.image)
         cv2.displayOverlay(self.GUI_NAME, "Showing image "
-                                        "" + str(self.current_radiograph_index) + "/"
-                                                              "" + str(self.last_radiograph_index), 1000)
+                                          "" + str(self.current_radiograph_index) + "/"
+                                                                                    "" + str(
+            self.last_radiograph_index), 1000)
 
-    def drawEdges(self,tmp_img):
+    def drawEdges(self, tmp_img):
         blur = cv2.bilateralFilter(tmp_img, 3, 75, 75)
         edges = cv2.Canny(blur, 20, 60)
         edges = cv2.cvtColor(edges, cv2.COLOR_GRAY2RGB)
@@ -97,14 +100,14 @@ class GUI:
         # tmp_img = cv2.addWeighted(tmp_img, 1 - edges_val, edges, edges_val, 0)
         return tmp_img
 
-    def decreaseIndex(self,current_index, last_index):
+    def decreaseIndex(self, current_index, last_index):
         self.preprocess = False
         current_index -= 1
         if current_index < 0:
             current_index = last_index
         return current_index
 
-    def increaseIndex(self,current_index, last_index):
+    def increaseIndex(self, current_index, last_index):
         current_index += 1
         self.preprocess = False
 
@@ -113,7 +116,7 @@ class GUI:
         return current_index
 
     # mouse callback function
-    def mouseListener(self,event, x, y, flags, param):
+    def mouseListener(self, event, x, y, flags, param):
         global mouse_x, mouse_y
 
         if event == cv2.EVENT_MOUSEMOVE:
@@ -125,19 +128,59 @@ class GUI:
             for m in self.models:
                 movedMean = m.translateAndRescaleMean(x, y).getPointsAsTuples()
 
+                x = movedMean[:, 0]
+                y = movedMean[:, 1]
+                print(x.shape, y.shape)
+
+                tck, u = scipy.interpolate.splprep([x, y], u=None, s=0.0, per=1)
+                uNew = np.linspace(u.min(), u.max(), 1000)
+                xNew, yNew = scipy.interpolate.splev(uNew, tck, der=0)
+                xNewDer, yNewDer = scipy.interpolate.splev(uNew, tck, der=1)
+
+                plt.figure()
+                plt.plot(x, y, 'x')
+                plt.plot(xNew, yNew)
+                plt.plot(xNewDer, yNewDer)
+
+                plt.figure()
+                plt.plot(x, y, 'x')
+                plt.plot(xNew, yNew)
+                # plt.plot(xNewDer, yNewDer)
+                for idx in range(99, 1099, 100):
+                    normalOfIdx = idx
+                    slopeForNormal = -1 / yNewDer[normalOfIdx]
+                    print(slopeForNormal)
+                    normalY = slopeForNormal * xNew + yNew[normalOfIdx]
+
+                    plt.plot(xNew[normalOfIdx], yNew[normalOfIdx], 'o')
+                    plt.plot(xNew, normalY)
+                plt.show()
+
+                # for i in range(len(out)):
+                #     origin = (int(x[i]), int(out[i][0]))
+                #     end = (int(x[(i + 1) % len(x)]), int(out[(i + 1) % len(out)][0]))
+                #
+                #     cv2.line(self.img, origin, end, (0, 255, 0), 3)
+                #
+                # for i in range(len(out)):
+                #     origin = (int(x[i]), int(out[i][1]))
+                #     end = (int(x[(i + 1) % len(x)]), int(out[(i + 1) % len(out)][1]))
+                #
+                #     cv2.line(self.img, origin, end, (0, 255, 0), 3)
+
                 for i in range(len(movedMean)):
                     origin = (int(movedMean[i][0]), int(movedMean[i][1]))
-                    end = (int(movedMean[(i+1)%len(movedMean)][0]), int(movedMean[(i+1)%len(movedMean)][1]))
+                    end = (int(movedMean[(i + 1) % len(movedMean)][0]), int(movedMean[(i + 1) % len(movedMean)][1]))
 
-                    cv2.line(self.img, origin, end, (0,0,255), 3)
+                    cv2.line(self.img, origin, end, (0, 0, 255), 3)
 
     def preprocessCurrentRadiograph(self):
         radiograph = self.radiographs[self.current_radiograph_index]
         if not self.preprocess:
             self.img = radiograph.preprocessRadiograph([
-            PILtoCV,
-            bilateralFilter,
-            applyCLAHE])
+                PILtoCV,
+                bilateralFilter,
+                applyCLAHE])
         else:
             self.img = PILtoCV(radiograph.image)
 

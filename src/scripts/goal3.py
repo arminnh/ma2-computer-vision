@@ -1,9 +1,10 @@
 import os
 import sys
-from Radiograph import Radiograph, getRadiographs
-from GUI import GUI
+
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
+from GUI import GUI
+from Radiograph import getRadiographs
 import scripts.goal1
 
 
@@ -18,6 +19,4 @@ if __name__ == '__main__':
     gui = GUI(r, models)
     gui.open()
 
-
-
-    #print(models)
+    # print(models)
