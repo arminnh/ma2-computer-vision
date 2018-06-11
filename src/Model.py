@@ -35,50 +35,11 @@ class Model:
         mean = self.translateMean(x,y)
         return mean
 
-
-    def _covariance(self, data):
-        mean = self.meanLandmark.getPointsAsList()
-
-        S = np.matmul((data-mean).T,(data- mean))
-        print(S/ (len(data)-1))
-        print("numpy")
-        print(np.cov(np.transpose(data)))
-        return S / len(data)
-
-    def getT(self, data):
-        mean = self.meanLandmark.getPointsAsList()
-        mean = np.asarray(mean)
-        D = data - mean
-        S = np.matmul(D, D.T)
-        eigenvalues, eigenvectors = np.linalg.eig(S)
-        sorted_values = np.flip(eigenvalues.argsort(), 0)[:len(data)]
-        eigvals = eigenvalues[sorted_values]
-        eigvectors = eigenvectors[:, sorted_values]
-        return np.matmul(D.T, eigvectors)
-
-
-    def _pca(self, X, number_of_components):
-
-        mean = np.mean(X, 0)
-        X_mean = X - mean
-
-        M = np.dot(X_mean, X_mean.T)
-        print(M.shape)
-        eigenvalues, eigenvectors = np.linalg.eig(M)
-        #eigenvectors = np.dot(X_mean.T, eigenvectors)
-
-        # Get the most important eigenvectors first
-        sorted_values = np.flip(eigenvalues.argsort(), 0)[:number_of_components]
-
-        return [mean, eigenvalues[sorted_values], eigenvectors[:, sorted_values]]
-
-
     def doPCA(self):
         data = [l.getPointsAsList() for l in self.preprocessedLandmarks]
 
         #[m, eigenvalues, self.eigenvectors] = self._pca(data,self.pcaComponents)
 
-        p = PCA(n_components=self.pcaComponents)
 
         S = np.cov(np.transpose(data))
 
@@ -86,15 +47,8 @@ class Model:
         sorted_values = np.flip(eigenvalues.argsort(), 0)[:self.pcaComponents]
         eigvals = eigenvalues[sorted_values]
         eigvectors = eigenvectors[:, sorted_values]
-        print("shape:",eigvectors.shape)
 
-        T = self.getT(data)
-
-
-        #print(S.shape)
-        #covariance = self._covariance(data)
-        #p.fit(data)
-        self.eigenvectors = T
+        self.eigenvectors = eigvectors
 
     def matchModelPointsToTargetPoints(self, landmarkY):
         # 1. initialize the shape parameters, b, to zero
@@ -119,8 +73,7 @@ class Model:
             b = newB
 
     def reconstruct(self):
-        l = self.landmarks[0]
-        print(self.eigenvectors.shape)
+        l = self.preprocessedLandmarks[0]
         b = np.dot(self.eigenvectors.T, l.points - self.meanLandmark.points)
         #b.reshape((self.pcaComponents, -1))
         recon = self.meanLandmark.points + np.dot(self.eigenvectors, b).flatten()
