@@ -17,7 +17,7 @@ class Model:
         self.eigenvectors = np.array([])
         self.meanTheta = None
         self.meanScale = None
-        self.sampleAmount = 5
+        self.sampleAmount = 10
         self.grayLevelModels = {}
         self.normalizedGrayLevelModels = {}
         self.grayLevelModelsInverseCovariances = {}
@@ -89,13 +89,13 @@ class Model:
 
     def mahalanobisDistance(self, profile, landmarkPointIndex):
         """
-        Returns the Mahalanobis distance of a new gray level profile from the built gray level model with index
+        Returns the squared Mahalanobis distance of a new gray level profile from the built gray level model with index
         landmarkPointIndex.
         """
         Sp = self.grayLevelModelsInverseCovariances[landmarkPointIndex]
         pMinusMeanTrans = (profile - self.grayLevelModels[landmarkPointIndex])
 
-        return np.matmul(np.matmul(pMinusMeanTrans.T, Sp), pMinusMeanTrans)
+        return pMinusMeanTrans.T @ Sp @ pMinusMeanTrans
 
     def findBetterFittingLandmark(self, landmark, radiograph):
         """
@@ -162,7 +162,7 @@ class Model:
         print("New model points diff:", diff)
 
         # procrustes_analysis.drawLandmarks([newLandmark], "newLandmark")
-        newLandmark = self.reconstructLandmarkForCoefficients(newB).rotate(-theta).scale(1 / scale).translate(-translateX, -translateY)
+        newLandmark = self.reconstructLandmarkForCoefficients(newB).rotate(-theta).scale(scale).translate(-translateX, -translateY)
 
         return newB, newLandmark
 

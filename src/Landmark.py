@@ -109,9 +109,9 @@ class Landmark:
         """ Returns this landmark superimposed (translated, scaled, and rotated) over another. """
         meanShiftedPoints, translationXY = self.getMeanShiftedPoints()
         theta = self.getThetaForReference(other)
-        s = 1 / self.getScale()
+        s = self.getScale()
 
-        superimposed = self.translate(*translationXY).scale(s).rotate(theta)
+        superimposed = self.translate(*translationXY).scale(1/s).rotate(theta)
 
         return superimposed, translationXY, s, theta
 

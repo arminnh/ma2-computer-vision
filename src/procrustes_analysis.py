@@ -50,7 +50,7 @@ def performProcrustesAnalysis(landmarks: List[Landmark]):
 
     d = 10000
     iteration = 1
-
+    i = 0
     while d > 0.0001:
         # Superimpose all landmarks over the reference
         newLandmarks = []
@@ -59,6 +59,7 @@ def performProcrustesAnalysis(landmarks: List[Landmark]):
             newLandmarks.append(landmark)
             mean_theta += theta
             mean_scale += scale
+            i+=1
 
         landmarks = newLandmarks
 
@@ -74,8 +75,8 @@ def performProcrustesAnalysis(landmarks: List[Landmark]):
 
     # drawLandmarks(landmarks, "after Procrustes")
 
-    mean_theta /= len(landmarks)
-    mean_scale /= len(landmarks)
+    mean_theta /= i
+    mean_scale /= i
     return landmarks, meanLandmark, mean_scale, mean_theta
 
 
