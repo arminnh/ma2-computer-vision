@@ -9,7 +9,7 @@ def equalizeHist(img):
     return cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
 
 def cvToPIL(img):
-     return Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+     return Image.fromarray(img)
 
 def bilateralFilter(img):
     return cv2.bilateralFilter(img, 9, 100, 100)
@@ -23,10 +23,7 @@ def showImg(img):
     return img
 
 def applyCLAHE(img):
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    clahe = cv2.createCLAHE(clipLimit=2)
-    gray = clahe.apply(gray)
-    return cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+    return cv2.createCLAHE(clipLimit=2).apply(img)
 
 def otsu(img):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)

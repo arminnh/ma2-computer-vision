@@ -127,7 +127,7 @@ def sampleNormalLine(m, current, pixelsToSample=None):
 
     x1, y1 = X[0], Y[0]
     x2, y2 = X[-1], Y[-1]
-    print("\nm: {}, dx: {}, line length: {}".format(m, dx, math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)))
+    # print("\nm: {}, dx: {}, line length: {}".format(m, dx, math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)))
 
     if pixelsToSample is not None:
         # TODO: sample in a better way

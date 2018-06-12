@@ -210,11 +210,11 @@ class Landmark:
             grayLevelProfiles[i] = pixels
 
             # Normalized derivative profile
-            print("i {}, derivated profile: {}, divisor: {}".format(i, list(pixels), np.sum(np.abs(pixels))), end=", ")
+            # print("i {}, derivated profile: {}, divisor: {}".format(i, list(pixels), np.sum(np.abs(pixels))), end=", ")
             scale = np.sum(np.abs(pixels))
             if scale != 0:
                 pixels = pixels / scale
-            print("normalized profile: {}".format(list(pixels)))
+            # print("normalized profile: {}".format(list(pixels)))
 
             normalizedGrayLevelProfiles[i] = pixels
             normalPointsOfLandmarkNr[i] = normalPoints

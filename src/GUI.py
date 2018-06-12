@@ -174,7 +174,8 @@ class GUI:
             self.img = radiograph.preprocessRadiograph([
                 PILtoCV,
                 bilateralFilter,
-                applyCLAHE])
+                applyCLAHE
+            ])
         else:
             self.img = PILtoCV(radiograph.image)
 
@@ -184,6 +185,6 @@ class GUI:
         """ Execute an iteration of "matching model points to target points"
         model points are defined by the model, target points by the 'bestLandmark'
         """
-        self.b, self.betterFittingLandmark = self.models[0].matchModelPointsToTargetPoints(self.b, self.betterFittingLandmark)
-        self.betterFittingLandmark = self.models[0].findBetterFittingLandmark(self.betterFittingLandmark, self.radiographs[0])
+        self.betterFittingLandmark = self.models[0].matchModelPointsToTargetPoints(self.betterFittingLandmark)
+        self.betterFittingLandmark = self.models[0].findBetterFittingLandmark(self.betterFittingLandmark, self.radiographs[self.current_radiograph_index])
         self.drawLandMark(self.betterFittingLandmark, (255, 255, 255))

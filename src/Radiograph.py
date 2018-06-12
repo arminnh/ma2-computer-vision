@@ -6,6 +6,9 @@ from PIL import ImageDraw, Image
 import Landmark
 import Segment
 import util
+from preprocess_img import PILtoCV, bilateralFilter, applyCLAHE, cvToPIL
+
+
 
 
 class Radiograph:
@@ -16,6 +19,7 @@ class Radiograph:
         """
         self.filename = filename
         self.image = image  # type: Image
+        self.image = self.preprocessRadiograph()
         self.landmarks = landmarks  # type: Dict[int, Landmark.Landmark]
         self.segments = segments  # type: Dict[int, Segment.Segment]
         self.mirrored = mirrored
@@ -81,7 +85,14 @@ class Radiograph:
         for segment in self.segments.values():
             segment.image.show()
 
-    def preprocessRadiograph(self, transformations):
+    def preprocessRadiograph(self, transformations=None):
+        if transformations is None:
+            transformations = [
+                PILtoCV,
+                bilateralFilter,
+                applyCLAHE,
+                cvToPIL
+            ]
         img = self.image
         for transform in transformations:
             img = transform(img)

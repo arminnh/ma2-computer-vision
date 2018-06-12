@@ -19,7 +19,7 @@ def buildActiveShapeModel(radiographs=None):
 
     # 1.2 Pre-process the landmarks to normalize translation, rotation, and scale differences
     models = []
-    model = Model("test", landmarks=[l for l in allLandmarks if l.toothNumber in [1]])
+    model = Model("test", landmarks=[l for l in allLandmarks if l.toothNumber in [7]])
     model.doProcrustesAnalysis()
     model.buildGrayLevelModels()
     models.append(model)

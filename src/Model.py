@@ -51,6 +51,7 @@ class Model:
 
         self.eigenvalues = eigenvalues[sorted_values]
         self.eigenvectors = eigenvectors[:, sorted_values]
+        print(self.eigenvalues)
         return self
 
     def buildGrayLevelModels(self):
@@ -114,7 +115,7 @@ class Model:
             for profile, normalPoint in profiles:
                 d = self.mahalanobisDistance(profile, pointIdx)
                 distances.append((d, normalPoint))
-                print("Mahalanobis dist: {}, p: {}".format(d, normalPoint))
+                # print("Mahalanobis dist: {}, p: {}".format(d, normalPoint))
 
             bestPoints.append(min(distances, key=lambda x: x[0])[1])
 
@@ -123,48 +124,43 @@ class Model:
     def reconstructLandmarkForCoefficients(self, b):
         return Landmark(self.meanLandmark.points + (self.eigenvectors @ b).flatten())
 
-    def matchModelPointsToTargetPoints(self, b, landmarkY):
-        # procrustes_analysis.drawLandmarks([landmarkY], "landmarkY")
+    def matchModelPointsToTargetPoints(self, landmarkY):
+        b = np.zeros((self.pcaComponents, 1))
+        diff = float("inf")
+        translateX = 0
+        translateY = 0
+        theta = 0
+        scale = 0
 
-        # 1. initialize the shape parameters, b, to zero
-        # b = np.zeros((self.pcaComponents, 1))
-        # diff = float("inf")
-        # i = 0
+        iii = 0
+        while diff > 1e-9:
+            iii += 1
 
-        # while diff > 1:
-        # i += 1
+            # Generate model points using x = x' + Pb
+            x = self.reconstructLandmarkForCoefficients(b)
 
-        # Generate model points using x = x' + Pb
-        x = self.reconstructLandmarkForCoefficients(b)
-        # procrustes_analysis.drawLandmarks([x], "x")
+            # Project Y into the model coordinate frame by superimposition
+            # and get the parameters of the transformation
+            y, (translateX, translateY), scale, theta = landmarkY.superimpose(x)
 
-        # Project Y into the model coordinate frame by superimposition and return the parameters of the transformation
-        y, (translateX, translateY), scale, theta = landmarkY.superimpose(x)
-        print((translateX, translateY), scale, theta)
-        # procrustes_analysis.drawLandmarks([y], "y")
+            # TODO ??? Project y into the tangent plane to x_mean by scaling: y' = y / (y x_mean)
+            y.points /= y.points.dot(self.meanLandmark.points)
 
-        # TODO ??? Project y into the tangent plane to x_mean by scaling: y' = y / (y x_mean)
-        y.points = y.points / np.dot(y.points, self.meanLandmark.points)
+            # Update the model parameters b
+            newB = (self.eigenvectors.T @ (y.points - self.meanLandmark.points)).reshape((self.pcaComponents, -1))
 
-        # Update the model parameters b
-        print((y.points - self.meanLandmark.points))
-        newB = self.eigenvectors.T @ (y.points - self.meanLandmark.points)
-        newB = newB.reshape((self.pcaComponents, -1))
-        for i in range(len(newB)):
-            limit = 2*np.sqrt(self.eigenvalues[i])
-            prev = newB[i]
-            newB[i] = np.clip(newB[i], -limit, limit)
-            print("prev: {}, now: {}, {}".format(prev, newB[i], limit))
+            for i in range(len(newB)):
+                limit = 2 * np.sqrt(abs(self.eigenvalues[i]))
+                prev = newB[i]
+                newB[i] = np.clip(newB[i], -limit, limit)
+                print("prev: {}, now: {}, {}".format(prev, newB[i], limit))
 
+            diff = scipy.spatial.distance.euclidean(b, newB)
+            b = newB
+            print("i: {}, b diff: {}".format(iii, diff))
 
-        diff = scipy.spatial.distance.euclidean(b, newB)
-        # b = newB
-        print("New model points diff:", diff)
-
-        # procrustes_analysis.drawLandmarks([newLandmark], "newLandmark")
-        newLandmark = self.reconstructLandmarkForCoefficients(newB).rotate(-theta).scale(scale).translate(-translateX, -translateY)
-
-        return newB, newLandmark
+        return self.reconstructLandmarkForCoefficients(b) \
+            .rotate(-theta).scale(scale).translate(-translateX, -translateY)
 
     def reconstruct(self):
         """
