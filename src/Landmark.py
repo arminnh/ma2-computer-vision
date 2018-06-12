@@ -110,12 +110,49 @@ class Landmark:
 
         points = self.getPointsAsTuples()
         for i, point in enumerate(points):
-            normalX, normalY = util.sampleNormalLine(points[i - 1], point, points[(i + 1) % len(points)],
-                                                       pixelsToSample=pixelsToSample)
+            m = util.getNormalSlope(points[i - 1], point, points[(i + 1) % len(points)])
+            normalX, normalY = util.sampleNormalLine(m, point, pixelsToSample=pixelsToSample)
 
             lines[i] = normalX, normalY
 
         return lines
+
+    def getGrayLevelProfilesForAllNormalPoints(self, pixelsToSample):
+        if self.radiograph is None:
+            raise Exception("Need radiograph for gray level profile")
+
+        normalizedGrayLevelProfilesWithPoints = {}
+
+        points = self.getPointsAsTuples()
+        for i, point in enumerate(points):
+            # Build gray level profile by sampling a few points on each side of the point.
+
+            # Sample points on normal line of the current landmark point
+            m = util.getNormalSlope(points[i - 1], point, points[(i + 1) % len(points)])
+            normalPoints = util.sampleNormalLine(m,point,pixelsToSample=pixelsToSample)
+            normalizedGrayLevelProfilesWithPoints[i] = []
+
+            # Loop over the sampled points
+            # We need to get the gray level profile of all these points
+            for normalPoint in normalPoints:
+                # Get pixel values on the sampled positions
+                p2 = util.sampleNormalLine(m, normalPoint, pixelsToSample=pixelsToSample)
+
+                img = self.radiograph.image.convert("L")  # type: Image
+                pixels = np.asarray([img.getpixel((x, y)) for (x, y) in p2])
+
+                # Derivative profile of length n_p - 1
+                pixels = np.diff(pixels)
+
+                # Normalized derivative profile
+                scale = np.sum(np.abs(pixels))
+                if scale != 0:
+                    pixels = pixels / scale
+
+                normalizedGrayLevelProfilesWithPoints[i].append([pixels, normalPoint])
+            # print("PROFILES SHAPE: ", pixels.shape)
+
+        return normalizedGrayLevelProfilesWithPoints
 
     def grayLevelProfileForAllPoints(self, pixelsToSample):
         """
@@ -138,8 +175,8 @@ class Landmark:
             # Build gray level profile by sampling a few points on each side of the point.
 
             # Sample points on normal line of the current landmark point
-            normalPoints = util.sampleNormalLine(points[i - 1], point, points[(i + 1) % len(points)],
-                                                       pixelsToSample=pixelsToSample)
+            m = util.getNormalSlope(points[i - 1], point, points[(i + 1) % len(points)])
+            normalPoints = util.sampleNormalLine(m,point,pixelsToSample=pixelsToSample)
 
             # Get pixel values on the sampled positions
             img = self.radiograph.image.convert("L")  # type: Image

@@ -109,23 +109,11 @@ def getSlopeOfInnerBisector(m1, m2):
         return -1 / m4
 
 
-def sampleNormalLine(before, current, nextt, pixelsToSample=None):
+def sampleNormalLine(m, current, pixelsToSample=None):
     """
     Returns points on the normal line that goes through `current` by calculating the angle between `before` and `next`.
     :param pixelsToSample: If given, samples a certain amount of pixels on each side of `current`
     """
-    xx = np.asarray([before[0], current[0], nextt[0]])
-    yy = np.asarray([before[1], current[1], nextt[1]])
-    sorted_xx = xx.argsort()
-    # Fuck you scipy and your strictly increasing x values
-    xx = xx[sorted_xx] + [0, 0.00000001, 0.00000002]
-    yy = yy[sorted_xx]
-
-    # y = m x + b
-    f = scipy.interpolate.CubicSpline(xx, yy).derivative()
-    tangentLineSlope = f(current[0])
-    # m = slope of normal line
-    m = -1 / tangentLineSlope if tangentLineSlope != 0 else 0
     x = current[0]
     b = current[1]
     # dx = the distance that can be moved in X for there to be a max distance of 1 in Y
@@ -150,3 +138,17 @@ def sampleNormalLine(before, current, nextt, pixelsToSample=None):
         Y = np.concatenate((Y[beforeCurrentIdx], Y[afterCurrentIdx]))
 
     return X, Y
+
+def getNormalSlope(before, current, nextt):
+    xx = np.asarray([before[0], current[0], nextt[0]])
+    yy = np.asarray([before[1], current[1], nextt[1]])
+    sorted_xx = xx.argsort()
+    # Fuck you scipy and your strictly increasing x values
+    xx = xx[sorted_xx] + [0, 0.00000001, 0.00000002]
+    yy = yy[sorted_xx]
+    # y = m x + b
+    f = scipy.interpolate.CubicSpline(xx, yy).derivative()
+    tangentLineSlope = f(current[0])
+    # m = slope of normal line
+    m = -1 / tangentLineSlope if tangentLineSlope != 0 else 0
+    return m

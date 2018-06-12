@@ -135,7 +135,8 @@ class GUI:
                 points = newLandmark.getPointsAsTuples()
 
                 for i in range(len(points)):
-                    x2, y2 = util.sampleNormalLine(points[i - 1], points[i], points[(i + 1) % len(points)])
+                    m = util.getNormalSlope(points[i - 1], points[i], points[(i + 1) % len(points)])
+                    x2, y2 = util.sampleNormalLine(m, points[i])
 
                     cv2.line(self.img,
                              (int(x2[0]), int(y2[0])),

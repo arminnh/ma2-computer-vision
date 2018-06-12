@@ -85,13 +85,20 @@ class Model:
 
     def findNextBestPoints(self, landmark, radiograph):
         # build gray level profiles for current landmark
-        newLandmark = None
 
         landmark.radiograph = radiograph
-        _, normalizedGrayLevelProfiles, normalPointsOfLandmarkNr = landmark.grayLevelProfileForAllPoints(self.sampleAmount)
-        for landmarkPoint, profile in normalizedGrayLevelProfiles.items():
-            self.mahalanobisDistance(profile, landmarkPoint)
+        normalizedGrayLevelProfilesWithPoints = landmark.getGrayLevelProfilesForAllNormalPoints(self.sampleAmount)
+        bestPoints = []
+        for landmarkPoint, profiles in normalizedGrayLevelProfilesWithPoints.items():
+            distances = []
 
+            for profile, originFromProfile in profiles:
+                distances.append((self.mahalanobisDistance(profile, landmarkPoint), originFromProfile))
+
+            p = min(distances, key=lambda x: x[0])[1]
+            bestPoints.append(p)
+
+        newLandmark = Landmark(np.asarray(bestPoints).flatten())
 
         return newLandmark
 
