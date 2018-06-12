@@ -147,7 +147,7 @@ class GUI:
             origin = (points[i][0], points[i][1])
             end = (points[(i + 1) % len(points)][0], points[(i + 1) % len(points)][1])
 
-            cv2.line(self.img, origin, end, color, 3)
+            cv2.line(self.img, origin, end, color, 1)
 
     def drawLandMarkWithNormals(self, points, color=(0, 0, 255)):
         for i in range(len(points)):

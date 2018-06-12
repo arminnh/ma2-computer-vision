@@ -60,8 +60,8 @@ class Landmark:
         """ Returns the landmark points translated by their means. """
         # https://en.wikipedia.org/wiki/Procrustes_analysis
         p = self.getPointsAsTuples()
-        translateXY = np.mean(p, axis=0)
-        return p - translateXY, translateXY
+        translateXY = -np.mean(p, axis=0)
+        return p + translateXY, translateXY
 
     def getScale(self):
         """ Returns a statistical measure of the object's scale, root mean square distance (RMSD). """

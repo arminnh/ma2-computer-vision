@@ -123,6 +123,8 @@ class Model:
         return Landmark(self.meanLandmark.points + (self.eigenvectors @ b).flatten())
 
     def matchModelPointsToTargetPoints(self, b, landmarkY):
+        # procrustes_analysis.drawLandmarks([landmarkY], "landmarkY")
+
         # 1. initialize the shape parameters, b, to zero
         # b = np.zeros((self.pcaComponents, 1))
         # diff = float("inf")
@@ -133,14 +135,12 @@ class Model:
 
         # Generate model points using x = x' + Pb
         x = self.reconstructLandmarkForCoefficients(b)
-        procrustes_analysis.drawLandmarks([x], "x")
-        procrustes_analysis.drawLandmarks([landmarkY], "landmarkY")
+        # procrustes_analysis.drawLandmarks([x], "x")
 
-        # Project Y into model coordinate frame
-        _, (translateX, translateY), scale, theta = x.superimpose(landmarkY)
-
-        y = landmarkY.rotate(-theta).scale(1 / scale).translate(-translateX, -translateY)
-        procrustes_analysis.drawLandmarks([y], "y")
+        # Project Y into the model coordinate frame by superimposition and return the parameters of the transformation
+        y, (translateX, translateY), scale, theta = landmarkY.superimpose(x)
+        print((translateX, translateY), scale, theta)
+        # procrustes_analysis.drawLandmarks([y], "y")
 
         # TODO ??? Project y into the tangent plane to x_mean by scaling: y' = y / (y x_mean)
         # y.points = y.points / np.dot(y.points, self.meanLandmark.points)
@@ -149,13 +149,12 @@ class Model:
         newB = self.eigenvectors.T @ (y.points - self.meanLandmark.points)
         newB = newB.reshape((self.pcaComponents, -1))
 
-        newLandmark = self.reconstructLandmarkForCoefficients(newB).rotate(theta).scale(scale).translate(translateX, translateY)
-        # procrustes_analysis.drawLandmarks([newLandmark], "newLandmark iteration: " + str(i))
+        newLandmark = self.reconstructLandmarkForCoefficients(newB).rotate(-theta).scale(1 / scale).translate(-translateX, -translateY)
         diff = scipy.spatial.distance.euclidean(landmarkY.points, newLandmark.points)
         # b = newB
         print("New model points diff:", diff)
 
-        procrustes_analysis.drawLandmarks([newLandmark], "newLandmark")
+        # procrustes_analysis.drawLandmarks([newLandmark], "newLandmark")
 
         return newB, newLandmark
 
