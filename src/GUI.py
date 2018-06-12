@@ -16,13 +16,16 @@ class GUI:
         self.mouse_y = 0
         self.preprocess = False
         self.models = models
-        self.nextBestLandmark = None
+        self.betterFittingLandmark = None
         self.b = np.zeros((20, 1))
 
     def open(self):
         self._createWindow()
 
-        TRACKBAR_IMG = self._initTrackBar()
+        self.changeImgIndex(0)
+
+        if len(self.radiographs) > 1:
+            TRACKBAR_IMG = self._initTrackBar()
 
         edges_on = False
 
@@ -76,8 +79,6 @@ class GUI:
         # selected image
         TRACKBAR_IMG = 'Image'
         cv2.createTrackbar(TRACKBAR_IMG, self.GUI_NAME, 0, self.last_radiograph_index, self.changeImgIndex)
-        # initialize
-        self.changeImgIndex(0)
         return TRACKBAR_IMG
 
     def _createWindow(self):
@@ -134,11 +135,10 @@ class GUI:
                 newLandmark = m.getTranslatedAndInverseScaledMean(x, y)
                 radiograph = self.radiographs[self.current_radiograph_index]
 
-                # self.nextBestLandmark = m.findNextBestPoints(newLandmark, radiograph)
-                self.nextBestLandmark = newLandmark
+                self.betterFittingLandmark = m.findBetterFittingLandmark(newLandmark, radiograph)
 
                 self.drawLandMarkWithNormals(newLandmark.getPointsAsTuples())
-                self.drawLandMarkWithNormals(self.nextBestLandmark.getPointsAsTuples(), (200, 200, 100))
+                self.drawLandMarkWithNormals(self.betterFittingLandmark.getPointsAsTuples(), (200, 200, 100))
 
     def drawLandMark(self, landmark, color=(0, 0, 255)):
         points = landmark.getPointsAsTuples().round().astype(int)
@@ -182,5 +182,6 @@ class GUI:
         """ Execute an iteration of "matching model points to target points"
         model points are defined by the model, target points by the 'bestLandmark'
         """
-        self.b, self.nextBestLandmark = self.models[0].matchModelPointsToTargetPoints(self.b, self.nextBestLandmark)
-        self.drawLandMark(self.nextBestLandmark, (255, 255, 255))
+        self.b, self.betterFittingLandmark = self.models[0].matchModelPointsToTargetPoints(self.b, self.betterFittingLandmark)
+        self.betterFittingLandmark = self.models[0].findBetterFittingLandmark(self.betterFittingLandmark, self.radiographs[0])
+        self.drawLandMark(self.betterFittingLandmark, (255, 255, 255))

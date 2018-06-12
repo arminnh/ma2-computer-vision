@@ -17,7 +17,7 @@ class Model:
         self.eigenvectors = np.array([])
         self.meanTheta = None
         self.meanScale = None
-        self.sampleAmount = 5
+        self.sampleAmount = 10
         self.grayLevelModels = {}
         self.normalizedGrayLevelModels = {}
         self.grayLevelModelsInverseCovariances = {}
@@ -42,6 +42,7 @@ class Model:
     def doPCA(self):
         """ Perform PCA on the landmarks after procrustes analysis and store the eigenvalues and eigenvectors. """
         data = [l.getPointsAsList() for l in self.preprocessedLandmarks]
+        data.append(data[0])
 
         S = np.cov(np.transpose(data))
 
