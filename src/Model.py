@@ -54,7 +54,7 @@ class Model:
     def buildGrayLevelModels(self):
         self.meanGrayLevelModels = {}
         self.normalizedGrayLevels = {}
-        self.grayLevelsCovariances = {}
+        self.grayLevelsInverseCovariances = {}
         for i, points in enumerate(self.meanLandmark.getPointsAsTuples()):
             # Model gray level appearance
             self.normalizedGrayLevels[i] = []
@@ -73,15 +73,15 @@ class Model:
         for pointIndex, mean in self.meanGrayLevelModels.items():
             self.meanGrayLevelModels[pointIndex] = mean / len(self.meanLandmark.getPointsAsTuples())
 
-            self.grayLevelsCovariances[pointIndex] = np.cov(np.transpose(self.normalizedGrayLevels[pointIndex]))
+            self.grayLevelsInverseCovariances[pointIndex] = linalg.inv(np.cov(np.transpose(self.normalizedGrayLevels[pointIndex])))
             #print("COV:",self.grayLevelsCovariances[pointIndex].shape)
 
         return self
 
     def mahalanobisDistance(self, profile, landmarkPointIndex):
-        Sp = self.grayLevelsCovariances[landmarkPointIndex]
+        Sp = self.grayLevelsInverseCovariances[landmarkPointIndex]
         pMinusMeanTrans = (profile - self.meanGrayLevelModels[landmarkPointIndex])
-        res = np.matmul(np.matmul(pMinusMeanTrans.T,linalg.inv(Sp)), pMinusMeanTrans)
+        res = np.matmul(np.matmul(pMinusMeanTrans.T, Sp), pMinusMeanTrans)
         return res
 
     def findNextBestPoints(self, landmark, radiograph):
@@ -107,7 +107,7 @@ class Model:
     def matchModelPointsToTargetPoints(self, landmarkY):
         # 1. initialize the shape parameters, b, to zero
         b = np.zeros((self.pcaComponents, 1))
-        diff = 0
+        diff = float("inf")
 
         while diff > 1:
             # get new LandmarkY
@@ -130,7 +130,7 @@ class Model:
             diff = scipy.spatial.distance.euclidean(b, newB)
             b = newB
 
-        return b
+        return Landmark(self.meanLandmark.points + np.matmul(np.transpose(self.eigenvectors), b).flatten())
 
     def reconstruct(self):
         """
