@@ -127,7 +127,12 @@ class GUI:
             print("click x: {}, y: {}".format(mouse_x, mouse_y))
             # Check contours?
             for m in self.models:
-                points = m.translateAndRescaleMean(x, y).getPointsAsTuples()
+                newLandmark = m.translateAndRescaleMean(x, y)
+                radiograph = self.radiographs[self.current_radiograph_index]
+
+                m.findNextBestPoints(newLandmark, radiograph)
+
+                points = newLandmark.getPointsAsTuples()
 
                 for i in range(len(points)):
                     x2, y2 = util.sampleNormalLine(points[i - 1], points[i], points[(i + 1) % len(points)])

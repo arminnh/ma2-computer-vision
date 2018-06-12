@@ -16,7 +16,6 @@ class Model:
         self.eigenvectors = []
         self.meanTheta = None
         self.meanScale = None
-        self.grayLevelModels = {}
         self.sampleAmount = 5
 
     def doProcrustesAnalysis(self):
@@ -63,7 +62,7 @@ class Model:
             # Get gray level model for each landmark and add it
             for landmark in self.landmarks:
                 # TODO: rekening houden met tooth?
-                grayLevelProfiles, normalizedGrayLevelProfiles = landmark.grayLevelProfileForAllPoints(self.sampleAmount)
+                grayLevelProfiles, normalizedGrayLevelProfiles, _ = landmark.grayLevelProfileForAllPoints(self.sampleAmount)
                 for pointIndex, profile in grayLevelProfiles.items():
                     if pointIndex not in self.meanGrayLevelModels:
                         self.meanGrayLevelModels[pointIndex] = np.zeros(profile.shape)
@@ -79,30 +78,47 @@ class Model:
 
         return self
 
-    def MahalanobisDistance(self, profile, landmarkPointIndex):
+    def mahalanobisDistance(self, profile, landmarkPointIndex):
         Sp = self.grayLevelsCovariances[landmarkPointIndex]
-        pMinusMeanTrans = (profile - self.meanGrayLevelModels[landmarkPointIndex]).T
-        return pMinusMeanTrans * linalg.inv(Sp) * pMinusMeanTrans
+        pMinusMeanTrans = (profile - self.meanGrayLevelModels[landmarkPointIndex])
+        return pMinusMeanTrans * linalg.inv(Sp) * pMinusMeanTrans.T
+
+    def findNextBestPoints(self, landmark, radiograph):
+        # build gray level profiles for current landmark
+        newLandmark = None
+
+        landmark.radiograph = radiograph
+        _, normalizedGrayLevelProfiles, normalPointsOfLandmarkNr = landmark.grayLevelProfileForAllPoints(self.sampleAmount)
+        for landmarkPoint, profile in normalizedGrayLevelProfiles.items():
+            self.mahalanobisDistance(profile, landmarkPoint)
+
+
+        return newLandmark
 
     def matchModelPointsToTargetPoints(self, landmarkY):
         # 1. initialize the shape parameters, b, to zero
         b = np.zeros((self.pcaComponents, 1))
-        converged = False
+        diff = 0
 
-        while not converged:
+        while diff > 1:
+            # get new LandmarkY
+            #getBestMahalanbosShape(...)
+
             # 2. generate the model points using x = x' + Pb
-            newModelPoints = self.meanLandmark.points + np.matmul(np.transpose(self.eigenvectors), b).flatten()
+            x = Landmark(self.meanLandmark.points + np.matmul(np.transpose(self.eigenvectors), b).flatten())
 
             # 3. Find the pose parameters
-
             # 4. Project Y into the model co-ordinate frame by inverting the transformation T
+            landmarkY.normalize()
+            y, theta, scale = landmarkY.superImpose(x)
 
             # 5. Project y into the tangent plane to x' by scaling: y' = y / (y x')
-
+            yPrime = y.points / np.dot(y.points, self.meanLandmark.points)
+            yPrime = Landmark(yPrime)
             # 6. Update the model parameters to match to y'
-            newB = np.matmul(self.eigenvectors, yPrime.points - self.meanLandmark.points)
+            newB = np.matmul(self.eigenvectors.T, yPrime.points - self.meanLandmark.points)
             newB = newB.reshape((self.pcaComponents, -1))
-            converged = scipy.spatial.distance.euclidean(b, newB)
+            diff = scipy.spatial.distance.euclidean(b, newB)
             b = newB
 
         return b
