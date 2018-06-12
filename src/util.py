@@ -137,7 +137,7 @@ def sampleNormalLine(m, current, pixelsToSample=None):
         X = np.concatenate((X[beforeCurrentIdx], X[afterCurrentIdx]))
         Y = np.concatenate((Y[beforeCurrentIdx], Y[afterCurrentIdx]))
 
-    return X, Y
+    return list(zip(X, Y))
 
 def getNormalSlope(before, current, nextt):
     xx = np.asarray([before[0], current[0], nextt[0]])

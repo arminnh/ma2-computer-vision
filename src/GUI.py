@@ -130,23 +130,29 @@ class GUI:
                 newLandmark = m.translateAndRescaleMean(x, y)
                 radiograph = self.radiographs[self.current_radiograph_index]
 
-                m.findNextBestPoints(newLandmark, radiograph)
+                bestLandmark = m.findNextBestPoints(newLandmark, radiograph)
 
                 points = newLandmark.getPointsAsTuples()
 
-                for i in range(len(points)):
-                    m = util.getNormalSlope(points[i - 1], points[i], points[(i + 1) % len(points)])
-                    x2, y2 = util.sampleNormalLine(m, points[i])
+                self.drawLandMarkWithNormals(points)
+                self.drawLandMarkWithNormals(bestLandmark.getPointsAsTuples(), (100,100,100))
 
-                    cv2.line(self.img,
-                             (int(x2[0]), int(y2[0])),
-                             (int(x2[-1]), int(y2[-1])),
-                             (255, 0, 0), 3)
+    def drawLandMarkWithNormals(self, points, color=(0, 0, 255)):
+        for i in range(len(points)):
+            m = util.getNormalSlope(points[i - 1], points[i], points[(i + 1) % len(points)])
+            p = np.asarray(util.sampleNormalLine(m, points[i]))
+            x2 = p[:,0]
+            y2 = p[:,1]
 
-                    origin = (int(points[i][0]), int(points[i][1]))
-                    end = (int(points[(i + 1) % len(points)][0]), int(points[(i + 1) % len(points)][1]))
+            cv2.line(self.img,
+                     (int(x2[0]), int(y2[0])),
+                     (int(x2[-1]), int(y2[-1])),
+                     (255, 0, 0), 3)
 
-                    cv2.line(self.img, origin, end, (0, 0, 255), 3)
+            origin = (int(points[i][0]), int(points[i][1]))
+            end = (int(points[(i + 1) % len(points)][0]), int(points[(i + 1) % len(points)][1]))
+
+            cv2.line(self.img, origin, end, color, 3)
 
     def preprocessCurrentRadiograph(self):
         radiograph = self.radiographs[self.current_radiograph_index]

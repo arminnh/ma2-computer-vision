@@ -111,9 +111,9 @@ class Landmark:
         points = self.getPointsAsTuples()
         for i, point in enumerate(points):
             m = util.getNormalSlope(points[i - 1], point, points[(i + 1) % len(points)])
-            normalX, normalY = util.sampleNormalLine(m, point, pixelsToSample=pixelsToSample)
+            normalPoints= util.sampleNormalLine(m, point, pixelsToSample=pixelsToSample)
 
-            lines[i] = normalX, normalY
+            lines[i] = normalPoints
 
         return lines
 
@@ -129,17 +129,17 @@ class Landmark:
 
             # Sample points on normal line of the current landmark point
             m = util.getNormalSlope(points[i - 1], point, points[(i + 1) % len(points)])
-            normalPoints = util.sampleNormalLine(m,point,pixelsToSample=pixelsToSample)
+            normalSamplePoints = util.sampleNormalLine(m,point,pixelsToSample=pixelsToSample)
             normalizedGrayLevelProfilesWithPoints[i] = []
 
             # Loop over the sampled points
             # We need to get the gray level profile of all these points
-            for normalPoint in normalPoints:
+            for normalPoint in normalSamplePoints:
                 # Get pixel values on the sampled positions
                 p2 = util.sampleNormalLine(m, normalPoint, pixelsToSample=pixelsToSample)
 
                 img = self.radiograph.image.convert("L")  # type: Image
-                pixels = np.asarray([img.getpixel((x, y)) for (x, y) in p2])
+                pixels = np.asarray([img.getpixel(p) for p in p2])
 
                 # Derivative profile of length n_p - 1
                 pixels = np.diff(pixels)
@@ -177,10 +177,9 @@ class Landmark:
             # Sample points on normal line of the current landmark point
             m = util.getNormalSlope(points[i - 1], point, points[(i + 1) % len(points)])
             normalPoints = util.sampleNormalLine(m,point,pixelsToSample=pixelsToSample)
-
             # Get pixel values on the sampled positions
             img = self.radiograph.image.convert("L")  # type: Image
-            pixels = np.asarray([img.getpixel((x, y)) for (x, y) in normalPoints])
+            pixels = np.asarray([img.getpixel(p) for p in normalPoints])
 
             # Derivative profile of length n_p - 1
             pixels = np.diff(pixels)

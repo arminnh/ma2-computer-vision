@@ -81,7 +81,8 @@ class Model:
     def mahalanobisDistance(self, profile, landmarkPointIndex):
         Sp = self.grayLevelsCovariances[landmarkPointIndex]
         pMinusMeanTrans = (profile - self.meanGrayLevelModels[landmarkPointIndex])
-        return pMinusMeanTrans * linalg.inv(Sp) * pMinusMeanTrans.T
+        res = pMinusMeanTrans.T * linalg.inv(Sp) * pMinusMeanTrans
+        raise ValueError
 
     def findNextBestPoints(self, landmark, radiograph):
         # build gray level profiles for current landmark
@@ -92,8 +93,9 @@ class Model:
         for landmarkPoint, profiles in normalizedGrayLevelProfilesWithPoints.items():
             distances = []
 
-            for profile, originFromProfile in profiles:
-                distances.append((self.mahalanobisDistance(profile, landmarkPoint), originFromProfile))
+            for profile, normalPoint in profiles:
+                print("Mahal dist:", self.mahalanobisDistance(profile, landmarkPoint), "p:",normalPoint)
+                distances.append((self.mahalanobisDistance(profile, landmarkPoint), normalPoint))
 
             p = min(distances, key=lambda x: x[0])[1]
             bestPoints.append(p)
