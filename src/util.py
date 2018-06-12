@@ -110,7 +110,7 @@ def getSlopeOfInnerBisector(m1, m2):
         return -1 / m4
 
 
-def sampleNormalLine(m, current, pixelsToSample=None):
+def sampleNormalLine(m, current, pixelsToSample):
     """
     Returns points on the normal line that goes through `current` by calculating the angle between `before` and `next`.
     :param pixelsToSample: If given, samples a certain amount of pixels on each side of `current`
@@ -120,23 +120,26 @@ def sampleNormalLine(m, current, pixelsToSample=None):
     # dx = the distance that can be moved in X for there to be a max distance of 1 in Y
     dx = 1 / m if m != 0 else 1
 
-    pixels = 30
-    xOffset = pixels * dx if -1 < dx < 1 else pixels
-    X = np.linspace(x - xOffset, x + xOffset, 2 * pixels)
+    #pixels = 30
+    xOffset = pixelsToSample * dx if -1 < dx < 1 else pixelsToSample
+    pStart = (x - xOffset)
+    pEnd = (x + xOffset)
+    X = np.asarray([pStart + k/(pixelsToSample - 1) * (pEnd - pStart) for k in range(pixelsToSample)])
     Y = m * (X - current[0]) + b
 
-    x1, y1 = X[0], Y[0]
-    x2, y2 = X[-1], Y[-1]
+    # x1, y1 = X[0], Y[0]
+    # x2, y2 = X[-1], Y[-1]
     # print("\nm: {}, dx: {}, line length: {}".format(m, dx, math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)))
 
-    if pixelsToSample is not None:
-        # TODO: sample in a better way
-        beforeCurrentIdx = np.random.randint(0, round(len(X) / 2), pixelsToSample)
-        afterCurrentIdx = np.random.randint(round(len(X) / 2), len(X), pixelsToSample)
-        beforeCurrentIdx.sort()
-        afterCurrentIdx.sort()
-        X = np.concatenate((X[beforeCurrentIdx], X[afterCurrentIdx]))
-        Y = np.concatenate((Y[beforeCurrentIdx], Y[afterCurrentIdx]))
+    # if pixelsToSample is not None:
+    #     # TODO: sample in a better way
+    #
+    #     beforeCurrentIdx = np.random.randint(0, round(len(X) / 2), pixelsToSample)
+    #     afterCurrentIdx = np.random.randint(round(len(X) / 2), len(X), pixelsToSample)
+    #     beforeCurrentIdx.sort()
+    #     afterCurrentIdx.sort()
+    #     X = np.concatenate((X[beforeCurrentIdx], X[afterCurrentIdx]))
+    #     Y = np.concatenate((Y[beforeCurrentIdx], Y[afterCurrentIdx]))
 
     return list(zip(X, Y))
 

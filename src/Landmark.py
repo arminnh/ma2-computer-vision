@@ -156,11 +156,11 @@ class Landmark:
                 # Get pixel values on the sampled positions
                 p2 = util.sampleNormalLine(m, normalPoint, pixelsToSample=pixelsToSample)
 
-                img = self.radiograph.image.convert("L")  # type: Image
+                img = self.radiograph.image#.convert("L")  # type: Image
                 pixels = np.asarray([img.getpixel(p) for p in p2])
 
                 # Derivative profile of length n_p - 1
-                pixels = np.diff(pixels)
+                pixels = np.asarray([pixels[i+1] - pixels[i-1] for i in range(len(pixels)-1)])#np.diff(pixels)
 
                 # Normalized derivative profile
                 scale = np.sum(np.abs(pixels))
@@ -205,7 +205,7 @@ class Landmark:
             pixels = np.asarray([img.getpixel(p) for p in normalPoints])
 
             # Derivative profile of length n_p - 1
-            pixels = np.diff(pixels)
+            pixels = np.asarray([pixels[i+1] - pixels[i-1] for i in range(len(pixels)-1)])#np.diff(pixels)
 
             grayLevelProfiles[i] = pixels
 

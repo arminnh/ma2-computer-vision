@@ -17,10 +17,10 @@ class Model:
         self.eigenvectors = np.array([])
         self.meanTheta = None
         self.meanScale = None
-        self.sampleAmount = 10
-        self.grayLevelModels = {}
-        self.normalizedGrayLevelModels = {}
-        self.grayLevelModelsInverseCovariances = {}
+        self.sampleAmount = 20
+        self.y_ij = {}
+        self.y_j_bar = {}
+        self.C_yj = {}
 
     def doProcrustesAnalysis(self):
         # procrustes_analysis.drawLandmarks(self.landmarks, "before")
@@ -79,8 +79,6 @@ class Model:
 
                     self.normalizedGrayLevelModels[i].append(normalizedGrayLevelProfiles[pointIndex])
 
-        for pointIndex, summ in self.grayLevelModels.items():
-            self.grayLevelModels[pointIndex] = summ / len(self.meanLandmark.getPointsAsTuples())
 
             self.grayLevelModelsInverseCovariances[pointIndex] = linalg.inv(
                 np.cov(np.transpose(self.normalizedGrayLevelModels[pointIndex]))
@@ -109,13 +107,15 @@ class Model:
         grayLevelProfiles = landmark.getGrayLevelProfilesForAllNormalPoints(self.sampleAmount)
 
         bestPoints = []
-        for pointIdx, profiles in grayLevelProfiles.items():
+        for pointIdx in range(len(grayLevelProfiles)):
+
+            profiles = grayLevelProfiles[pointIdx]
             distances = []
 
             for profile, normalPoint in profiles:
                 d = self.mahalanobisDistance(profile, pointIdx)
                 distances.append((d, normalPoint))
-                # print("Mahalanobis dist: {}, p: {}".format(d, normalPoint))
+                print("Mahalanobis dist: {}, p: {}".format(d, normalPoint))
 
             bestPoints.append(min(distances, key=lambda x: x[0])[1])
 
@@ -123,6 +123,28 @@ class Model:
 
     def reconstructLandmarkForCoefficients(self, b):
         return Landmark(self.meanLandmark.points + (self.eigenvectors @ b).flatten())
+
+    def allignTwoShapes(self, l1, l2):
+        import math
+        """
+        :param x1:
+        :param x2: the reference
+        :return:
+        """
+        x2_center = np.mean(l2.getPointsAsTuples(), axis=0)
+        x1_center = np.mean(l1.getPointsAsTuples(), axis=0)
+        moveDist = x2_center - x1_center
+        l1 = l1.translate(*moveDist).getPointsAsTuples()
+        l2 = l2.getPointsAsTuples()
+
+        normSq = (np.linalg.norm(l1.flatten()) ** 2)
+        a = (l1.flatten() @ l2.flatten()) / normSq
+        b = np.sum([l1[i][0] * l2[i][1] - l1[i][1] * l2[i][0] for i in range(len(l1))]) / normSq
+
+        s = np.sqrt(a**2 + b**2)
+        theta = math.atan(b/a)
+
+        return moveDist, s, theta
 
     def matchModelPointsToTargetPoints(self, landmarkY):
         b = np.zeros((self.pcaComponents, 1))
@@ -133,6 +155,8 @@ class Model:
         scale = 0
 
         iii = 0
+        #procrustes_analysis.drawLandmarks([landmarkY], "landmarkY")
+
         while diff > 1e-9:
             iii += 1
 
@@ -142,6 +166,10 @@ class Model:
             # Project Y into the model coordinate frame by superimposition
             # and get the parameters of the transformation
             y, (translateX, translateY), scale, theta = landmarkY.superimpose(x)
+            #(translateX, translateY), scale, theta = self.allignTwoShapes(x, landmarkY)
+            #y = landmarkY.translate(-translateX,-translateY).scale(1 / scale).rotate(-theta)
+
+            #procrustes_analysis.drawLandmarks([y], "help me")
 
             # TODO ??? Project y into the tangent plane to x_mean by scaling: y' = y / (y x_mean)
             y.points /= y.points.dot(self.meanLandmark.points)

@@ -137,7 +137,7 @@ class GUI:
 
                 self.betterFittingLandmark = m.findBetterFittingLandmark(newLandmark, radiograph)
 
-                self.drawLandMark(newLandmark)
+                self.drawLandMarkWithNormals(newLandmark)
                 self.drawLandMark(self.betterFittingLandmark, (200, 200, 100))
 
     def drawLandMark(self, landmark, color=(0, 0, 255)):
@@ -154,14 +154,15 @@ class GUI:
 
         for i in range(len(points)):
             m = util.getNormalSlope(points[i - 1], points[i], points[(i + 1) % len(points)])
-            p = np.asarray(util.sampleNormalLine(m, points[i]))
+            p = np.asarray(util.sampleNormalLine(m, points[i], 20))
             x2 = p[:, 0]
             y2 = p[:, 1]
 
-            cv2.line(self.img,
-                     (int(x2[0]), int(y2[0])),
-                     (int(x2[-1]), int(y2[-1])),
-                     (255, 0, 0), 3)
+            for j in range(len(x2)):
+                cv2.line(self.img,
+                         (int(x2[j]), int(y2[j])),
+                         (int(x2[j]), int(y2[j])),
+                         (255, 0, 0), 1)
 
             origin = (int(points[i][0]), int(points[i][1]))
             end = (int(points[(i + 1) % len(points)][0]), int(points[(i + 1) % len(points)][1]))
@@ -186,5 +187,6 @@ class GUI:
         model points are defined by the model, target points by the 'bestLandmark'
         """
         self.betterFittingLandmark = self.models[0].matchModelPointsToTargetPoints(self.betterFittingLandmark)
-        self.betterFittingLandmark = self.models[0].findBetterFittingLandmark(self.betterFittingLandmark, self.radiographs[self.current_radiograph_index])
+        #self.betterFittingLandmark = self.models[0].findBetterFittingLandmark(self.betterFittingLandmark, self.radiographs[self.current_radiograph_index])
         self.drawLandMark(self.betterFittingLandmark, (255, 255, 255))
+        self.betterFittingLandmark = self.models[0].findBetterFittingLandmark(self.betterFittingLandmark, self.radiographs[self.current_radiograph_index])
