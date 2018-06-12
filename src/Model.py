@@ -81,8 +81,8 @@ class Model:
     def mahalanobisDistance(self, profile, landmarkPointIndex):
         Sp = self.grayLevelsCovariances[landmarkPointIndex]
         pMinusMeanTrans = (profile - self.meanGrayLevelModels[landmarkPointIndex])
-        res = pMinusMeanTrans.T * linalg.inv(Sp) * pMinusMeanTrans
-        raise ValueError
+        res = np.matmul(np.matmul(pMinusMeanTrans.T,linalg.inv(Sp)), pMinusMeanTrans)
+        return res
 
     def findNextBestPoints(self, landmark, radiograph):
         # build gray level profiles for current landmark

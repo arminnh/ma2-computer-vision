@@ -59,7 +59,8 @@ def loadRadiographImage(radiographFilename):
 
     # Check if the tif of the current radioID is present in our current tifs
     img = Image.open(filename)
-    return img
+
+    return img.convert("L")
 
 
 def flipToothNumber(n):

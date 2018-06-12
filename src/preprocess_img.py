@@ -49,6 +49,5 @@ def increaseContrast(img):
 def PILtoCV(img):
     img = np.array(img)
     # Change colors from RGB to BGR
-    img = img[:, :, ::-1].copy()
-    return img
+    return img.copy()
 

@@ -135,7 +135,7 @@ class GUI:
                 points = newLandmark.getPointsAsTuples()
 
                 self.drawLandMarkWithNormals(points)
-                self.drawLandMarkWithNormals(bestLandmark.getPointsAsTuples(), (100,100,100))
+                self.drawLandMarkWithNormals(bestLandmark.getPointsAsTuples(), (200,200,100))
 
     def drawLandMarkWithNormals(self, points, color=(0, 0, 255)):
         for i in range(len(points)):
