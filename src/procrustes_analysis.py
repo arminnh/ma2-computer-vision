@@ -24,6 +24,7 @@ def drawLandmarks(landmarks: List[Landmark], title):
     # plt.plot(x1, y1, x2, y2, marker='o')
     ax = plt.gca()
     ax.set_ylim(ax.get_ylim()[::-1])
+    plt.axis("equal")
     plt.show()
 
 

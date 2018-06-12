@@ -149,7 +149,7 @@ class Model:
         newB = self.eigenvectors.T @ (y.points - self.meanLandmark.points)
         newB = newB.reshape((self.pcaComponents, -1))
 
-        newLandmark = self.reconstructLandmarkForCoefficients(newB)
+        newLandmark = self.reconstructLandmarkForCoefficients(newB).rotate(theta).scale(scale).translate(translateX, translateY)
         # procrustes_analysis.drawLandmarks([newLandmark], "newLandmark iteration: " + str(i))
         diff = scipy.spatial.distance.euclidean(landmarkY.points, newLandmark.points)
         # b = newB

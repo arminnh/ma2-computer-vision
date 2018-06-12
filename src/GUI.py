@@ -183,4 +183,4 @@ class GUI:
         model points are defined by the model, target points by the 'bestLandmark'
         """
         self.b, self.nextBestLandmark = self.models[0].matchModelPointsToTargetPoints(self.b, self.nextBestLandmark)
-        self.drawLandMark(self.nextBestLandmark)
+        self.drawLandMark(self.nextBestLandmark, (255, 255, 255))

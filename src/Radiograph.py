@@ -74,6 +74,7 @@ class Radiograph:
         plt.title("Tooters of radiograph {}".format(self.filename))
         ax = plt.gca()
         ax.set_ylim(ax.get_ylim()[::-1])
+        plt.axis("equal")
         plt.show()
 
     def showWithSegments(self):
