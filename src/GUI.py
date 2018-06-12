@@ -137,8 +137,8 @@ class GUI:
 
                 self.betterFittingLandmark = m.findBetterFittingLandmark(newLandmark, radiograph)
 
-                self.drawLandMarkWithNormals(newLandmark.getPointsAsTuples())
-                self.drawLandMarkWithNormals(self.betterFittingLandmark.getPointsAsTuples(), (200, 200, 100))
+                self.drawLandMark(newLandmark)
+                self.drawLandMark(self.betterFittingLandmark, (200, 200, 100))
 
     def drawLandMark(self, landmark, color=(0, 0, 255)):
         points = landmark.getPointsAsTuples().round().astype(int)
@@ -149,7 +149,9 @@ class GUI:
 
             cv2.line(self.img, origin, end, color, 1)
 
-    def drawLandMarkWithNormals(self, points, color=(0, 0, 255)):
+    def drawLandMarkWithNormals(self, landmark, color=(0, 0, 255)):
+        points = landmark.getPointsAsTuples().round().astype(int)
+
         for i in range(len(points)):
             m = util.getNormalSlope(points[i - 1], points[i], points[(i + 1) % len(points)])
             p = np.asarray(util.sampleNormalLine(m, points[i]))
@@ -183,5 +185,5 @@ class GUI:
         model points are defined by the model, target points by the 'bestLandmark'
         """
         self.b, self.betterFittingLandmark = self.models[0].matchModelPointsToTargetPoints(self.b, self.betterFittingLandmark)
-        self.betterFittingLandmark = self.models[0].findBetterFittingLandmark(self.betterFittingLandmark, self.radiographs[0])
+        #self.betterFittingLandmark = self.models[0].findBetterFittingLandmark(self.betterFittingLandmark, self.radiographs[0])
         self.drawLandMark(self.betterFittingLandmark, (255, 255, 255))

@@ -120,7 +120,7 @@ def sampleNormalLine(m, current, pixelsToSample=None):
     # dx = the distance that can be moved in X for there to be a max distance of 1 in Y
     dx = 1 / m if m != 0 else 1
 
-    pixels = 50
+    pixels = 20
     xOffset = pixels * dx if -1 < dx < 1 else pixels
     X = np.linspace(x - xOffset, x + xOffset, 2 * pixels)
     Y = m * (X - current[0]) + b

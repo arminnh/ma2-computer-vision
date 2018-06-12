@@ -17,7 +17,7 @@ class Model:
         self.eigenvectors = np.array([])
         self.meanTheta = None
         self.meanScale = None
-        self.sampleAmount = 10
+        self.sampleAmount = 5
         self.grayLevelModels = {}
         self.normalizedGrayLevelModels = {}
         self.grayLevelModelsInverseCovariances = {}
@@ -144,18 +144,25 @@ class Model:
         # procrustes_analysis.drawLandmarks([y], "y")
 
         # TODO ??? Project y into the tangent plane to x_mean by scaling: y' = y / (y x_mean)
-        # y.points = y.points / np.dot(y.points, self.meanLandmark.points)
+        y.points = y.points / np.dot(y.points, self.meanLandmark.points)
 
         # Update the model parameters b
+        print((y.points - self.meanLandmark.points))
         newB = self.eigenvectors.T @ (y.points - self.meanLandmark.points)
         newB = newB.reshape((self.pcaComponents, -1))
+        for i in range(len(newB)):
+            limit = 2*np.sqrt(self.eigenvalues[i])
+            prev = newB[i]
+            newB[i] = np.clip(newB[i], -limit, limit)
+            print("prev: {}, now: {}, {}".format(prev, newB[i], limit))
 
-        newLandmark = self.reconstructLandmarkForCoefficients(newB).rotate(-theta).scale(1 / scale).translate(-translateX, -translateY)
-        diff = scipy.spatial.distance.euclidean(landmarkY.points, newLandmark.points)
+
+        diff = scipy.spatial.distance.euclidean(b, newB)
         # b = newB
         print("New model points diff:", diff)
 
         # procrustes_analysis.drawLandmarks([newLandmark], "newLandmark")
+        newLandmark = self.reconstructLandmarkForCoefficients(newB).rotate(-theta).scale(1 / scale).translate(-translateX, -translateY)
 
         return newB, newLandmark
 
