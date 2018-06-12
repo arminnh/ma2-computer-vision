@@ -3,29 +3,26 @@ import os
 import re
 
 import numpy as np
+import scipy.interpolate
 from PIL import Image
 
 import util
-import scipy.interpolate
 
 
 class Landmark:
 
-    def __init__(self, points, radiographFilename=None, toothNumber=None):
+    def __init__(self, points, radiographFilename=None, toothNumber=None, radiograph=None):
         self.radiographFilename = radiographFilename
         self.toothNumber = toothNumber
         self.points = points if isinstance(points, np.ndarray) else np.array(points)
-        self.radiograph = None
+        self.radiograph = radiograph
 
     def __str__(self):
         return "Landmark for tooth {} for radiograph {}".format(self.toothNumber, self.radiographFilename)
 
-    def translatePoints(self, x, y):
-        p = self.points.copy()
-        p[0::2] = p[0::2] + x
-        p[1::2] = p[1::2] + y
-
-        return Landmark(p, self.radiographFilename, self.toothNumber)
+    def copy(self, points=None):
+        points = points if points is not None else self.points
+        return Landmark(points, self.radiographFilename, self.toothNumber, self.radiograph)
 
     def getPointsAsTuples(self):
         p = list(self.points)
@@ -35,23 +32,43 @@ class Landmark:
     def getPointsAsList(self):
         return self.points
 
+    def translate(self, x, y):
+        """ Translates the points of the landmark. """
+        p = self.points.copy()
+        p[0::2] = p[0::2] + x
+        p[1::2] = p[1::2] + y
+
+        return self.copy(p)
+
+    def scale(self, s):
+        """ Scales the points in the landmark by a factor s. """
+        return self.copy(self.points * s)
+
+    def rotate(self, theta):
+        """ Rotates the points in the landmark. """
+        new_points = []
+        for p in self.getNormalizedPoints():
+            u = math.cos(theta) * p[0] - math.sin(theta) * p[1]
+            v = math.sin(theta) * p[0] + math.cos(theta) * p[1]
+
+            new_points.append(u)
+            new_points.append(v)
+
+        return self.copy(np.asarray(new_points))
+
     def getMeanShiftedPoints(self):
         """ Returns the landmark points translated by their means. """
         # https://en.wikipedia.org/wiki/Procrustes_analysis
         p = self.getPointsAsTuples()
-        t = np.mean(p, axis=0)
-        return p - t
+        translateXY = np.mean(p, axis=0)
+        return p - translateXY, translateXY
 
     def getScale(self):
         """ Returns a statistical measure of the object's scale, root mean square distance (RMSD). """
         # https://en.wikipedia.org/wiki/Procrustes_analysis
         # TODO: check if this scaling factor is correct, maybe scale using SVD
-        distance = self.getMeanShiftedPoints()
+        distance, _ = self.getMeanShiftedPoints()
         return np.sqrt(np.mean(np.square(distance)))
-
-    def getNormalizedPoints(self):
-        """ Returns an array of normalized landmark points.  """
-        return self.getMeanShiftedPoints() / self.getScale()
 
     def getThetaForReference(self, reference):
         """
@@ -79,29 +96,24 @@ class Landmark:
         """
         return np.sqrt(np.sum(np.square(self.getPointsAsList() - other.getPointsAsList())))
 
+    def getNormalizedPoints(self):
+        """ Returns an array of normalized landmark points.  """
+        meanShiftedPoints, _ = self.getMeanShiftedPoints()
+        return meanShiftedPoints / self.getScale()
+
     def normalize(self):
         """ Normalizes the points in the landmark. """
-        return Landmark(self.getNormalizedPoints().flatten(), self.radiographFilename, self.toothNumber)
-
-    def rotate(self, theta):
-        """ Rotates the points in the landmark. """
-        new_points = []
-        for p in self.getNormalizedPoints():
-            u = math.cos(theta) * p[0] - math.sin(theta) * p[1]
-            v = math.sin(theta) * p[0] + math.cos(theta) * p[1]
-
-            new_points.append(u)
-            new_points.append(v)
-
-        return Landmark(np.asarray(new_points), self.radiographFilename, self.toothNumber)
+        return self.copy(self.getNormalizedPoints().flatten())
 
     def superimpose(self, other):
         """ Returns this landmark superimposed (translated, scaled, and rotated) over another. """
+        meanShiftedPoints, translationXY = self.getMeanShiftedPoints()
         theta = self.getThetaForReference(other)
-        s = self.getScale()
-        superimposed = self.normalize().rotate(theta)
+        s = 1 / self.getScale()
 
-        return Landmark(superimposed.points, self.radiographFilename, self.toothNumber), theta, s
+        superimposed = self.translate(*translationXY).scale(s).rotate(theta)
+
+        return superimposed, translationXY, s, theta
 
     def normalSamplesForAllPoints(self, pixelsToSample):
         """
@@ -112,7 +124,7 @@ class Landmark:
         points = self.getPointsAsTuples()
         for i, point in enumerate(points):
             m = util.getNormalSlope(points[i - 1], point, points[(i + 1) % len(points)])
-            normalPoints= util.sampleNormalLine(m, point, pixelsToSample=pixelsToSample)
+            normalPoints = util.sampleNormalLine(m, point, pixelsToSample=pixelsToSample)
 
             lines[i] = normalPoints
 
@@ -130,12 +142,12 @@ class Landmark:
             # Build gray level profile by sampling a few points on each side of the point.
 
             # Sample points on normal line of the current landmark point
-            #m = util.getNormalSlope(points[i - 1], point, points[(i + 1) % len(points)])
+            # m = util.getNormalSlope(points[i - 1], point, points[(i + 1) % len(points)])
             tangentLineSlope = f(point[0])
             # m = slope of normal line
             m = -1 / tangentLineSlope if tangentLineSlope != 0 else 0
 
-            normalSamplePoints = util.sampleNormalLine(m,point,pixelsToSample=pixelsToSample)
+            normalSamplePoints = util.sampleNormalLine(m, point, pixelsToSample=pixelsToSample)
             normalizedGrayLevelProfilesWithPoints[i] = []
 
             # Loop over the sampled points
@@ -182,12 +194,12 @@ class Landmark:
             # Build gray level profile by sampling a few points on each side of the point.
 
             # Sample points on normal line of the current landmark point
-            #m = util.getNormalSlope(points[i - 1], point, points[(i + 1) % len(points)])
+            # m = util.getNormalSlope(points[i - 1], point, points[(i + 1) % len(points)])
             tangentLineSlope = f(point[0])
             # m = slope of normal line
             m = -1 / tangentLineSlope if tangentLineSlope != 0 else 0
 
-            normalPoints = util.sampleNormalLine(m,point,pixelsToSample=pixelsToSample)
+            normalPoints = util.sampleNormalLine(m, point, pixelsToSample=pixelsToSample)
             # Get pixel values on the sampled positions
             img = self.radiograph.image  # type: Image
             pixels = np.asarray([img.getpixel(p) for p in normalPoints])
@@ -206,7 +218,8 @@ class Landmark:
 
             normalizedGrayLevelProfiles[i] = pixels
             normalPointsOfLandmarkNr[i] = normalPoints
-            #print("PROFILES SHAPE: ", pixels.shape)
+            # print("PROFILES SHAPE: ", pixels.shape)
+
         return grayLevelProfiles, normalizedGrayLevelProfiles, normalPointsOfLandmarkNr
 
     def calculateDerivative(self, points):

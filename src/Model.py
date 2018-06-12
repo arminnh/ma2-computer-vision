@@ -1,9 +1,10 @@
 import numpy as np
 import scipy.spatial.distance
+from scipy import linalg
 
 import procrustes_analysis
 from Landmark import Landmark
-from scipy import linalg
+
 
 class Model:
     def __init__(self, name, landmarks, pcaComponents=20):
@@ -12,35 +13,35 @@ class Model:
         self.meanLandmark = None  # type: Landmark
         self.preprocessedLandmarks = []
         self.pcaComponents = pcaComponents
-        self.eigenvalues = []
-        self.eigenvectors = []
+        self.eigenvalues = np.array([])
+        self.eigenvectors = np.array([])
         self.meanTheta = None
         self.meanScale = None
         self.sampleAmount = 5
+        self.grayLevelModels = {}
+        self.normalizedGrayLevelModels = {}
+        self.grayLevelModelsInverseCovariances = {}
 
     def doProcrustesAnalysis(self):
         # procrustes_analysis.drawLandmarks(self.landmarks, "before")
 
-        self.preprocessedLandmarks, self.meanLandmark, self.meanTheta, self.meanScale \
+        self.preprocessedLandmarks, self.meanLandmark, self.meanScale, self.meanTheta \
             = procrustes_analysis.performProcrustesAnalysis(self.landmarks)
 
         # procrustes_analysis.drawLandmarks(self.preprocessedLandmarks, "after")
         return self
 
-    def translateMean(self, x, y):
-        self.meanLandmark = self.meanLandmark.translatePoints(x, y)
-        return self.meanLandmark
+    def getTranslatedMean(self, x, y):
+        """ Returns the mean landmark translated to x and y. """
+        return self.meanLandmark.translate(x, y)
 
-    def translateAndRescaleMean(self, x, y):
-        self.meanLandmark = self.meanLandmark.normalize()
-        self.meanLandmark.points *= self.meanScale
-        mean = self.translateMean(x, y)
-        return mean
+    def getTranslatedAndInverseScaledMean(self, x, y):
+        """ Returns the mean landmark rescaled back from unit variance (after procrustes) and translated to x and y. """
+        return self.meanLandmark.scale(self.meanScale).translate(x, y)
 
     def doPCA(self):
+        """ Perform PCA on the landmarks after procrustes analysis and store the eigenvalues and eigenvectors. """
         data = [l.getPointsAsList() for l in self.preprocessedLandmarks]
-
-        # [m, eigenvalues, self.eigenvectors] = self._pca(data,self.pcaComponents)
 
         S = np.cov(np.transpose(data))
 
@@ -52,96 +53,123 @@ class Model:
         return self
 
     def buildGrayLevelModels(self):
-        self.meanGrayLevelModels = {}
-        self.normalizedGrayLevels = {}
-        self.grayLevelsInverseCovariances = {}
-        for i, points in enumerate(self.meanLandmark.getPointsAsTuples()):
-            # Model gray level appearance
-            self.normalizedGrayLevels[i] = []
+        """
+        Builds gray level models for each of the tooth's landmark points.
+        Build gray level models for each of the mean landmark points by averaging the gray level profiles for each
+        point of each landmark.
+        """
+        self.grayLevelModels = {}
+        self.normalizedGrayLevelModels = {}
+        self.grayLevelModelsInverseCovariances = {}
 
-            # Get gray level model for each landmark and add it
+        for i in range(len(self.meanLandmark.getPointsAsTuples())):
+            self.normalizedGrayLevelModels[i] = []
+
+            # Build gray level model for each landmark and add it
             for landmark in self.landmarks:
-                # TODO: rekening houden met tooth?
-                grayLevelProfiles, normalizedGrayLevelProfiles, _ = landmark.grayLevelProfileForAllPoints(self.sampleAmount)
+                grayLevelProfiles, normalizedGrayLevelProfiles, _ = \
+                    landmark.grayLevelProfileForAllPoints(self.sampleAmount)
+
                 for pointIndex, profile in grayLevelProfiles.items():
-                    if pointIndex not in self.meanGrayLevelModels:
-                        self.meanGrayLevelModels[pointIndex] = np.zeros(profile.shape)
-                    self.meanGrayLevelModels[pointIndex] += profile
+                    if pointIndex not in self.grayLevelModels:
+                        self.grayLevelModels[pointIndex] = np.zeros(profile.shape)
+                    self.grayLevelModels[pointIndex] += profile
 
-                    self.normalizedGrayLevels[i].append(normalizedGrayLevelProfiles[pointIndex])
+                    self.normalizedGrayLevelModels[i].append(normalizedGrayLevelProfiles[pointIndex])
 
-        for pointIndex, mean in self.meanGrayLevelModels.items():
-            self.meanGrayLevelModels[pointIndex] = mean / len(self.meanLandmark.getPointsAsTuples())
+        for pointIndex, summ in self.grayLevelModels.items():
+            self.grayLevelModels[pointIndex] = summ / len(self.meanLandmark.getPointsAsTuples())
 
-            self.grayLevelsInverseCovariances[pointIndex] = linalg.inv(np.cov(np.transpose(self.normalizedGrayLevels[pointIndex])))
-            #print("COV:",self.grayLevelsCovariances[pointIndex].shape)
+            self.grayLevelModelsInverseCovariances[pointIndex] = linalg.inv(
+                np.cov(np.transpose(self.normalizedGrayLevelModels[pointIndex]))
+            )
 
         return self
 
     def mahalanobisDistance(self, profile, landmarkPointIndex):
-        Sp = self.grayLevelsInverseCovariances[landmarkPointIndex]
-        pMinusMeanTrans = (profile - self.meanGrayLevelModels[landmarkPointIndex])
-        res = np.matmul(np.matmul(pMinusMeanTrans.T, Sp), pMinusMeanTrans)
-        return res
+        """
+        Returns the Mahalanobis distance of a new gray level profile from the built gray level model with index
+        landmarkPointIndex.
+        """
+        Sp = self.grayLevelModelsInverseCovariances[landmarkPointIndex]
+        pMinusMeanTrans = (profile - self.grayLevelModels[landmarkPointIndex])
 
-    def findNextBestPoints(self, landmark, radiograph):
-        # build gray level profiles for current landmark
+        return np.matmul(np.matmul(pMinusMeanTrans.T, Sp), pMinusMeanTrans)
 
+    def findBetterFittingLandmark(self, landmark, radiograph):
+        """
+        Returns a landmark that is a better fit on the image than the given according to the gray level profiles of
+        points of the landmark and the mahalanobis distance.
+        """
         landmark.radiograph = radiograph
-        normalizedGrayLevelProfilesWithPoints = landmark.getGrayLevelProfilesForAllNormalPoints(self.sampleAmount)
+
+        # Get the gray level profiles of points on normal lines of the landmark's points
+        grayLevelProfiles = landmark.getGrayLevelProfilesForAllNormalPoints(self.sampleAmount)
+
         bestPoints = []
-        for landmarkPoint, profiles in normalizedGrayLevelProfilesWithPoints.items():
+        for pointIdx, profiles in grayLevelProfiles.items():
             distances = []
 
             for profile, normalPoint in profiles:
-                print("Mahal dist:", self.mahalanobisDistance(profile, landmarkPoint), "p:",normalPoint)
-                distances.append((self.mahalanobisDistance(profile, landmarkPoint), normalPoint))
+                d = self.mahalanobisDistance(profile, pointIdx)
+                distances.append((d, normalPoint))
+                print("Mahalanobis dist: {}, p: {}".format(d, normalPoint))
 
-            p = min(distances, key=lambda x: x[0])[1]
-            bestPoints.append(p)
+            bestPoints.append(min(distances, key=lambda x: x[0])[1])
 
-        newLandmark = Landmark(np.asarray(bestPoints).flatten())
+        return landmark.copy(np.asarray(bestPoints).flatten())
 
-        return newLandmark
+    def reconstructLandmarkForCoefficients(self, b):
+        return Landmark(self.meanLandmark.points + (self.eigenvectors @ b).flatten())
 
-    def matchModelPointsToTargetPoints(self, landmarkY):
+    def matchModelPointsToTargetPoints(self, b, landmarkY):
         # 1. initialize the shape parameters, b, to zero
-        b = np.zeros((self.pcaComponents, 1))
-        diff = float("inf")
+        # b = np.zeros((self.pcaComponents, 1))
+        # diff = float("inf")
+        # i = 0
 
-        while diff > 1:
-            # get new LandmarkY
-            #getBestMahalanbosShape(...)
+        # while diff > 1:
+        # i += 1
 
-            # 2. generate the model points using x = x' + Pb
-            x = Landmark(self.meanLandmark.points + np.matmul(np.transpose(self.eigenvectors), b).flatten())
+        # Generate model points using x = x' + Pb
+        x = self.reconstructLandmarkForCoefficients(b)
+        procrustes_analysis.drawLandmarks([x], "x")
+        procrustes_analysis.drawLandmarks([landmarkY], "landmarkY")
 
-            # 3. Find the pose parameters
-            # 4. Project Y into the model co-ordinate frame by inverting the transformation T
-            landmarkY.normalize()
-            y, theta, scale = landmarkY.superImpose(x)
+        # Project Y into model coordinate frame
+        _, (translateX, translateY), scale, theta = x.superimpose(landmarkY)
 
-            # 5. Project y into the tangent plane to x' by scaling: y' = y / (y x')
-            yPrime = y.points / np.dot(y.points, self.meanLandmark.points)
-            yPrime = Landmark(yPrime)
-            # 6. Update the model parameters to match to y'
-            newB = np.matmul(self.eigenvectors.T, yPrime.points - self.meanLandmark.points)
-            newB = newB.reshape((self.pcaComponents, -1))
-            diff = scipy.spatial.distance.euclidean(b, newB)
-            b = newB
+        y = landmarkY.rotate(-theta).scale(1 / scale).translate(-translateX, -translateY)
+        procrustes_analysis.drawLandmarks([y], "y")
 
-        return Landmark(self.meanLandmark.points + np.matmul(np.transpose(self.eigenvectors), b).flatten())
+        # TODO ??? Project y into the tangent plane to x_mean by scaling: y' = y / (y x_mean)
+        # y.points = y.points / np.dot(y.points, self.meanLandmark.points)
+
+        # Update the model parameters b
+        newB = self.eigenvectors.T @ (y.points - self.meanLandmark.points)
+        newB = newB.reshape((self.pcaComponents, -1))
+
+        newLandmark = self.reconstructLandmarkForCoefficients(newB)
+        # procrustes_analysis.drawLandmarks([newLandmark], "newLandmark iteration: " + str(i))
+        diff = scipy.spatial.distance.euclidean(landmarkY.points, newLandmark.points)
+        # b = newB
+        print("New model points diff:", diff)
+
+        procrustes_analysis.drawLandmarks([newLandmark], "newLandmark")
+
+        return newB, newLandmark
 
     def reconstruct(self):
         """
         Reconstructs a landmark.
         Be sure to create b for a preprocessed landmark. PCA is done on preprocessed landmarks.
         """
-        l = self.preprocessedLandmarks[0]
-        b = np.dot(self.eigenvectors.T, l.points - self.meanLandmark.points)
-        # b.reshape((self.pcaComponents, -1))
-        reconstruction = self.meanLandmark.points + np.dot(self.eigenvectors, b).flatten()
+        landmark = self.preprocessedLandmarks[0]
+        b = self.eigenvectors.T @ (landmark.points - self.meanLandmark.points)
+        b = b.reshape((self.pcaComponents, -1))
 
-        procrustes_analysis.drawLandmarks([l], "origin")
-        procrustes_analysis.drawLandmarks([Landmark(reconstruction)], "reconstruction")
-        return reconstruction
+        reconstructed = self.reconstructLandmarkForCoefficients(b)
+
+        procrustes_analysis.drawLandmarks([landmark], "origin")
+        procrustes_analysis.drawLandmarks([reconstructed], "reconstructed")
+        return reconstructed

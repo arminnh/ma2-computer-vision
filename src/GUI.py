@@ -1,5 +1,4 @@
 ## Based on code from: https://github.com/Cartucho/OpenLabeling
-import math
 
 import util
 from preprocess_img import *
@@ -17,6 +16,8 @@ class GUI:
         self.mouse_y = 0
         self.preprocess = False
         self.models = models
+        self.nextBestLandmark = None
+        self.b = np.zeros((20, 1))
 
     def open(self):
         self._createWindow()
@@ -61,8 +62,11 @@ class GUI:
             # quit key listener
             elif pressed_key == ord('q'):
                 break
-            """ Key Listeners END """
 
+            elif pressed_key == ord('n'):
+                self.doMatchingModelPointsIteration()
+
+            """ Key Listeners END """
             if cv2.getWindowProperty(self.GUI_NAME, cv2.WND_PROP_VISIBLE) < 1:
                 break
 
@@ -127,22 +131,30 @@ class GUI:
             print("click x: {}, y: {}".format(mouse_x, mouse_y))
             # Check contours?
             for m in self.models:
-                newLandmark = m.translateAndRescaleMean(x, y)
+                newLandmark = m.getTranslatedAndInverseScaledMean(x, y)
                 radiograph = self.radiographs[self.current_radiograph_index]
 
-                bestLandmark = m.findNextBestPoints(newLandmark, radiograph)
+                # self.nextBestLandmark = m.findNextBestPoints(newLandmark, radiograph)
+                self.nextBestLandmark = newLandmark
 
-                points = newLandmark.getPointsAsTuples()
+                self.drawLandMarkWithNormals(newLandmark.getPointsAsTuples())
+                self.drawLandMarkWithNormals(self.nextBestLandmark.getPointsAsTuples(), (200, 200, 100))
 
-                self.drawLandMarkWithNormals(points)
-                self.drawLandMarkWithNormals(bestLandmark.getPointsAsTuples(), (200,200,100))
+    def drawLandMark(self, landmark, color=(0, 0, 255)):
+        points = landmark.getPointsAsTuples().round().astype(int)
+
+        for i in range(len(points)):
+            origin = (points[i][0], points[i][1])
+            end = (points[(i + 1) % len(points)][0], points[(i + 1) % len(points)][1])
+
+            cv2.line(self.img, origin, end, color, 3)
 
     def drawLandMarkWithNormals(self, points, color=(0, 0, 255)):
         for i in range(len(points)):
             m = util.getNormalSlope(points[i - 1], points[i], points[(i + 1) % len(points)])
             p = np.asarray(util.sampleNormalLine(m, points[i]))
-            x2 = p[:,0]
-            y2 = p[:,1]
+            x2 = p[:, 0]
+            y2 = p[:, 1]
 
             cv2.line(self.img,
                      (int(x2[0]), int(y2[0])),
@@ -165,3 +177,10 @@ class GUI:
             self.img = PILtoCV(radiograph.image)
 
         self.preprocess = not self.preprocess
+
+    def doMatchingModelPointsIteration(self):
+        """ Execute an iteration of "matching model points to target points"
+        model points are defined by the model, target points by the 'bestLandmark'
+        """
+        self.b, self.nextBestLandmark = self.models[0].matchModelPointsToTargetPoints(self.b, self.nextBestLandmark)
+        self.drawLandMark(self.nextBestLandmark)

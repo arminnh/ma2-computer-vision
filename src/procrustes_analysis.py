@@ -6,7 +6,9 @@ import numpy as np
 from scipy.spatial import procrustes
 
 from Landmark import Landmark
+
 random.seed(123)
+
 
 def listToTuples(p):
     return np.asarray([(float(p[2 * j]), float(p[2 * j + 1])) for j in range(int(len(p) / 2))])
@@ -20,6 +22,8 @@ def drawLandmarks(landmarks: List[Landmark], title):
         points = np.asarray(points)
         plt.plot(points[:, 0], points[:, 1])
     # plt.plot(x1, y1, x2, y2, marker='o')
+    ax = plt.gca()
+    ax.set_ylim(ax.get_ylim()[::-1])
     plt.show()
 
 
@@ -32,7 +36,7 @@ def performProcrustesAnalysis(landmarks: List[Landmark]):
     # drawLandmarks(landmarks, "procrustes input")
 
     # First standardize all landmarks
-    #landmarks = [l.normalize() for l in landmarks]
+    # landmarks = [l.normalize() for l in landmarks]
 
     # drawLandmarks(landmarks, "normalized")
 
@@ -49,8 +53,8 @@ def performProcrustesAnalysis(landmarks: List[Landmark]):
     while d > 0.0001:
         # Superimpose all landmarks over the reference
         newLandmarks = []
-        for l in landmarks:
-            landmark, theta, scale = l.superimpose(reference)
+        for landmark in landmarks:
+            landmark, translationXY, scale, theta = landmark.superimpose(reference)
             newLandmarks.append(landmark)
             mean_theta += theta
             mean_scale += scale
@@ -71,7 +75,7 @@ def performProcrustesAnalysis(landmarks: List[Landmark]):
 
     mean_theta /= len(landmarks)
     mean_scale /= len(landmarks)
-    return landmarks, meanLandmark, mean_theta , mean_scale
+    return landmarks, meanLandmark, mean_scale, mean_theta
 
 
 def scipyProcrustesAnalysis(reference, landmarks):
