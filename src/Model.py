@@ -66,14 +66,16 @@ class Model:
                 grayLevelProfiles, normalizedGrayLevelProfiles = landmark.grayLevelProfileForAllPoints(self.sampleAmount)
                 for pointIndex, profile in grayLevelProfiles.items():
                     if pointIndex not in self.meanGrayLevelModels:
-                        self.meanGrayLevelModels[pointIndex] = []
-                    self.meanGrayLevelModels[pointIndex].append(profile)
+                        self.meanGrayLevelModels[pointIndex] = np.zeros(profile.shape)
+                    self.meanGrayLevelModels[pointIndex] += profile
+
                     self.normalizedGrayLevels[i].append(normalizedGrayLevelProfiles[pointIndex])
 
-        for pointIndex, means in self.meanGrayLevelModels.items():
-            mean = np.mean(means, axis=0)
-            self.meanGrayLevelModels[pointIndex] = mean
-            self.grayLevelsCovariances[pointIndex] = np.cov(self.normalizedGrayLevels[pointIndex])
+        for pointIndex, mean in self.meanGrayLevelModels.items():
+            self.meanGrayLevelModels[pointIndex] = mean / len(self.meanLandmark.getPointsAsTuples())
+
+            self.grayLevelsCovariances[pointIndex] = np.cov(np.transpose(self.normalizedGrayLevels[pointIndex]))
+            #print("COV:",self.grayLevelsCovariances[pointIndex].shape)
 
         return self
 

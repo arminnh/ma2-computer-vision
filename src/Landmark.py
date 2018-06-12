@@ -157,7 +157,7 @@ class Landmark:
             print("normalized profile: {}".format(list(pixels)))
 
             normalizedGrayLevelProfiles[i] = pixels
-
+            #print("PROFILES SHAPE: ", pixels.shape)
         return grayLevelProfiles, normalizedGrayLevelProfiles
 
 
