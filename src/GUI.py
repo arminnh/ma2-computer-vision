@@ -139,7 +139,7 @@ class GUI:
                 #newLandmark.radiograph = radiograph
                 self.betterFittingLandmark = m.findBetterFittingLandmark(newLandmark, radiograph)
 
-                self.drawLandMarkWithNormals(newLandmark)
+                self.drawLandMarkWithNormals(newLandmark, grayLevels=False)
                 self.drawLandMark(self.betterFittingLandmark, (200, 200, 100))
 
     def drawLandMark(self, landmark, color=(0, 0, 255)):
@@ -151,12 +151,12 @@ class GUI:
 
             cv2.line(self.img, origin, end, color, 1)
 
-    def drawLandMarkWithNormals(self, landmark, color=(0, 0, 255)):
+    def drawLandMarkWithNormals(self, landmark, color=(0, 0, 255), grayLevels=True):
         points = landmark.getPointsAsTuples().round().astype(int)
 
         for i in range(len(points)):
             m = util.getNormalSlope(points[i - 1], points[i], points[(i + 1) % len(points)])
-            p = np.asarray(util.sampleNormalLine(m, points[i], 10))
+            p = np.asarray(util.sampleNormalLine(m, points[i], util.SAMPLE_AMOUNT))
             x2 = p[:, 0]
             y2 = p[:, 1]
 
@@ -171,15 +171,16 @@ class GUI:
 
             cv2.line(self.img, origin, end, color, 3)
 
-        grayLevelProfiles = landmark.getGrayLevelProfilesForAllNormalPoints(10, False)
-        for r in grayLevelProfiles.values():
-            for [pixels, p, p2] in r:
-                print(pixels)
-                for z in range(len(p2)):
+        if grayLevels:
+            grayLevelProfiles = landmark.getGrayLevelProfilesForAllNormalPoints(util.SAMPLE_AMOUNT, False)
+            for r in grayLevelProfiles.values():
+                for [pixels, p, p2] in r:
+                    print(pixels)
+                    for z in range(len(p2)):
 
-                    orig = (int(p2[z][0]), int(p2[z][1]))
+                        orig = (int(p2[z][0]), int(p2[z][1]))
 
-                    cv2.line(self.img, orig, orig, int(pixels[z]), thickness=2)
+                        cv2.line(self.img, orig, orig, int(pixels[z]), thickness=2)
 
     def preprocessCurrentRadiograph(self):
         radiograph = self.radiographs[self.current_radiograph_index]
@@ -198,6 +199,7 @@ class GUI:
         """ Execute an iteration of "matching model points to target points"
         model points are defined by the model, target points by the 'bestLandmark'
         """
+        self.img = PILtoCV(self.radiographs[self.current_radiograph_index].image)
         self.betterFittingLandmark = self.models[0].matchModelPointsToTargetPoints(self.betterFittingLandmark)
         #self.betterFittingLandmark = self.models[0].findBetterFittingLandmark(self.betterFittingLandmark, self.radiographs[self.current_radiograph_index])
         self.drawLandMark(self.betterFittingLandmark, (255, 255, 255))
@@ -215,5 +217,5 @@ class GUI:
         l: Landmark.Landmark = self.models[0].landmarks[0]
         self.drawLandMarkWithNormals(l)
 
-        grayLevelProfiles, normalizedGrayLevelProfiles, normalPointsOfLandmarkNr = l.grayLevelProfileForAllPoints(20, False)
+        grayLevelProfiles, normalizedGrayLevelProfiles, normalPointsOfLandmarkNr = l.grayLevelProfileForAllPoints(util.SAMPLE_AMOUNT, False)
         self.drawGrayLevelProfiles(grayLevelProfiles, normalPointsOfLandmarkNr)

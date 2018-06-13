@@ -4,6 +4,7 @@ from scipy import linalg
 
 import procrustes_analysis
 from Landmark import Landmark
+import util
 
 
 class Model:
@@ -17,7 +18,7 @@ class Model:
         self.eigenvectors = np.array([])
         self.meanTheta = None
         self.meanScale = None
-        self.sampleAmount = 20
+        self.sampleAmount = util.SAMPLE_AMOUNT
         self.y_ij = {}
         self.y_j_bar = {}
         self.C_yj = {}
