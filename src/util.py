@@ -6,8 +6,6 @@ import numpy as np
 import scipy.interpolate
 from PIL import Image
 
-from preprocess_img import PILtoCV, applyCLAHE, cvToPIL, bilateralFilter
-
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "resources", "data")
 
 RADIOGRAPH_NUMBERS = list(range(1, 15))
@@ -20,6 +18,8 @@ CENTRAL_TEETH = {2, 3, 6, 7}
 LATERAL_TEETH = {1, 4, 5, 8}
 
 SAMPLE_AMOUNT = 40  # 10, 13, 15, 30
+SAMPLE_AMOUNT = 20
+
 PCA_COMPONENTS = 20
 
 
@@ -57,7 +57,20 @@ def loadRadiographImage(radiographFilename):
     filename = glob.glob(os.path.join(radioDir, "**", "{}.tif".format(radiographFilename)), recursive=True)[0]
 
     # Check if the tif of the current radioID is present in our current tifs
-    return Image.open(filename).convert("L")
+    img = Image.open(filename)
+
+    x, y = img.size
+    x2 = int(x / 2)
+    y2 = int(y / 2)
+
+    xStart, yStart = 400, 450
+    img = img.crop((x2 - xStart, y2 - yStart, x2 + xStart, y2 + yStart + 250))
+    XOffset = - (x2 - xStart)
+    YOffset = - (y2 - yStart)
+
+    img = img.convert("L")
+
+    return img, XOffset, YOffset
 
 
 def flipToothNumber(n):

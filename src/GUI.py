@@ -1,5 +1,3 @@
-import time
-
 import util
 from preprocess_img import *
 
@@ -34,13 +32,16 @@ class GUI:
                 # draw edges
                 img = self.drawEdges(img)
 
-            cv2.imshow(self.name, img)
             y, x = self.img.shape
             cv2.line(self.img, (int(x / 2), 0), (int(x / 2), int(y)), (255, 255, 255), 3)
             cv2.line(self.img, (0, int(y / 2)), (x, int(y / 2)), (255, 255, 255), 3)
+
             for model in self.models:
-                landmark = model.landmarks[self.currentRadiographIndex]
-                self.drawLandmark(landmark, color=180, thickness=3)
+                if self.currentRadiographIndex < len(model.landmarks):
+                    landmark = model.landmarks[self.currentRadiographIndex]
+                    self.drawLandmark(landmark, color=180, thickness=3)
+
+            cv2.imshow(self.name, img)
 
             # Key Listeners
             pressed_key = cv2.waitKey(50)

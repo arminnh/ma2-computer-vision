@@ -242,7 +242,7 @@ def loadLandmarkPoints(filename):
     return np.asarray([float(x) for x in p])
 
 
-def loadAllForRadiograph(radiographFilename):
+def loadAllForRadiograph(radiographFilename, XOffset, YOffset):
     """
     Loads all the landmarks for a given radiograph.
     :return: Dictionary of toothNumber -> Landmark
@@ -253,6 +253,6 @@ def loadAllForRadiograph(radiographFilename):
     for filepath in util.getLandmarkFilenames(radiographFilename):
         filename = os.path.split(filepath)[-1]
         toothNumber = int(re.match("landmarks{}-([0-9]).txt".format(radiographFilename), filename).group(1))
-        landmarks[toothNumber] = Landmark(loadLandmarkPoints(filepath), radiographFilename, toothNumber)
+        landmarks[toothNumber] = Landmark(loadLandmarkPoints(filepath), radiographFilename, toothNumber).translate(XOffset, YOffset)
 
     return landmarks

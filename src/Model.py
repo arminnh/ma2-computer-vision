@@ -51,7 +51,7 @@ class Model:
 
         self.eigenvalues = eigenvalues[sorted_values]
         self.eigenvectors = eigenvectors[:, sorted_values]
-        print(self.eigenvalues)
+        # print(self.eigenvalues)
         return self
 
     def buildGrayLevelModels(self):
@@ -196,9 +196,7 @@ class Model:
 
             for i in range(len(newB)):
                 limit = 2 * np.sqrt(abs(self.eigenvalues[i]))
-                prev = newB[i]
                 newB[i] = np.clip(newB[i], -limit, limit)
-                # print("prev: {}, now: {}, {}".format(prev, newB[i], limit))
 
             diff = scipy.spatial.distance.euclidean(b, newB)
             b = newB

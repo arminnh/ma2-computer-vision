@@ -114,12 +114,12 @@ def getRadiographs(numbers=None, extra=False):
             print("Loading radiograph {}, {}".format(n, filepath))
 
             # Load the radiograph in as is
-            img = util.loadRadiographImage(filename)
+            img, XOffset, YOffset = util.loadRadiographImage(filename)
             segments = Segment.loadAllForRadiograph(filename)
             radiographs.append(Radiograph(
                 filename=filename,
                 image=img,
-                landmarks=Landmark.loadAllForRadiograph(filename),
+                landmarks=Landmark.loadAllForRadiograph(filename, XOffset, YOffset),
                 segments=segments
             ))
 
