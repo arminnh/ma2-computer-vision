@@ -22,7 +22,7 @@ class Model:
         self.y_ij = {}
         self.y_j_bar = {}
         self.C_yj = {}
-        self.initModel = InitModel(landmarks, self.sampleAmount)
+        self.initModel = InitModel(landmarks, 28)
 
     def doProcrustesAnalysis(self):
         # procrustes_analysis.drawLandmarks(self.landmarks, "before")
