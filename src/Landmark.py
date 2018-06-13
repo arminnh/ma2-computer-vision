@@ -137,15 +137,14 @@ class Landmark:
         normalizedGrayLevelProfilesWithPoints = {}
 
         points = self.getPointsAsTuples()
-        f = self.calculateDerivative(points)
         for i, point in enumerate(points):
             # Build gray level profile by sampling a few points on each side of the point.
 
             # Sample points on normal line of the current landmark point
-            # m = util.getNormalSlope(points[i - 1], point, points[(i + 1) % len(points)])
-            tangentLineSlope = f(point[0])
+            m = util.getNormalSlope(points[i - 1], point, points[(i + 1) % len(points)])
+            #tangentLineSlope = f(point[0])
             # m = slope of normal line
-            m = -1 / tangentLineSlope if tangentLineSlope != 0 else 0
+            #m = -1 / tangentLineSlope if tangentLineSlope != 0 else 0
 
             normalSamplePoints = util.sampleNormalLine(m, point, pixelsToSample=pixelsToSample)
             normalizedGrayLevelProfilesWithPoints[i] = []
@@ -172,7 +171,7 @@ class Landmark:
 
         return normalizedGrayLevelProfilesWithPoints
 
-    def grayLevelProfileForAllPoints(self, pixelsToSample):
+    def grayLevelProfileForAllPoints(self, pixelsToSample, getDeriv=True):
         """
         For every landmark point j (all points in this landmark) in the image i (the radiograph of this landmark) of
         the training set, we extract a gray level profile g_ij of length n_p pixels, centered around the landmark point.
@@ -188,24 +187,24 @@ class Landmark:
         normalizedGrayLevelProfiles = {}
         normalPointsOfLandmarkNr = {}
         points = self.getPointsAsTuples()
-        f = self.calculateDerivative(points)
 
         for i, point in enumerate(points):
             # Build gray level profile by sampling a few points on each side of the point.
 
             # Sample points on normal line of the current landmark point
-            # m = util.getNormalSlope(points[i - 1], point, points[(i + 1) % len(points)])
-            tangentLineSlope = f(point[0])
+            m = util.getNormalSlope(points[i - 1], point, points[(i + 1) % len(points)])
+            #tangentLineSlope = f(point[0])
             # m = slope of normal line
-            m = -1 / tangentLineSlope if tangentLineSlope != 0 else 0
+            #m = -1 / tangentLineSlope if tangentLineSlope != 0 else 0
 
             normalPoints = util.sampleNormalLine(m, point, pixelsToSample=pixelsToSample)
             # Get pixel values on the sampled positions
             img = self.radiograph.image  # type: Image
             pixels = np.asarray([img.getpixel(p) for p in normalPoints])
 
-            # Derivative profile of length n_p - 1
-            pixels = np.asarray([pixels[i+1] - pixels[i-1] for i in range(len(pixels)-1)])#np.diff(pixels)
+            if getDeriv:
+                # Derivative profile of length n_p - 1
+                pixels = np.asarray([pixels[i+1] - pixels[i-1] for i in range(len(pixels)-1)])#np.diff(pixels)
 
             grayLevelProfiles[i] = pixels
 
@@ -232,9 +231,9 @@ class Landmark:
             xx[i] += 0.001 * (i + 1)
         yy = yy[sorted_xx]
         # y = m x + b
+
         f = scipy.interpolate.CubicSpline(xx, yy).derivative()
         return f
-
 
 def loadLandmarkPoints(filename):
     f = open(filename, "r")

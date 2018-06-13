@@ -60,29 +60,46 @@ class Model:
         Build gray level models for each of the mean landmark points by averaging the gray level profiles for each
         point of each landmark.
         """
-        self.grayLevelModels = {}
-        self.normalizedGrayLevelModels = {}
-        self.grayLevelModelsInverseCovariances = {}
+        self.C_yj = {}
+        self.y_j_bar = {}
+        # Build gray level model for each landmark and add it
+        for i,landmark in enumerate(self.landmarks):
+            grayLevelProfiles, normalizedGrayLevelProfiles, _ = \
+                landmark.grayLevelProfileForAllPoints(self.sampleAmount)
+            for j, profile in grayLevelProfiles.items():
+                if j not in self.y_j_bar:
+                    self.y_j_bar[j] = []
 
-        for i in range(len(self.meanLandmark.getPointsAsTuples())):
-            self.normalizedGrayLevelModels[i] = []
+                self.y_j_bar[j].append(normalizedGrayLevelProfiles[j])
+                #self.y_ij[i][j] = normalizedGrayLevelProfiles[j]
 
-            # Build gray level model for each landmark and add it
-            for landmark in self.landmarks:
-                grayLevelProfiles, normalizedGrayLevelProfiles, _ = \
-                    landmark.grayLevelProfileForAllPoints(self.sampleAmount)
+        # for i in range(len(self.meanLandmark.getPointsAsTuples())):
+        #     self.normalizedGrayLevelModels[i] = []
+        #
+        #     # Build gray level model for each landmark and add it
+        #     for landmark in self.landmarks:
+        #         grayLevelProfiles, normalizedGrayLevelProfiles, _ = \
+        #             landmark.grayLevelProfileForAllPoints(self.sampleAmount)
+        #
+        #         for pointIndex, profile in grayLevelProfiles.items():
+        #             if pointIndex not in self.grayLevelModels:
+        #                 self.grayLevelModels[pointIndex] = np.zeros(profile.shape)
+        #             self.grayLevelModels[pointIndex] += profile
+        #
+        #             self.normalizedGrayLevelModels[i].append(normalizedGrayLevelProfiles[pointIndex])
 
-                for pointIndex, profile in grayLevelProfiles.items():
-                    if pointIndex not in self.grayLevelModels:
-                        self.grayLevelModels[pointIndex] = np.zeros(profile.shape)
-                    self.grayLevelModels[pointIndex] += profile
-
-                    self.normalizedGrayLevelModels[i].append(normalizedGrayLevelProfiles[pointIndex])
-
-
-            self.grayLevelModelsInverseCovariances[pointIndex] = linalg.inv(
-                np.cov(np.transpose(self.normalizedGrayLevelModels[pointIndex]))
-            )
+        for j in range(len(self.y_j_bar)):
+            cov = np.cov(np.transpose(self.y_j_bar[j]))
+            self.y_j_bar[j] = np.mean(self.y_j_bar[j], axis=0)
+            # cov = np.zeros((self.sampleAmount-1, self.sampleAmount-1))
+            # for i in range(len(self.landmarks)):
+            #     p = (self.y_ij[i][j] - self.y_j_bar[j])
+            #     p.resize(len(p), 1)
+            #     res = np.matmul(p, p.T)
+            #     cov += res
+            # cov /= len(self.landmarks)
+            #cov = np.cov(self.y_ij)
+            self.C_yj[j] = linalg.inv(cov)
 
         return self
 
@@ -91,8 +108,8 @@ class Model:
         Returns the squared Mahalanobis distance of a new gray level profile from the built gray level model with index
         landmarkPointIndex.
         """
-        Sp = self.grayLevelModelsInverseCovariances[landmarkPointIndex]
-        pMinusMeanTrans = (profile - self.grayLevelModels[landmarkPointIndex])
+        Sp = self.C_yj[landmarkPointIndex]
+        pMinusMeanTrans = (profile - self.y_j_bar[landmarkPointIndex])
 
         return pMinusMeanTrans.T @ Sp @ pMinusMeanTrans
 

@@ -1,5 +1,5 @@
 ## Based on code from: https://github.com/Cartucho/OpenLabeling
-
+import Landmark
 import util
 from preprocess_img import *
 
@@ -65,6 +65,9 @@ class GUI:
             # quit key listener
             elif pressed_key == ord('q'):
                 break
+            elif pressed_key == ord('o'):
+                self.showOriginalTooth()
+
 
             elif pressed_key == ord('n'):
                 self.doMatchingModelPointsIteration()
@@ -190,3 +193,18 @@ class GUI:
         #self.betterFittingLandmark = self.models[0].findBetterFittingLandmark(self.betterFittingLandmark, self.radiographs[self.current_radiograph_index])
         self.drawLandMark(self.betterFittingLandmark, (255, 255, 255))
         self.betterFittingLandmark = self.models[0].findBetterFittingLandmark(self.betterFittingLandmark, self.radiographs[self.current_radiograph_index])
+
+    def drawGrayLevelProfiles(self, grayLevels, normalPointsOnLandmark):
+
+        for i, pixels in grayLevels.items():
+            for j, point in enumerate(normalPointsOnLandmark[i]):
+                orig = (int(point[0]), int(point[1]))
+                cv2.circle(self.img, orig, 1, int(pixels[j]), thickness=5)
+                #cv2.putText(self.img, "{},{}".format(1, 1), orig, cv2.FONT_ITALIC, 0.2, 255)
+
+    def showOriginalTooth(self):
+        l: Landmark.Landmark = self.models[0].landmarks[0]
+        self.drawLandMarkWithNormals(l)
+
+        grayLevelProfiles, normalizedGrayLevelProfiles, normalPointsOfLandmarkNr = l.grayLevelProfileForAllPoints(20, False)
+        self.drawGrayLevelProfiles(grayLevelProfiles, normalPointsOfLandmarkNr)
