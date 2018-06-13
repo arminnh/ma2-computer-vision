@@ -4,6 +4,7 @@ from scipy import linalg
 
 import procrustes_analysis
 from Landmark import Landmark
+from scripts.InitModel import InitModel
 
 
 class Model:
@@ -21,6 +22,7 @@ class Model:
         self.y_ij = {}
         self.y_j_bar = {}
         self.C_yj = {}
+        self.initModel = InitModel(landmarks, self.sampleAmount)
 
     def doProcrustesAnalysis(self):
         # procrustes_analysis.drawLandmarks(self.landmarks, "before")

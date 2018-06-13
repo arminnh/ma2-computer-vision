@@ -127,7 +127,7 @@ class Landmark:
 
         return lines
 
-    def getGrayLevelProfilesForAllNormalPoints(self, pixelsToSample, deriv=True):
+    def getGrayLevelProfilesForAllNormalPoints(self, pixelsToSample, getDeriv=True):
         if self.radiograph is None:
             raise Exception("Need radiograph for gray level profile")
 
@@ -153,17 +153,23 @@ class Landmark:
                 # Get pixel values on the sampled positions
                 p2 = util.sampleNormalLine(m, normalPoint, pixelsToSample=pixelsToSample)
                 p2.append(tuple(normalPoint))
-                img = self.radiograph.image#.convert("L")  # type: Image
-                pixels = np.asarray([img.getpixel(p) for p in p2])
 
-                if deriv:
+                beforeDeriv, afterDeriv, scaled = util.getPixels(self.radiograph, p2, getDeriv)
+
+                #img = self.radiograph.image#.convert("L")  # type: Image
+                #pixels = np.asarray([img.getpixel(p) for p in p2])
+
+                if getDeriv:
+                    pixels = scaled
                     # Derivative profile of length n_p - 1
-                    pixels = np.asarray([pixels[i+1] - pixels[i-1] for i in range(len(pixels)-1)])#np.diff(pixels)
+                    #pixels = np.asarray([pixels[i+1] - pixels[i-1] for i in range(len(pixels)-1)])#np.diff(pixels)
 
                     # Normalized derivative profile
-                    scale = np.sum(np.abs(pixels))
-                    if scale != 0:
-                        pixels = pixels / scale
+                    #scale = np.sum(np.abs(pixels))
+                    #if scale != 0:
+                    #    pixels = pixels / scale
+                else:
+                    pixels = beforeDeriv
 
                 normalizedGrayLevelProfilesWithPoints[i].append([pixels, normalPoint, p2])
             # print("PROFILES SHAPE: ", pixels.shape)
@@ -199,24 +205,26 @@ class Landmark:
             normalPoints = util.sampleNormalLine(m, point, pixelsToSample=pixelsToSample)
             normalPoints.append(tuple(point))
 
+            _, afterDeriv, scaled = util.getPixels(self.radiograph, normalPoints, getDeriv)
+            grayLevelProfiles[i] = afterDeriv
             # Get pixel values on the sampled positions
-            img = self.radiograph.image  # type: Image
-            pixels = np.asarray([img.getpixel(p) for p in normalPoints])
+            #img = self.radiograph.image  # type: Image
+            #pixels = np.asarray([img.getpixel(p) for p in normalPoints])
+            #
+            # if getDeriv:
+            #     # Derivative profile of length n_p - 1
+            #     pixels = np.asarray([pixels[i+1] - pixels[i-1] for i in range(len(pixels)-1)])#np.diff(pixels)
+            #
+            # grayLevelProfiles[i] = pixels
+            #
+            # # Normalized derivative profile
+            # # print("i {}, derivated profile: {}, divisor: {}".format(i, list(pixels), np.sum(np.abs(pixels))), end=", ")
+            # scale = np.sum(np.abs(pixels))
+            # if scale != 0:
+            #     pixels = pixels / scale
+            # # print("normalized profile: {}".format(list(pixels)))
 
-            if getDeriv:
-                # Derivative profile of length n_p - 1
-                pixels = np.asarray([pixels[i+1] - pixels[i-1] for i in range(len(pixels)-1)])#np.diff(pixels)
-
-            grayLevelProfiles[i] = pixels
-
-            # Normalized derivative profile
-            # print("i {}, derivated profile: {}, divisor: {}".format(i, list(pixels), np.sum(np.abs(pixels))), end=", ")
-            scale = np.sum(np.abs(pixels))
-            if scale != 0:
-                pixels = pixels / scale
-            # print("normalized profile: {}".format(list(pixels)))
-
-            normalizedGrayLevelProfiles[i] = pixels
+            normalizedGrayLevelProfiles[i] = scaled
             normalPointsOfLandmarkNr[i] = normalPoints
             # print("PROFILES SHAPE: ", pixels.shape)
 

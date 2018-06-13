@@ -18,6 +18,14 @@ class GUI:
         self.showEdges = False
         self.sampleAmount = sampleAmount
 
+        self.origins = {}
+        self.getAllOrigins()
+
+    def getAllOrigins(self):
+        for i,model in enumerate(self.models):
+            orig = model.initModel.meanOrigin
+            self.origins[i] = int(orig[0]), int(orig[1])
+
     def open(self):
         self.createWindow()
         self.setCurrentImage(self.currentRadiographIndex)
@@ -40,6 +48,9 @@ class GUI:
                 if self.currentRadiographIndex < len(model.landmarks):
                     landmark = model.landmarks[self.currentRadiographIndex]
                     self.drawLandmark(landmark, color=180, thickness=3)
+
+                    #self.drawOriginModel(model.initModel.profileForImage[self.currentRadiographIndex])
+                    self.drawAllOrigins()
 
             cv2.imshow(self.name, img)
 
@@ -82,7 +93,8 @@ class GUI:
                 break
 
             elif pressed_key == ord("o"):
-                self.showOriginalTooth()
+                #self.showOriginalTooth()
+                self.updateOrigins()
 
             elif pressed_key == ord("n"):
                 self.findBetterLandmark()
@@ -91,6 +103,15 @@ class GUI:
                 break
 
         cv2.destroyAllWindows()
+
+    def drawAllOrigins(self):
+        for pos in self.origins.values():
+            cv2.circle(self.img, pos, 1, int(255), 2)
+
+    def drawOriginModel(self, originModel):
+        for pixel, pos in originModel:
+            orig = (int(pos[0]), int(pos[1]))
+            cv2.circle(self.img, orig, 1, int(pixel), 2)
 
     def createWindow(self):
         cv2.namedWindow(self.name, cv2.WINDOW_KEEPRATIO)
@@ -260,3 +281,15 @@ class GUI:
                 orig = (int(point[0]), int(point[1]))
                 cv2.circle(self.img, orig, 1, int(pixels[j]), thickness=5)
                 # cv2.putText(self.img, "{},{}".format(1, 1), orig, cv2.FONT_ITALIC, 0.2, 255)
+
+    def refreshCurrentRadiograph(self):
+        self.img = PILtoCV(self.currentRadiograph.image)
+
+    def updateOrigins(self):
+        oldOrigins = self.origins
+        for i, m in enumerate(self.models):
+            currentOriginForModel = oldOrigins[i]
+            newOrigin = m.initModel.getBetterOrigin(currentOriginForModel, self.currentRadiograph)
+            newOrigin = (int(newOrigin[0]), int(newOrigin[1]))
+            self.origins[i] = newOrigin
+        self.refreshCurrentRadiograph()
