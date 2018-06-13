@@ -90,10 +90,7 @@ class Landmark:
         return theta
 
     def shapeDistance(self, other):
-        """ Returns the SSD from an other landmark.
-        Should be done on superimposed (translated, scaled, and rotated) objects.
-        :type other: Landmark
-        """
+        """ Returns the SSD from an other landmark. """
         return np.sqrt(np.sum(np.square(self.getPointsAsList() - other.getPointsAsList())))
 
     def getNormalizedPoints(self):

@@ -10,9 +10,10 @@ import scripts.goal1
 
 if __name__ == '__main__':
     radiographNumbers = util.RADIOGRAPH_NUMBERS
+    # radiographNumbers = list(range(5))
     PCAComponents = util.PCA_COMPONENTS
     sampleAmount = util.SAMPLE_AMOUNT
-    sampleAmount = 15
+    # sampleAmount = 15
 
     radiographs = Radiograph.getRadiographs(radiographNumbers)
 

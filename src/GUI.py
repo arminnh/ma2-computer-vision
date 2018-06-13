@@ -1,3 +1,5 @@
+import time
+
 import util
 from preprocess_img import *
 
@@ -34,8 +36,8 @@ class GUI:
 
             cv2.imshow(self.name, img)
             y, x = self.img.shape
-            cv2.line(self.img, (int(x/2), 0), (int(x/2), int(y)), (255, 255, 255), 3)
-            cv2.line(self.img, (0, int(y/2)), (x, int(y/2)), (255, 255, 255), 3)
+            cv2.line(self.img, (int(x / 2), 0), (int(x / 2), int(y)), (255, 255, 255), 3)
+            cv2.line(self.img, (0, int(y / 2)), (x, int(y / 2)), (255, 255, 255), 3)
             for model in self.models:
                 landmark = model.landmarks[self.currentRadiographIndex]
                 self.drawLandmark(landmark, color=180, thickness=3)
@@ -90,7 +92,6 @@ class GUI:
         cv2.destroyAllWindows()
 
     def createWindow(self):
-        # create window
         cv2.namedWindow(self.name, cv2.WINDOW_KEEPRATIO)
         cv2.resizeWindow(self.name, 1000, 700)
         cv2.setMouseCallback(self.name, self.mouseListener)
@@ -121,10 +122,11 @@ class GUI:
 
     def initTrackBars(self):
         if len(self.radiographs) > 1:
-            cv2.createTrackbar("radiograph", self.name, self.currentRadiographIndex, len(self.radiographs)-1, self.setCurrentImage)
+            cv2.createTrackbar("radiograph", self.name, self.currentRadiographIndex, len(self.radiographs) - 1,
+                               self.setCurrentImage)
 
         if len(self.models) > 1:
-            cv2.createTrackbar("model", self.name, self.currentModelIndex, len(self.models)-1, self.setCurrentModel)
+            cv2.createTrackbar("model", self.name, self.currentModelIndex, len(self.models) - 1, self.setCurrentModel)
 
         return self
 
@@ -224,12 +226,22 @@ class GUI:
         """ Execute an iteration of "matching model points to target points"
         model points are defined by the model, target points by the 'bestLandmark'
         """
+        landmark = self.currentLandmark
+        d = 2
+        i = 0
+
+        while d > 1 and i < 50:
+            self.currentLandmark = self.currentModel.findBetterFittingLandmark(self.currentLandmark,
+                                                                               self.currentRadiograph)
+            self.currentLandmark = self.currentModel.matchModelPointsToTargetPoints(self.currentLandmark)
+
+            d = landmark.shapeDistance(self.currentLandmark)
+            landmark = self.currentLandmark
+
+            i += 1
+            print(i, d)
+
         self.img = PILtoCV(self.currentRadiograph.image)
-
-        self.currentLandmark = self.currentModel.findBetterFittingLandmark(self.currentLandmark, self.currentRadiograph)
-
-        self.currentLandmark = self.currentModel.matchModelPointsToTargetPoints(self.currentLandmark)
-
         self.drawLandmark(self.currentLandmark, (255, 255, 255))
 
     def showOriginalTooth(self):
