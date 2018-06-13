@@ -12,6 +12,7 @@ if __name__ == '__main__':
     radiographNumbers = util.RADIOGRAPH_NUMBERS
     PCAComponents = util.PCA_COMPONENTS
     sampleAmount = util.SAMPLE_AMOUNT
+    sampleAmount = 15
 
     radiographs = Radiograph.getRadiographs(radiographNumbers)
 

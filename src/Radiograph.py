@@ -89,6 +89,8 @@ class Radiograph:
                 PILtoCV,
                 bilateralFilter,
                 applyCLAHE,
+                bilateralFilter,
+                applyCLAHE,
                 cvToPIL
             ]
         img = self.image

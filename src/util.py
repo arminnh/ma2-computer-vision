@@ -6,6 +6,8 @@ import numpy as np
 import scipy.interpolate
 from PIL import Image
 
+from preprocess_img import PILtoCV, applyCLAHE, cvToPIL, bilateralFilter
+
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "resources", "data")
 
 RADIOGRAPH_NUMBERS = list(range(1, 15))
@@ -55,9 +57,7 @@ def loadRadiographImage(radiographFilename):
     filename = glob.glob(os.path.join(radioDir, "**", "{}.tif".format(radiographFilename)), recursive=True)[0]
 
     # Check if the tif of the current radioID is present in our current tifs
-    img = Image.open(filename)
-
-    return img.convert("L")
+    return Image.open(filename).convert("L")
 
 
 def flipToothNumber(n):

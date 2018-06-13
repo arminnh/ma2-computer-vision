@@ -33,6 +33,12 @@ class GUI:
                 img = self.drawEdges(img)
 
             cv2.imshow(self.name, img)
+            y, x = self.img.shape
+            cv2.line(self.img, (int(x/2), 0), (int(x/2), int(y)), (255, 255, 255), 3)
+            cv2.line(self.img, (0, int(y/2)), (x, int(y/2)), (255, 255, 255), 3)
+            for model in self.models:
+                landmark = model.landmarks[self.currentRadiographIndex]
+                self.drawLandmark(landmark, color=180, thickness=3)
 
             # Key Listeners
             pressed_key = cv2.waitKey(50)
@@ -163,14 +169,14 @@ class GUI:
 
             self.drawLandMarkWithNormals(self.currentLandmark, grayLevels=False)
 
-    def drawLandMark(self, landmark, color=(0, 0, 255)):
+    def drawLandmark(self, landmark, color=(0, 0, 255), thickness=1):
         points = landmark.getPointsAsTuples().round().astype(int)
 
         for i in range(len(points)):
             origin = (points[i][0], points[i][1])
             end = (points[(i + 1) % len(points)][0], points[(i + 1) % len(points)][1])
 
-            cv2.line(self.img, origin, end, color, 1)
+            cv2.line(self.img, origin, end, color, thickness)
 
     def drawLandMarkWithNormals(self, landmark, color=(0, 0, 255), grayLevels=True):
         points = landmark.getPointsAsTuples().round().astype(int)
@@ -224,7 +230,7 @@ class GUI:
 
         self.currentLandmark = self.currentModel.matchModelPointsToTargetPoints(self.currentLandmark)
 
-        self.drawLandMark(self.currentLandmark, (255, 255, 255))
+        self.drawLandmark(self.currentLandmark, (255, 255, 255))
 
     def showOriginalTooth(self):
         landmark = self.currentModel.landmarks[self.currentRadiograph]
