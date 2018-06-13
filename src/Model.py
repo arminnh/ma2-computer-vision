@@ -4,11 +4,10 @@ from scipy import linalg
 
 import procrustes_analysis
 from Landmark import Landmark
-import util
 
 
 class Model:
-    def __init__(self, name, landmarks, pcaComponents=20):
+    def __init__(self, name, landmarks, pcaComponents, sampleAmount):
         self.name = name
         self.landmarks = landmarks
         self.meanLandmark = None  # type: Landmark
@@ -18,7 +17,7 @@ class Model:
         self.eigenvectors = np.array([])
         self.meanTheta = None
         self.meanScale = None
-        self.sampleAmount = util.SAMPLE_AMOUNT
+        self.sampleAmount = sampleAmount
         self.y_ij = {}
         self.y_j_bar = {}
         self.C_yj = {}
@@ -64,7 +63,7 @@ class Model:
         self.C_yj = {}
         self.y_j_bar = {}
         # Build gray level model for each landmark and add it
-        for i,landmark in enumerate(self.landmarks):
+        for i, landmark in enumerate(self.landmarks):
             grayLevelProfiles, normalizedGrayLevelProfiles, _ = \
                 landmark.grayLevelProfileForAllPoints(self.sampleAmount)
             for j, profile in grayLevelProfiles.items():
@@ -72,7 +71,7 @@ class Model:
                     self.y_j_bar[j] = []
 
                 self.y_j_bar[j].append(normalizedGrayLevelProfiles[j])
-                #self.y_ij[i][j] = normalizedGrayLevelProfiles[j]
+                # self.y_ij[i][j] = normalizedGrayLevelProfiles[j]
 
         # for i in range(len(self.meanLandmark.getPointsAsTuples())):
         #     self.normalizedGrayLevelModels[i] = []
@@ -99,8 +98,8 @@ class Model:
             #     res = np.matmul(p, p.T)
             #     cov += res
             # cov /= len(self.landmarks)
-            #cov = np.cov(self.y_ij)
-            self.C_yj[j] = linalg.inv(cov)
+            # cov = np.cov(self.y_ij)
+            self.C_yj[j] = linalg.pinv(cov)
 
         return self
 
@@ -133,7 +132,7 @@ class Model:
             for profile, normalPoint, _ in profiles:
                 d = self.mahalanobisDistance(profile, pointIdx)
                 distances.append((abs(d), normalPoint))
-                print("Mahalanobis dist: {}, p: {}".format(abs(d), normalPoint))
+                print("Mahalanobis dist: {:.2f}, p: {}".format(abs(d), normalPoint))
 
             bestPoints.append(min(distances, key=lambda x: x[0])[1])
 
@@ -142,7 +141,7 @@ class Model:
     def reconstructLandmarkForCoefficients(self, b):
         return Landmark(self.meanLandmark.points + (self.eigenvectors @ b).flatten())
 
-    def allignTwoShapes(self, l1, l2):
+    def alignTwoShapes(self, l1, l2):
         import math
         """
         :param x1:
@@ -159,8 +158,8 @@ class Model:
         a = (l1.flatten() @ l2.flatten()) / normSq
         b = np.sum([l1[i][0] * l2[i][1] - l1[i][1] * l2[i][0] for i in range(len(l1))]) / normSq
 
-        s = np.sqrt(a**2 + b**2)
-        theta = math.atan(b/a)
+        s = np.sqrt(a ** 2 + b ** 2)
+        theta = math.atan(b / a)
 
         return moveDist, s, theta
 
@@ -173,7 +172,7 @@ class Model:
         scale = 0
 
         iii = 0
-        #procrustes_analysis.drawLandmarks([landmarkY], "landmarkY")
+        # procrustes_analysis.drawLandmarks([landmarkY], "landmarkY")
 
         while diff > 1e-9:
             iii += 1
@@ -184,10 +183,10 @@ class Model:
             # Project Y into the model coordinate frame by superimposition
             # and get the parameters of the transformation
             y, (translateX, translateY), scale, theta = landmarkY.superimpose(x)
-            #(translateX, translateY), scale, theta = self.allignTwoShapes(x, landmarkY)
-            #y = landmarkY.translate(-translateX,-translateY).scale(1 / scale).rotate(-theta)
+            # (translateX, translateY), scale, theta = self.alignTwoShapes(x, landmarkY)
+            # y = landmarkY.translate(-translateX,-translateY).scale(1 / scale).rotate(-theta)
 
-            #procrustes_analysis.drawLandmarks([y], "help me")
+            # procrustes_analysis.drawLandmarks([y], "help me")
 
             # TODO ??? Project y into the tangent plane to x_mean by scaling: y' = y / (y x_mean)
             y.points /= y.points.dot(self.meanLandmark.points)
@@ -199,11 +198,11 @@ class Model:
                 limit = 2 * np.sqrt(abs(self.eigenvalues[i]))
                 prev = newB[i]
                 newB[i] = np.clip(newB[i], -limit, limit)
-                print("prev: {}, now: {}, {}".format(prev, newB[i], limit))
+                # print("prev: {}, now: {}, {}".format(prev, newB[i], limit))
 
             diff = scipy.spatial.distance.euclidean(b, newB)
             b = newB
-            print("i: {}, b diff: {}".format(iii, diff))
+            # print("i: {}, b diff: {}".format(iii, diff))
 
         return self.reconstructLandmarkForCoefficients(b) \
             .rotate(-theta).scale(scale).translate(-translateX, -translateY)

@@ -9,8 +9,6 @@ import util
 from preprocess_img import PILtoCV, bilateralFilter, applyCLAHE, cvToPIL
 
 
-
-
 class Radiograph:
 
     def __init__(self, filename, image, landmarks, segments, mirrored=False):
@@ -61,12 +59,12 @@ class Radiograph:
             for i in range(len(points)):
                 plt.text(X[i] - 10, Y[i], i)
 
-            pixelsToSample = 20
             normals = landmark.normalSamplesForAllPoints(pixelsToSample)
-            grayLevelProfiles, normalizedGrayLevelProfiles, normalPointsOfLandmarkNr = landmark.grayLevelProfileForAllPoints(pixelsToSample)
+            grayLevelProfiles, normalizedGrayLevelProfiles, normalPointsOfLandmarkNr = landmark.grayLevelProfileForAllPoints(
+                pixelsToSample)
 
             for i, profile in normalizedGrayLevelProfiles.items():
-                #plt.plot(normals[i][0], normals[i][1])
+                # plt.plot(normals[i][0], normals[i][1])
 
                 Xs = np.arange(X[i] - pixelsToSample, X[i] + pixelsToSample)
                 y = np.repeat(Y[i], 2 * pixelsToSample)

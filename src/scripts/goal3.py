@@ -3,19 +3,21 @@ import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
+import util
 from GUI import GUI
-from Radiograph import getRadiographs
+import Radiograph
 import scripts.goal1
 
-
-def fitModelToImage():
-    print("pls")
-
-
 if __name__ == '__main__':
-    models = scripts.goal1.buildActiveShapeModel(list(range(1, 15)))
-    r = getRadiographs(list(range(1, 4)))
-    gui = GUI(r, models)
+    radiographNumbers = util.RADIOGRAPH_NUMBERS
+    PCAComponents = util.PCA_COMPONENTS
+    sampleAmount = util.SAMPLE_AMOUNT
+
+    radiographs = Radiograph.getRadiographs(radiographNumbers)
+
+    models = scripts.goal1.buildActiveShapeModels(radiographs, PCAComponents, sampleAmount)
+
+    gui = GUI(radiographs, models, sampleAmount)
     gui.open()
 
     # print(models)

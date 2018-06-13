@@ -1,103 +1,126 @@
-## Based on code from: https://github.com/Cartucho/OpenLabeling
-import Landmark
 import util
 from preprocess_img import *
 
 
 class GUI:
 
-    def __init__(self, radiographs, models):
-        self.GUI_NAME = 'Computer Vision KU Leuven'
+    def __init__(self, radiographs, models, sampleAmount):
+        self.name = "Computer Vision KU Leuven"
         self.radiographs = radiographs
-        self.last_radiograph_index = len(radiographs) - 1
-        self.current_radiograph_index = 0
-        self.img = None
-        self.mouse_x = 0
-        self.mouse_y = 0
-        self.preprocess = False
+        self.currentRadiograph = None
+        self.currentRadiographIndex = 0
         self.models = models
-        self.betterFittingLandmark = None
-        self.b = np.zeros((20, 1))
+        self.currentModel = None
+        self.currentModelIndex = 0
+        self.img = None
+        self.preprocess = False
+        self.currentLandmark = None
+        self.showEdges = False
+        self.sampleAmount = sampleAmount
 
     def open(self):
-        self._createWindow()
+        self.createWindow()
+        self.setCurrentImage(self.currentRadiographIndex)
+        self.setCurrentModel(self.currentModelIndex)
+        self.initTrackBars()
 
-        self.changeImgIndex(0)
-
-        if len(self.radiographs) > 1:
-            TRACKBAR_IMG = self._initTrackBar()
-
-        edges_on = False
-
-        # loop
         while True:
             # clone the img
-            tmp_img = self.img.copy()
-            height, width = tmp_img.shape[:2]
-            if edges_on == True:
-                # draw edges
-                tmp_img = self.drawEdges(tmp_img)
+            img = self.img.copy()
 
-            cv2.imshow(self.GUI_NAME, tmp_img)
+            if self.showEdges:
+                # draw edges
+                img = self.drawEdges(img)
+
+            cv2.imshow(self.name, img)
+
+            # Key Listeners
             pressed_key = cv2.waitKey(50)
 
-            """ Key Listeners START """
-            if pressed_key == ord('a') or pressed_key == ord('z'):
-                # show previous image key listener
-                if pressed_key == ord('a'):
-                    img_index = self.decreaseIndex(self.current_radiograph_index, self.last_radiograph_index)
-                # show next image key listener
-                elif pressed_key == ord('z'):
-                    img_index = self.increaseIndex(self.current_radiograph_index, self.last_radiograph_index)
-                cv2.setTrackbarPos(TRACKBAR_IMG, self.GUI_NAME, img_index)
+            # show another image
+            if pressed_key == ord("x") or pressed_key == ord("c"):
+                if len(self.radiographs) > 1:
+                    if pressed_key == ord("x"):
+                        self.increaseRadiographIndex(-1)
+                    elif pressed_key == ord("c"):
+                        self.increaseRadiographIndex(1)
+                    cv2.setTrackbarPos("radiograph", self.name, self.currentRadiographIndex)
+
+            # select another model
+            if pressed_key == ord("v") or pressed_key == ord("b"):
+                if len(self.radiographs) > 1:
+                    if pressed_key == ord("v"):
+                        self.increaseModelIndex(-1)
+                    elif pressed_key == ord("b"):
+                        self.increaseModelIndex(1)
+                    cv2.setTrackbarPos("model", self.name, self.currentModelIndex)
+
             # show edges key listener
-            elif pressed_key == ord('e'):
-                if edges_on == True:
-                    edges_on = False
-                    cv2.displayOverlay(self.GUI_NAME, "Edges turned OFF!", 1000)
+            elif pressed_key == ord("e"):
+                if self.showEdges:
+                    self.showEdges = False
+                    cv2.displayOverlay(self.name, "Edges turned OFF!", 100)
 
                 else:
-                    edges_on = True
-                    cv2.displayOverlay(self.GUI_NAME, "Edges turned ON!", 1000)
+                    self.showEdges = True
+                    cv2.displayOverlay(self.name, "Edges turned ON!", 100)
+
             elif pressed_key == ord("p"):
                 self.preprocessCurrentRadiograph()
 
             # quit key listener
-            elif pressed_key == ord('q'):
+            elif pressed_key == ord("q"):
                 break
-            elif pressed_key == ord('o'):
+
+            elif pressed_key == ord("o"):
                 self.showOriginalTooth()
 
-            elif pressed_key == ord('n'):
-                self.doMatchingModelPointsIteration()
+            elif pressed_key == ord("n"):
+                self.findBetterLandmark()
 
-            """ Key Listeners END """
-            if cv2.getWindowProperty(self.GUI_NAME, cv2.WND_PROP_VISIBLE) < 1:
+            if cv2.getWindowProperty(self.name, cv2.WND_PROP_VISIBLE) < 1:
                 break
 
         cv2.destroyAllWindows()
 
-    def _initTrackBar(self):
-        # selected image
-        TRACKBAR_IMG = 'Image'
-        cv2.createTrackbar(TRACKBAR_IMG, self.GUI_NAME, 0, self.last_radiograph_index, self.changeImgIndex)
-        return TRACKBAR_IMG
-
-    def _createWindow(self):
+    def createWindow(self):
         # create window
-        cv2.namedWindow(self.GUI_NAME, cv2.WINDOW_KEEPRATIO)
-        cv2.resizeWindow(self.GUI_NAME, 1000, 700)
-        cv2.setMouseCallback(self.GUI_NAME, self.mouseListener)
+        cv2.namedWindow(self.name, cv2.WINDOW_KEEPRATIO)
+        cv2.resizeWindow(self.name, 1000, 700)
+        cv2.setMouseCallback(self.name, self.mouseListener)
+        return self
 
-    def changeImgIndex(self, x):
-        self.current_radiograph_index = x
-        # TODO laad de foto in van radiograph
-        radiograph = self.radiographs[self.current_radiograph_index]
-        self.img = PILtoCV(radiograph.image)
-        cv2.displayOverlay(self.GUI_NAME, "Showing image "
-                                          "" + str(self.current_radiograph_index) + "/"
-                                                                                    "" + str(
-            self.last_radiograph_index), 1000)
+    def refreshOverlay(self):
+        modelName = self.currentModel.name if self.currentModel is not None else self.currentModelIndex
+
+        cv2.displayOverlay(
+            self.name,
+            "Showing image {}, model {}".format(self.currentRadiographIndex, modelName),
+            1000
+        )
+        return self
+
+    def setCurrentImage(self, idx):
+        self.currentRadiographIndex = idx
+        self.currentRadiograph = self.radiographs[idx]
+        self.img = PILtoCV(self.radiographs[idx].image)
+        self.refreshOverlay()
+        return self
+
+    def setCurrentModel(self, idx):
+        self.currentModelIndex = idx
+        self.currentModel = self.models[idx]
+        self.refreshOverlay()
+        return self
+
+    def initTrackBars(self):
+        if len(self.radiographs) > 1:
+            cv2.createTrackbar("radiograph", self.name, self.currentRadiographIndex, len(self.radiographs)-1, self.setCurrentImage)
+
+        if len(self.models) > 1:
+            cv2.createTrackbar("model", self.name, self.currentModelIndex, len(self.models)-1, self.setCurrentModel)
+
+        return self
 
     def drawEdges(self, tmp_img):
         blur = cv2.bilateralFilter(tmp_img, 3, 75, 75)
@@ -108,39 +131,37 @@ class GUI:
         # tmp_img = cv2.addWeighted(tmp_img, 1 - edges_val, edges, edges_val, 0)
         return tmp_img
 
-    def decreaseIndex(self, current_index, last_index):
+    def increaseRadiographIndex(self, amount):
         self.preprocess = False
-        current_index -= 1
-        if current_index < 0:
-            current_index = last_index
-        return current_index
+        self.currentRadiographIndex += amount
 
-    def increaseIndex(self, current_index, last_index):
-        current_index += 1
-        self.preprocess = False
+        if self.currentRadiographIndex < 0:
+            self.currentRadiographIndex = 0
 
-        if current_index > last_index:
-            current_index = 0
-        return current_index
+        if self.currentRadiographIndex > len(self.radiographs):
+            self.currentRadiographIndex = len(self.radiographs) - 1
+
+        return self
+
+    def increaseModelIndex(self, amount):
+        self.currentModelIndex += amount
+
+        if self.currentModelIndex < 0:
+            self.currentModelIndex = 0
+
+        if self.currentModelIndex > len(self.models):
+            self.currentModelIndex = len(self.models) - 1
+
+        return self
 
     # mouse callback function
     def mouseListener(self, event, x, y, flags, param):
-        global mouse_x, mouse_y
+        if event == cv2.EVENT_LBUTTONDOWN:
+            print("click x: {}, y: {}".format(x, y))
 
-        if event == cv2.EVENT_MOUSEMOVE:
-            mouse_x = x
-            mouse_y = y
-        elif event == cv2.EVENT_LBUTTONDOWN:
-            print("click x: {}, y: {}".format(mouse_x, mouse_y))
-            # Check contours?
-            for m in self.models:
-                newLandmark = m.getTranslatedAndInverseScaledMean(x, y)
-                radiograph = self.radiographs[self.current_radiograph_index]
-                #newLandmark.radiograph = radiograph
-                self.betterFittingLandmark = m.findBetterFittingLandmark(newLandmark, radiograph)
+            self.currentLandmark = self.currentModel.getTranslatedAndInverseScaledMean(x, y)
 
-                self.drawLandMarkWithNormals(newLandmark, grayLevels=False)
-                self.drawLandMark(self.betterFittingLandmark, (200, 200, 100))
+            self.drawLandMarkWithNormals(self.currentLandmark, grayLevels=False)
 
     def drawLandMark(self, landmark, color=(0, 0, 255)):
         points = landmark.getPointsAsTuples().round().astype(int)
@@ -156,14 +177,14 @@ class GUI:
 
         for i in range(len(points)):
             m = util.getNormalSlope(points[i - 1], points[i], points[(i + 1) % len(points)])
-            p = np.asarray(util.sampleNormalLine(m, points[i], util.SAMPLE_AMOUNT))
+            p = np.asarray(util.sampleNormalLine(m, points[i], self.sampleAmount))
             x2 = p[:, 0]
             y2 = p[:, 1]
 
             for j in range(len(x2)):
                 cv2.line(self.img,
-                         ( int(x2[j]), int(y2[j]) ),
-                         ( int(x2[j]), int(y2[j]) ),
+                         (int(x2[j]), int(y2[j])),
+                         (int(x2[j]), int(y2[j])),
                          (255, 0, 0), 1)
 
             origin = (int(points[i][0]), int(points[i][1]))
@@ -172,50 +193,51 @@ class GUI:
             cv2.line(self.img, origin, end, color, 3)
 
         if grayLevels:
-            grayLevelProfiles = landmark.getGrayLevelProfilesForAllNormalPoints(util.SAMPLE_AMOUNT, False)
+            grayLevelProfiles = landmark.getGrayLevelProfilesForAllNormalPoints(self.sampleAmount, False)
             for r in grayLevelProfiles.values():
                 for [pixels, p, p2] in r:
                     print(pixels)
                     for z in range(len(p2)):
-
                         orig = (int(p2[z][0]), int(p2[z][1]))
 
                         cv2.line(self.img, orig, orig, int(pixels[z]), thickness=2)
 
     def preprocessCurrentRadiograph(self):
-        radiograph = self.radiographs[self.current_radiograph_index]
         if not self.preprocess:
-            self.img = radiograph.preprocessRadiograph([
+            self.img = self.currentRadiograph.preprocessRadiograph([
                 PILtoCV,
                 bilateralFilter,
                 applyCLAHE
             ])
         else:
-            self.img = PILtoCV(radiograph.image)
+            self.img = PILtoCV(self.currentRadiograph.image)
 
         self.preprocess = not self.preprocess
 
-    def doMatchingModelPointsIteration(self):
+    def findBetterLandmark(self):
         """ Execute an iteration of "matching model points to target points"
         model points are defined by the model, target points by the 'bestLandmark'
         """
-        self.img = PILtoCV(self.radiographs[self.current_radiograph_index].image)
-        self.betterFittingLandmark = self.models[0].matchModelPointsToTargetPoints(self.betterFittingLandmark)
-        #self.betterFittingLandmark = self.models[0].findBetterFittingLandmark(self.betterFittingLandmark, self.radiographs[self.current_radiograph_index])
-        self.drawLandMark(self.betterFittingLandmark, (255, 255, 255))
-        self.betterFittingLandmark = self.models[0].findBetterFittingLandmark(self.betterFittingLandmark, self.radiographs[self.current_radiograph_index])
+        self.img = PILtoCV(self.currentRadiograph.image)
+
+        self.currentLandmark = self.currentModel.findBetterFittingLandmark(self.currentLandmark, self.currentRadiograph)
+
+        self.currentLandmark = self.currentModel.matchModelPointsToTargetPoints(self.currentLandmark)
+
+        self.drawLandMark(self.currentLandmark, (255, 255, 255))
+
+    def showOriginalTooth(self):
+        landmark = self.currentModel.landmarks[self.currentRadiograph]
+        self.drawLandMarkWithNormals(landmark)
+
+        grayLevelProfiles, normalizedGrayLevelProfiles, normalPointsOfLandmarkNr \
+            = landmark.grayLevelProfileForAllPoints(self.sampleAmount, False)
+
+        self.drawGrayLevelProfiles(grayLevelProfiles, normalPointsOfLandmarkNr)
 
     def drawGrayLevelProfiles(self, grayLevels, normalPointsOnLandmark):
-
         for i, pixels in grayLevels.items():
             for j, point in enumerate(normalPointsOnLandmark[i]):
                 orig = (int(point[0]), int(point[1]))
                 cv2.circle(self.img, orig, 1, int(pixels[j]), thickness=5)
-                #cv2.putText(self.img, "{},{}".format(1, 1), orig, cv2.FONT_ITALIC, 0.2, 255)
-
-    def showOriginalTooth(self):
-        l: Landmark.Landmark = self.models[0].landmarks[0]
-        self.drawLandMarkWithNormals(l)
-
-        grayLevelProfiles, normalizedGrayLevelProfiles, normalPointsOfLandmarkNr = l.grayLevelProfileForAllPoints(util.SAMPLE_AMOUNT, False)
-        self.drawGrayLevelProfiles(grayLevelProfiles, normalPointsOfLandmarkNr)
+                # cv2.putText(self.img, "{},{}".format(1, 1), orig, cv2.FONT_ITALIC, 0.2, 255)

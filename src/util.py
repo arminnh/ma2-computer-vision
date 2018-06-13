@@ -8,21 +8,17 @@ from PIL import Image
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "resources", "data")
 
+RADIOGRAPH_NUMBERS = list(range(1, 15))
+TEETH = {1, 2, 3, 4, 5, 6, 7, 8}
 UPPER_TEETH = {1, 2, 3, 4}
 LOWER_TEETH = {5, 6, 7, 8}
 LEFT_TEETH = {1, 2, 5, 6}
 RIGHT_TEETH = {3, 4, 7, 8}
 CENTRAL_TEETH = {2, 3, 6, 7}
 LATERAL_TEETH = {1, 4, 5, 8}
-SAMPLE_AMOUNT = 30 # 10, 13, 15, 30
-TOOTH_TYPES1 = {
-    "CENTRAL": CENTRAL_TEETH,
-    "LATERAL": LATERAL_TEETH,
-}
-TOOTH_TYPES2 = {
-    "UPPER": UPPER_TEETH,
-    "LOWER": LOWER_TEETH,
-}
+
+SAMPLE_AMOUNT = 40  # 10, 13, 15, 30
+PCA_COMPONENTS = 20
 
 
 def getRadiographFilenames(number=None, extra=False):
@@ -121,11 +117,11 @@ def sampleNormalLine(m, current, pixelsToSample):
     # dx = the distance that can be moved in X for there to be a max distance of 1 in Y
     dx = 1 / m if m != 0 else 1
 
-    #pixels = 30
+    # pixels = 30
     xOffset = pixelsToSample * dx if -1 < dx < 1 else pixelsToSample
     pStart = (x - xOffset)
     pEnd = (x + xOffset)
-    X = np.asarray([pStart + k/(pixelsToSample - 1) * (pEnd - pStart) for k in range(pixelsToSample)])
+    X = np.asarray([pStart + k / (pixelsToSample - 1) * (pEnd - pStart) for k in range(pixelsToSample)])
     Y = m * (X - current[0]) + b
 
     # x1, y1 = X[0], Y[0]
@@ -143,6 +139,7 @@ def sampleNormalLine(m, current, pixelsToSample):
     #     Y = np.concatenate((Y[beforeCurrentIdx], Y[afterCurrentIdx]))
 
     return list(zip(X, Y))
+
 
 def getNormalSlope(before, current, nextt):
     xx = np.asarray([before[0], current[0], nextt[0]])
