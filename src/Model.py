@@ -129,7 +129,7 @@ class Model:
             profiles = grayLevelProfiles[pointIdx]
             distances = []
 
-            for profile, normalPoint in profiles:
+            for profile, normalPoint, _ in profiles:
                 d = self.mahalanobisDistance(profile, pointIdx)
                 distances.append((d, normalPoint))
                 print("Mahalanobis dist: {}, p: {}".format(d, normalPoint))

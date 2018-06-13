@@ -68,7 +68,6 @@ class GUI:
             elif pressed_key == ord('o'):
                 self.showOriginalTooth()
 
-
             elif pressed_key == ord('n'):
                 self.doMatchingModelPointsIteration()
 
@@ -137,7 +136,7 @@ class GUI:
             for m in self.models:
                 newLandmark = m.getTranslatedAndInverseScaledMean(x, y)
                 radiograph = self.radiographs[self.current_radiograph_index]
-
+                #newLandmark.radiograph = radiograph
                 self.betterFittingLandmark = m.findBetterFittingLandmark(newLandmark, radiograph)
 
                 self.drawLandMarkWithNormals(newLandmark)
@@ -157,20 +156,30 @@ class GUI:
 
         for i in range(len(points)):
             m = util.getNormalSlope(points[i - 1], points[i], points[(i + 1) % len(points)])
-            p = np.asarray(util.sampleNormalLine(m, points[i], 20))
+            p = np.asarray(util.sampleNormalLine(m, points[i], 10))
             x2 = p[:, 0]
             y2 = p[:, 1]
 
             for j in range(len(x2)):
                 cv2.line(self.img,
-                         (int(x2[j]), int(y2[j])),
-                         (int(x2[j]), int(y2[j])),
+                         ( int(x2[j]), int(y2[j]) ),
+                         ( int(x2[j]), int(y2[j]) ),
                          (255, 0, 0), 1)
 
             origin = (int(points[i][0]), int(points[i][1]))
             end = (int(points[(i + 1) % len(points)][0]), int(points[(i + 1) % len(points)][1]))
 
             cv2.line(self.img, origin, end, color, 3)
+
+        grayLevelProfiles = landmark.getGrayLevelProfilesForAllNormalPoints(10, False)
+        for r in grayLevelProfiles.values():
+            for [pixels, p, p2] in r:
+                print(pixels)
+                for z in range(len(p2)):
+
+                    orig = (int(p2[z][0]), int(p2[z][1]))
+
+                    cv2.line(self.img, orig, orig, int(pixels[z]), thickness=2)
 
     def preprocessCurrentRadiograph(self):
         radiograph = self.radiographs[self.current_radiograph_index]

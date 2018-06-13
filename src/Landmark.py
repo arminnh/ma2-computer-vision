@@ -130,7 +130,7 @@ class Landmark:
 
         return lines
 
-    def getGrayLevelProfilesForAllNormalPoints(self, pixelsToSample):
+    def getGrayLevelProfilesForAllNormalPoints(self, pixelsToSample, deriv=True):
         if self.radiograph is None:
             raise Exception("Need radiograph for gray level profile")
 
@@ -147,6 +147,7 @@ class Landmark:
             #m = -1 / tangentLineSlope if tangentLineSlope != 0 else 0
 
             normalSamplePoints = util.sampleNormalLine(m, point, pixelsToSample=pixelsToSample)
+            normalSamplePoints.append(tuple(point))
             normalizedGrayLevelProfilesWithPoints[i] = []
 
             # Loop over the sampled points
@@ -154,19 +155,20 @@ class Landmark:
             for normalPoint in normalSamplePoints:
                 # Get pixel values on the sampled positions
                 p2 = util.sampleNormalLine(m, normalPoint, pixelsToSample=pixelsToSample)
-
+                p2.append(tuple(normalPoint))
                 img = self.radiograph.image#.convert("L")  # type: Image
                 pixels = np.asarray([img.getpixel(p) for p in p2])
 
-                # Derivative profile of length n_p - 1
-                pixels = np.asarray([pixels[i+1] - pixels[i-1] for i in range(len(pixels)-1)])#np.diff(pixels)
+                if deriv:
+                    # Derivative profile of length n_p - 1
+                    pixels = np.asarray([pixels[i+1] - pixels[i-1] for i in range(len(pixels)-1)])#np.diff(pixels)
 
-                # Normalized derivative profile
-                scale = np.sum(np.abs(pixels))
-                if scale != 0:
-                    pixels = pixels / scale
+                    # Normalized derivative profile
+                    scale = np.sum(np.abs(pixels))
+                    if scale != 0:
+                        pixels = pixels / scale
 
-                normalizedGrayLevelProfilesWithPoints[i].append([pixels, normalPoint])
+                normalizedGrayLevelProfilesWithPoints[i].append([pixels, normalPoint, p2])
             # print("PROFILES SHAPE: ", pixels.shape)
 
         return normalizedGrayLevelProfilesWithPoints
@@ -198,6 +200,8 @@ class Landmark:
             #m = -1 / tangentLineSlope if tangentLineSlope != 0 else 0
 
             normalPoints = util.sampleNormalLine(m, point, pixelsToSample=pixelsToSample)
+            normalPoints.append(tuple(point))
+
             # Get pixel values on the sampled positions
             img = self.radiograph.image  # type: Image
             pixels = np.asarray([img.getpixel(p) for p in normalPoints])
