@@ -132,8 +132,8 @@ class Model:
 
             for profile, normalPoint, _ in profiles:
                 d = self.mahalanobisDistance(profile, pointIdx)
-                distances.append((d, normalPoint))
-                print("Mahalanobis dist: {}, p: {}".format(d, normalPoint))
+                distances.append((abs(d), normalPoint))
+                print("Mahalanobis dist: {}, p: {}".format(abs(d), normalPoint))
 
             bestPoints.append(min(distances, key=lambda x: x[0])[1])
 
