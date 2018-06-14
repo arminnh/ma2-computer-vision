@@ -1,3 +1,5 @@
+import time
+
 import util
 from preprocess_img import *
 
@@ -17,6 +19,8 @@ class GUI:
         self.preprocess = False
         self.currentLandmark = None
         self.showEdges = False
+        self.c = 0
+        self.blockSize = 3
 
     def open(self):
         self.createWindow()
@@ -33,34 +37,62 @@ class GUI:
                 img = self.drawEdges(img)
 
             y, x = self.img.shape
-            cv2.line(self.img, (int(x / 2), 0), (int(x / 2), int(y)), (255, 255, 255), 3)
-            cv2.line(self.img, (0, int(y / 2)), (x, int(y / 2)), (255, 255, 255), 3)
+            # cv2.line(self.img, (int(x / 2), 0), (int(x / 2), int(y)), (255, 255, 255), 3)
+            # cv2.line(self.img, (0, int(y / 2)), (x, int(y / 2)), (255, 255, 255), 3)
 
-            for model in self.toothModels:
-                if self.currentRadiographIndex < len(model.landmarks):
-                    landmark = model.landmarks[self.currentRadiographIndex]
-                    self.drawLandmark(landmark, color=180, thickness=3)
-
-                    self.drawOriginModel(model.initializationModel.profileForImage[self.currentRadiographIndex])
-                    self.drawAllOrigins()
-
-            ymin = img[int(y / 2):, list(range(x))].argmin(0) + int(y/2)
-
-            for xx, yy in zip(list(range(x)), ymin):
-                cv2.line(img, (xx, yy), (xx, yy), 255, 2)
-
-            import scipy.interpolate, scipy.optimize
-            z = np.polyfit(list(range(x)), ymin, 5)
-            f = np.poly1d(z)
-            for xx in list(range(x)):
-                cv2.line(img, (xx, int(f(xx))), (xx, int(f(xx))), 180, 1)
+            # for model in self.toothModels:
+            #     if self.currentRadiographIndex < len(model.landmarks):
+            #         landmark = model.landmarks[self.currentRadiographIndex]
+            #         self.drawLandmark(landmark, color=180, thickness=3)
+            #
+            #         self.drawOriginModel(model.initializationModel.profileForImage[self.currentRadiographIndex])
+            #         self.drawAllOrigins()
 
             cv2.imshow(self.name, img)
 
             # Key Listeners
             pressed_key = cv2.waitKey(50)
 
-            # show another image
+            if pressed_key == ord("`"):
+                self.c = 0
+                self.blockSize = 3
+
+            if pressed_key == ord("1"):
+                self.img = cv2.medianBlur(self.img, 29)
+
+            if pressed_key == ord("2"):
+                self.c += 1
+                print(self.c)
+                self.refreshCurrentImage()
+                self.img = cv2.adaptiveThreshold(self.img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY,
+                                                 self.blockSize, self.c)
+
+            if pressed_key == ord("3"):
+                self.blockSize += 2
+                print(self.blockSize)
+                self.refreshCurrentImage()
+                self.img = cv2.adaptiveThreshold(self.img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY,
+                                                 self.blockSize, self.c)
+
+            if pressed_key == ord("4"):
+                self.c += 1
+                print(self.c)
+                self.refreshCurrentImage()
+                self.img = cv2.adaptiveThreshold(self.img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,
+                                                 self.blockSize, self.c)
+
+            if pressed_key == ord("5"):
+                self.blockSize += 2
+                print(self.blockSize)
+                self.refreshCurrentImage()
+                self.img = cv2.adaptiveThreshold(self.img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,
+                                                 self.blockSize, self.c)
+
+            if pressed_key == ord("6"):
+                self.refreshCurrentImage()
+                self.img = cv2.adaptiveThreshold(self.img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 45,
+                                                 5)
+
             if pressed_key == ord("x") or pressed_key == ord("c"):
                 if len(self.radiographs) > 1:
                     if pressed_key == ord("x"):
@@ -107,6 +139,56 @@ class GUI:
 
         cv2.destroyAllWindows()
 
+    def transitionCost(self, prevY, currY):
+        if prevY == currY:
+            return 2
+        elif currY - prevY == 1 or currY - prevY == -1:
+            return 1
+        return np.inf
+
+    def bestPathForJawSplit(self, yMin, yMax):
+        """ Find the best path to split the jaws in the image starting from position (0, y). """
+        ttime = time.time()
+        _, xMax = self.img.shape
+        yMax = yMax - yMin
+
+        # Set up arrays for output x and y values
+        xPath = np.linspace(0, xMax, xMax).astype(int)
+        yPath = np.zeros(len(xPath)).astype(int)
+
+        # trellis (y, x, 2) shape. 2 to hold cost and previousY
+        trellis = np.full((yMax, len(xPath), 2), np.inf)
+
+        # set first column in trellis
+        for y in range(yMax):
+            trellis[y, 0, 0] = self.img[y + yMin, 0]
+            trellis[y, 0, 1] = y
+
+        # forward pass
+        for x in range(1, len(xPath)):
+            print(x)
+            for y in range(yMax):
+                start = y - 1 if y > 0 else y
+                end = y + 1 if y < yMax - 1 else y
+
+                bestPrevY = trellis[start:end + 1, x - 1, 0].argmin() + y - 1
+                bestPrevCost = trellis[bestPrevY, x - 1, 0]
+
+                newCost = bestPrevCost + self.img[y + yMin, x]  # + self.transitionCost(bestPrevY, y)
+                trellis[y, x, 0] = newCost
+                trellis[y, x, 1] = bestPrevY
+
+        # find the best path, backwards pass
+        # set first previousY value to set up backwards pass
+        previousY = int(trellis[:, -1, 0].argmin())
+
+        for x in range(len(xPath) - 1, -1, -1):
+            yPath[x] = previousY + yMin
+            previousY = int(trellis[previousY, x, 1])
+
+        print(time.time() - ttime)
+        return list(zip(xPath, yPath))
+
     def getAllOrigins(self):
         c = {}
         for i, model in enumerate(self.toothModels):
@@ -142,9 +224,17 @@ class GUI:
     def setCurrentImage(self, idx):
         self.currentRadiographIndex = idx
         self.currentRadiograph = self.radiographs[idx]
-        self.img = PILtoCV(self.radiographs[idx].image)
         self.toothCenters = self.getAllOrigins()
+        self.refreshCurrentImage()
         self.refreshOverlay()
+
+        # Find line to split jaws into two images
+        yMin, yMax = 400, 675
+        splitLine = self.bestPathForJawSplit(yMin, yMax)
+        for i, point in enumerate(splitLine):
+            if i > 0:
+                cv2.line(self.img, splitLine[i-1], point, 255, 2)
+
         return self
 
     def setCurrentModel(self, idx):
@@ -254,7 +344,7 @@ class GUI:
                 applyCLAHE
             ])
         else:
-            self.refreshCurrentRadiograph()
+            self.refreshCurrentImage()
 
         self.preprocess = not self.preprocess
 
@@ -278,10 +368,10 @@ class GUI:
             print("Improvement iteration {}, distance {}".format(i, d))
 
         self.currentLandmark = previousLandmark
-        self.refreshCurrentRadiograph()
+        self.refreshCurrentImage()
         self.drawLandmark(self.currentLandmark, (255, 255, 255))
 
-    def refreshCurrentRadiograph(self):
+    def refreshCurrentImage(self):
         self.img = PILtoCV(self.currentRadiograph.image)
 
     def updateOrigins(self):
@@ -291,4 +381,4 @@ class GUI:
             newOrigin = m.initializationModel.getBetterOrigin(currentOriginForModel, self.currentRadiograph)
             newOrigin = (int(newOrigin[0]), int(newOrigin[1]))
             self.toothCenters[i] = newOrigin
-        self.refreshCurrentRadiograph()
+        self.refreshCurrentImage()
