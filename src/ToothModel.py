@@ -10,7 +10,7 @@ from Landmark import Landmark
 
 
 class ToothModel:
-    def __init__(self, name, landmarks, pcaComponents, sampleAmount):
+    def __init__(self, name, landmarks, pcaComponents, sampleAmount, projectY=False):
         self.name = name
         self.landmarks = landmarks
         self.preprocessedLandmarks = []
@@ -25,6 +25,7 @@ class ToothModel:
         self.y_j_bar = {}
         self.C_yj = {}
         self.initializationModel = InitializationModel(landmarks, 28)  # TODO
+        self.projectYIntoTangentPlane = projectY
 
     def doProcrustesAnalysis(self):
         # procrustes_analysis.drawLandmarks(self.landmarks, "before")
@@ -145,28 +146,11 @@ class ToothModel:
     def reconstructLandmarkForCoefficients(self, b):
         return Landmark(self.meanLandmark.points + (self.eigenvectors @ b).flatten())
 
-    def alignTwoShapes(self, l1, l2):
-        """
-        :param x1:
-        :param x2: the reference
-        :return:
-        """
-        x2_center = np.mean(l2.getPointsAsTuples(), axis=0)
-        x1_center = np.mean(l1.getPointsAsTuples(), axis=0)
-        moveDist = x2_center - x1_center
-        l1 = l1.translate(*moveDist).getPointsAsTuples()
-        l2 = l2.getPointsAsTuples()
-
-        normSq = (np.linalg.norm(l1.flatten()) ** 2)
-        a = (l1.flatten() @ l2.flatten()) / normSq
-        b = np.sum([l1[i][0] * l2[i][1] - l1[i][1] * l2[i][0] for i in range(len(l1))]) / normSq
-
-        s = np.sqrt(a ** 2 + b ** 2)
-        theta = math.atan(b / a)
-
-        return moveDist, s, theta
-
     def matchModelPointsToTargetPoints(self, landmarkY):
+        """
+        A simple iterative approach towards finding the best pose and shape parameters to match a model instance X to a
+        new set of image points Y.
+        """
         b = np.zeros((self.pcaComponents, 1))
         diff = float("inf")
         translateX = 0
@@ -174,36 +158,29 @@ class ToothModel:
         theta = 0
         scale = 0
 
-        iii = 0
-        # procrustes_analysis.drawLandmarks([landmarkY], "landmarkY")
-
         while diff > 1e-9:
-            iii += 1
-
             # Generate model points using x = x' + Pb
             x = self.reconstructLandmarkForCoefficients(b)
 
             # Project Y into the model coordinate frame by superimposition
             # and get the parameters of the transformation
             y, (translateX, translateY), scale, theta = landmarkY.superimpose(x)
-            # (translateX, translateY), scale, theta = self.alignTwoShapes(x, landmarkY)
-            # y = landmarkY.translate(-translateX,-translateY).scale(1 / scale).rotate(-theta)
 
-            # procrustes_analysis.drawLandmarks([y], "help me")
-
-            # TODO ??? Project y into the tangent plane to x_mean by scaling: y' = y / (y x_mean)
-            y.points /= y.points.dot(self.meanLandmark.points)
+            # Project y into the tangent plane to x_mean by scaling: y' = y / (y x_mean)
+            # As in "An Introduction to Active Shape Models" by Tim Cootes
+            if self.projectYIntoTangentPlane:
+                y.points /= y.points.dot(self.meanLandmark.points)
 
             # Update the model parameters b
             newB = (self.eigenvectors.T @ (y.points - self.meanLandmark.points)).reshape((self.pcaComponents, -1))
 
+            # Constrain the coefficients to lie within certain limits
             for i in range(len(newB)):
                 limit = 2 * np.sqrt(abs(self.eigenvalues[i]))
                 newB[i] = np.clip(newB[i], -limit, limit)
 
             diff = scipy.spatial.distance.euclidean(b, newB)
             b = newB
-            # print("i: {}, b diff: {}".format(iii, diff))
 
         return self.reconstructLandmarkForCoefficients(b) \
             .rotate(-theta).scale(scale).translate(-translateX, -translateY)
