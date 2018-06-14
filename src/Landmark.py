@@ -121,13 +121,13 @@ class Landmark:
         points = self.getPointsAsTuples()
         for i, point in enumerate(points):
             m = util.getNormalSlope(points[i - 1], point, points[(i + 1) % len(points)])
-            normalPoints = util.sampleNormalLine(m, point, pixelsToSample=pixelsToSample)
+            normalPoints = util.sampleLine(m, point, pixelsToSample=pixelsToSample)
 
             lines[i] = normalPoints
 
         return lines
 
-    def getGrayLevelProfilesForAllNormalPoints(self, pixelsToSample, getDeriv=True):
+    def getGrayLevelProfilesForAllNormalPoints(self, sampleAmount, getDeriv=True):
         if self.radiograph is None:
             raise Exception("Need radiograph for gray level profile")
 
@@ -143,16 +143,14 @@ class Landmark:
             # m = slope of normal line
             #m = -1 / tangentLineSlope if tangentLineSlope != 0 else 0
 
-            normalSamplePoints = util.sampleNormalLine(m, point, pixelsToSample=pixelsToSample)
-            normalSamplePoints.append(tuple(point))
+            normalSamplePoints = util.sampleLine(m, point, pixelsToSample=sampleAmount)
             normalizedGrayLevelProfilesWithPoints[i] = []
 
             # Loop over the sampled points
             # We need to get the gray level profile of all these points
             for normalPoint in normalSamplePoints:
                 # Get pixel values on the sampled positions
-                p2 = util.sampleNormalLine(m, normalPoint, pixelsToSample=pixelsToSample)
-                p2.append(tuple(normalPoint))
+                p2 = util.sampleLine(m, normalPoint, pixelsToSample=sampleAmount)
 
                 beforeDeriv, afterDeriv, scaled = util.getPixels(self.radiograph, p2, getDeriv)
 
@@ -202,8 +200,7 @@ class Landmark:
             # m = slope of normal line
             #m = -1 / tangentLineSlope if tangentLineSlope != 0 else 0
 
-            normalPoints = util.sampleNormalLine(m, point, pixelsToSample=pixelsToSample)
-            normalPoints.append(tuple(point))
+            normalPoints = util.sampleLine(m, point, pixelsToSample=pixelsToSample)
 
             _, afterDeriv, scaled = util.getPixels(self.radiograph, normalPoints, getDeriv)
             grayLevelProfiles[i] = afterDeriv

@@ -18,7 +18,6 @@ CENTRAL_TEETH = {2, 3, 6, 7}
 LATERAL_TEETH = {1, 4, 5, 8}
 
 SAMPLE_AMOUNT = 40  # 10, 13, 15, 30
-SAMPLE_AMOUNT = 25
 
 PCA_COMPONENTS = 20
 
@@ -63,8 +62,8 @@ def loadRadiographImage(radiographFilename):
     x2 = int(x / 2)
     y2 = int(y / 2)
 
-    xStart, yStart = 400, 450
-    img = img.crop((x2 - xStart, y2 - yStart, x2 + xStart, y2 + yStart + 250))
+    xStart, yStart = 375, 450
+    img = img.crop((x2 - xStart, y2 - yStart, x2 + xStart, y2 + yStart + 200))
     XOffset = - (x2 - xStart)
     YOffset = - (y2 - yStart)
 
@@ -120,7 +119,7 @@ def getSlopeOfInnerBisector(m1, m2):
         return -1 / m4
 
 
-def sampleNormalLine(m, current, pixelsToSample):
+def sampleLine(m, current, pixelsToSample):
     """
     Returns points on the normal line that goes through `current` by calculating the angle between `before` and `next`.
     :param m: the slope of the line to sample on
@@ -138,7 +137,7 @@ def sampleNormalLine(m, current, pixelsToSample):
     pEnd = (x + xOffset)
 
     # 2 * pixelsToSample + 1 => as in "we have 2k+1 samples which can be put into a vector
-    X = np.linspace(pStart, pEnd, 2 * pixelsToSample + 1)
+    X = np.linspace(pStart, pEnd, pixelsToSample + 1)
     Y = m * (X - current[0]) + b
 
     return list(zip(X, Y))
@@ -164,12 +163,12 @@ def getPixels(radiograph, points, getDeriv=True):
     img = radiograph.image  # type: Image
     pixels = np.asarray([img.getpixel(p) for p in points])
 
-    beforeDeriv = pixels
+    beforeDeriv = pixels.copy()
     if getDeriv:
         # Derivative profile of length n_p - 1
         pixels = np.asarray([pixels[i + 1] - pixels[i - 1] for i in range(len(pixels) - 1)])  # np.diff(pixels)
 
-    afterDeriv = pixels
+    afterDeriv = pixels.copy()
 
     # Normalized derivative profile
     # print("i {}, derivated profile: {}, divisor: {}".format(i, list(pixels), np.sum(np.abs(pixels))), end=", ")
@@ -177,6 +176,6 @@ def getPixels(radiograph, points, getDeriv=True):
     if scale != 0:
         pixels = pixels / scale
 
-    scaled = pixels
+    scaled = pixels.copy()
 
     return beforeDeriv, afterDeriv, scaled

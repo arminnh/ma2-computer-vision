@@ -4,7 +4,7 @@ from preprocess_img import *
 
 class GUI:
 
-    def __init__(self, radiographs, models, sampleAmount):
+    def __init__(self, radiographs, models):
         self.name = "Computer Vision KU Leuven"
         self.radiographs = radiographs
         self.currentRadiograph = None
@@ -17,7 +17,6 @@ class GUI:
         self.preprocess = False
         self.currentLandmark = None
         self.showEdges = False
-        self.sampleAmount = sampleAmount
 
     def open(self):
         self.createWindow()
@@ -44,6 +43,17 @@ class GUI:
 
                     self.drawOriginModel(model.initializationModel.profileForImage[self.currentRadiographIndex])
                     self.drawAllOrigins()
+
+            ymin = img[int(y / 2):, list(range(x))].argmin(0) + int(y/2)
+
+            for xx, yy in zip(list(range(x)), ymin):
+                cv2.line(img, (xx, yy), (xx, yy), 255, 2)
+
+            import scipy.interpolate, scipy.optimize
+            z = np.polyfit(list(range(x)), ymin, 5)
+            f = np.poly1d(z)
+            for xx in list(range(x)):
+                cv2.line(img, (xx, int(f(xx))), (xx, int(f(xx))), 180, 1)
 
             cv2.imshow(self.name, img)
 
@@ -193,7 +203,7 @@ class GUI:
 
             self.currentLandmark = self.currentToothModel.getTranslatedAndInverseScaledMean(x, y)
 
-            self.drawLandMarkWithNormals(self.currentLandmark, grayLevels=False)
+            self.drawLandMarkWithNormals(self.currentLandmark, grayLevels=True)
 
     def drawLandmark(self, landmark, color=(0, 0, 255), thickness=1):
         points = landmark.getPointsAsTuples().round().astype(int)
@@ -209,7 +219,7 @@ class GUI:
 
         for i in range(len(points)):
             m = util.getNormalSlope(points[i - 1], points[i], points[(i + 1) % len(points)])
-            p = np.asarray(util.sampleNormalLine(m, points[i], self.sampleAmount))
+            p = np.asarray(util.sampleLine(m, points[i], self.currentToothModel.sampleAmount))
             x2 = p[:, 0]
             y2 = p[:, 1]
 
@@ -225,7 +235,9 @@ class GUI:
             cv2.line(self.img, origin, end, color, 3)
 
         if grayLevels:
-            grayLevelProfiles = landmark.getGrayLevelProfilesForAllNormalPoints(self.sampleAmount, False)
+            landmark.radiograph = self.currentRadiograph
+            grayLevelProfiles = landmark.getGrayLevelProfilesForAllNormalPoints(self.currentToothModel.sampleAmount,
+                                                                                False)
             for r in grayLevelProfiles.values():
                 for [pixels, p, p2] in r:
                     print(pixels)
@@ -242,7 +254,7 @@ class GUI:
                 applyCLAHE
             ])
         else:
-            self.img = PILtoCV(self.currentRadiograph.image)
+            self.refreshCurrentRadiograph()
 
         self.preprocess = not self.preprocess
 
@@ -266,24 +278,8 @@ class GUI:
             print("Improvement iteration {}, distance {}".format(i, d))
 
         self.currentLandmark = previousLandmark
-        self.img = PILtoCV(self.currentRadiograph.image)
+        self.refreshCurrentRadiograph()
         self.drawLandmark(self.currentLandmark, (255, 255, 255))
-
-    def showOriginalTooth(self):
-        landmark = self.currentToothModel.landmarks[self.currentRadiograph]
-        self.drawLandMarkWithNormals(landmark)
-
-        grayLevelProfiles, normalizedGrayLevelProfiles, normalPointsOfLandmarkNr \
-            = landmark.grayLevelProfileForAllPoints(self.sampleAmount, False)
-
-        self.drawGrayLevelProfiles(grayLevelProfiles, normalPointsOfLandmarkNr)
-
-    def drawGrayLevelProfiles(self, grayLevels, normalPointsOnLandmark):
-        for i, pixels in grayLevels.items():
-            for j, point in enumerate(normalPointsOnLandmark[i]):
-                orig = (int(point[0]), int(point[1]))
-                cv2.circle(self.img, orig, 1, int(pixels[j]), thickness=5)
-                # cv2.putText(self.img, "{},{}".format(1, 1), orig, cv2.FONT_ITALIC, 0.2, 255)
 
     def refreshCurrentRadiograph(self):
         self.img = PILtoCV(self.currentRadiograph.image)

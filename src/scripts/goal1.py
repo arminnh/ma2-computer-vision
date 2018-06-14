@@ -20,7 +20,7 @@ def buildActiveShapeModels(radiographs, PCAComponents, sampleAmount):
                 name="Model tooter {}".format(t),
                 landmarks=[l for l in allLandmarks if l.toothNumber == t],
                 pcaComponents=PCAComponents,
-                sampleAmount=sampleAmount
+                sampleAmount=sampleAmount,
             )
                 .buildGrayLevelModels()
                 .doProcrustesAnalysis()

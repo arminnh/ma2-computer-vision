@@ -40,10 +40,10 @@ class InitializationModel:
         return b1, b2, b3, b4, pixelProfile
 
     def sampleInitProfilePoints(self, origin):
-        horizontalPoints = util.sampleNormalLine(0, origin, self.sampleAmount)
-        verticalPoints = util.sampleNormalLine(1000, origin, self.sampleAmount)
-        diagonalPoints1 = util.sampleNormalLine(1, origin, self.sampleAmount)
-        diagonalPoints2 = util.sampleNormalLine(-1, origin, self.sampleAmount)
+        horizontalPoints = util.sampleLine(0, origin, self.sampleAmount)
+        verticalPoints = util.sampleLine(1000, origin, self.sampleAmount)
+        diagonalPoints1 = util.sampleLine(1, origin, self.sampleAmount)
+        diagonalPoints2 = util.sampleLine(-1, origin, self.sampleAmount)
         return diagonalPoints1, diagonalPoints2, horizontalPoints, verticalPoints
 
     def mahalanobisDistance(self, profile):

@@ -133,7 +133,7 @@ class ToothModel:
 
         # Examine a region of the image around each point X_i to find the best nearby match for the point X_i'
         # Get the gray level pointProfiles of points on normal lines of the landmark's points
-        grayLevelProfiles = landmark.getGrayLevelProfilesForAllNormalPoints(self.sampleAmount)
+        grayLevelProfiles = landmark.getGrayLevelProfilesForAllNormalPoints(self.sampleAmount, self.sampleAmount)
 
         bestPoints = []
         # pointIdx = the points 0 to 39 on the landmark
