@@ -9,27 +9,20 @@ class GUI:
         self.radiographs = radiographs
         self.currentRadiograph = None
         self.currentRadiographIndex = 0
-        self.models = models
-        self.currentModel = None
-        self.currentModelIndex = 0
+        self.toothModels = models
+        self.currentToothModel = None
+        self.currentToothModelIndex = 0
+        self.toothCenters = self.getAllOrigins()
         self.img = None
         self.preprocess = False
         self.currentLandmark = None
         self.showEdges = False
         self.sampleAmount = sampleAmount
 
-        self.origins = {}
-        self.getAllOrigins()
-
-    def getAllOrigins(self):
-        for i,model in enumerate(self.models):
-            orig = model.initModel.meanOrigin
-            self.origins[i] = int(orig[0]), int(orig[1])
-
     def open(self):
         self.createWindow()
         self.setCurrentImage(self.currentRadiographIndex)
-        self.setCurrentModel(self.currentModelIndex)
+        self.setCurrentModel(self.currentToothModelIndex)
         self.initTrackBars()
 
         while True:
@@ -44,12 +37,12 @@ class GUI:
             cv2.line(self.img, (int(x / 2), 0), (int(x / 2), int(y)), (255, 255, 255), 3)
             cv2.line(self.img, (0, int(y / 2)), (x, int(y / 2)), (255, 255, 255), 3)
 
-            for model in self.models:
+            for model in self.toothModels:
                 if self.currentRadiographIndex < len(model.landmarks):
                     landmark = model.landmarks[self.currentRadiographIndex]
                     self.drawLandmark(landmark, color=180, thickness=3)
 
-                    #self.drawOriginModel(model.initModel.profileForImage[self.currentRadiographIndex])
+                    self.drawOriginModel(model.initializationModel.profileForImage[self.currentRadiographIndex])
                     self.drawAllOrigins()
 
             cv2.imshow(self.name, img)
@@ -73,7 +66,7 @@ class GUI:
                         self.increaseModelIndex(-1)
                     elif pressed_key == ord("b"):
                         self.increaseModelIndex(1)
-                    cv2.setTrackbarPos("model", self.name, self.currentModelIndex)
+                    cv2.setTrackbarPos("model", self.name, self.currentToothModelIndex)
 
             # show edges key listener
             elif pressed_key == ord("e"):
@@ -93,7 +86,7 @@ class GUI:
                 break
 
             elif pressed_key == ord("o"):
-                #self.showOriginalTooth()
+                # self.showOriginalTooth()
                 self.updateOrigins()
 
             elif pressed_key == ord("n"):
@@ -104,8 +97,15 @@ class GUI:
 
         cv2.destroyAllWindows()
 
+    def getAllOrigins(self):
+        c = {}
+        for i, model in enumerate(self.toothModels):
+            orig = model.initializationModel.meanOrigin
+            c[i] = int(orig[0]), int(orig[1])
+        return c
+
     def drawAllOrigins(self):
-        for pos in self.origins.values():
+        for pos in self.toothCenters.values():
             cv2.circle(self.img, pos, 1, int(255), 2)
 
     def drawOriginModel(self, originModel):
@@ -120,7 +120,7 @@ class GUI:
         return self
 
     def refreshOverlay(self):
-        modelName = self.currentModel.name if self.currentModel is not None else self.currentModelIndex
+        modelName = self.currentToothModel.name if self.currentToothModel is not None else self.currentToothModelIndex
 
         cv2.displayOverlay(
             self.name,
@@ -133,12 +133,13 @@ class GUI:
         self.currentRadiographIndex = idx
         self.currentRadiograph = self.radiographs[idx]
         self.img = PILtoCV(self.radiographs[idx].image)
+        self.toothCenters = self.getAllOrigins()
         self.refreshOverlay()
         return self
 
     def setCurrentModel(self, idx):
-        self.currentModelIndex = idx
-        self.currentModel = self.models[idx]
+        self.currentToothModelIndex = idx
+        self.currentToothModel = self.toothModels[idx]
         self.refreshOverlay()
         return self
 
@@ -147,8 +148,9 @@ class GUI:
             cv2.createTrackbar("radiograph", self.name, self.currentRadiographIndex, len(self.radiographs) - 1,
                                self.setCurrentImage)
 
-        if len(self.models) > 1:
-            cv2.createTrackbar("model", self.name, self.currentModelIndex, len(self.models) - 1, self.setCurrentModel)
+        if len(self.toothModels) > 1:
+            cv2.createTrackbar("model", self.name, self.currentToothModelIndex, len(self.toothModels) - 1,
+                               self.setCurrentModel)
 
         return self
 
@@ -168,19 +170,19 @@ class GUI:
         if self.currentRadiographIndex < 0:
             self.currentRadiographIndex = 0
 
-        if self.currentRadiographIndex > len(self.radiographs):
+        if self.currentRadiographIndex >= len(self.radiographs):
             self.currentRadiographIndex = len(self.radiographs) - 1
 
         return self
 
     def increaseModelIndex(self, amount):
-        self.currentModelIndex += amount
+        self.currentToothModelIndex += amount
 
-        if self.currentModelIndex < 0:
-            self.currentModelIndex = 0
+        if self.currentToothModelIndex < 0:
+            self.currentToothModelIndex = 0
 
-        if self.currentModelIndex > len(self.models):
-            self.currentModelIndex = len(self.models) - 1
+        if self.currentToothModelIndex > len(self.toothModels):
+            self.currentToothModelIndex = len(self.toothModels) - 1
 
         return self
 
@@ -189,7 +191,7 @@ class GUI:
         if event == cv2.EVENT_LBUTTONDOWN:
             print("click x: {}, y: {}".format(x, y))
 
-            self.currentLandmark = self.currentModel.getTranslatedAndInverseScaledMean(x, y)
+            self.currentLandmark = self.currentToothModel.getTranslatedAndInverseScaledMean(x, y)
 
             self.drawLandMarkWithNormals(self.currentLandmark, grayLevels=False)
 
@@ -253,9 +255,9 @@ class GUI:
         i = 0
 
         while d > 1 and i < 50:
-            self.currentLandmark = self.currentModel.findBetterFittingLandmark(self.currentLandmark,
-                                                                               self.currentRadiograph)
-            self.currentLandmark = self.currentModel.matchModelPointsToTargetPoints(self.currentLandmark)
+            self.currentLandmark = self.currentToothModel.findBetterFittingLandmark(self.currentLandmark,
+                                                                                    self.currentRadiograph)
+            self.currentLandmark = self.currentToothModel.matchModelPointsToTargetPoints(self.currentLandmark)
 
             d = landmark.shapeDistance(self.currentLandmark)
             landmark = self.currentLandmark
@@ -267,7 +269,7 @@ class GUI:
         self.drawLandmark(self.currentLandmark, (255, 255, 255))
 
     def showOriginalTooth(self):
-        landmark = self.currentModel.landmarks[self.currentRadiograph]
+        landmark = self.currentToothModel.landmarks[self.currentRadiograph]
         self.drawLandMarkWithNormals(landmark)
 
         grayLevelProfiles, normalizedGrayLevelProfiles, normalPointsOfLandmarkNr \
@@ -286,10 +288,10 @@ class GUI:
         self.img = PILtoCV(self.currentRadiograph.image)
 
     def updateOrigins(self):
-        oldOrigins = self.origins
-        for i, m in enumerate(self.models):
+        oldOrigins = self.toothCenters
+        for i, m in enumerate(self.toothModels):
             currentOriginForModel = oldOrigins[i]
-            newOrigin = m.initModel.getBetterOrigin(currentOriginForModel, self.currentRadiograph)
+            newOrigin = m.initializationModel.getBetterOrigin(currentOriginForModel, self.currentRadiograph)
             newOrigin = (int(newOrigin[0]), int(newOrigin[1]))
-            self.origins[i] = newOrigin
+            self.toothCenters[i] = newOrigin
         self.refreshCurrentRadiograph()

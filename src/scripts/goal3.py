@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     models = scripts.goal1.buildActiveShapeModels(radiographs, PCAComponents, sampleAmount)
 
-    radiographs = Radiograph.getRadiographs(list(range(3)), extra=True)
+    radiographs = Radiograph.getRadiographs(list(range(8)), extra=True)
     gui = GUI(radiographs, models, sampleAmount)
     gui.open()
 

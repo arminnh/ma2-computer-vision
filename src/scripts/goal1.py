@@ -5,7 +5,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 import util
 import Radiograph
-from Model import Model
+from ToothModel import ToothModel
 
 
 def buildActiveShapeModels(radiographs, PCAComponents, sampleAmount):
@@ -16,7 +16,7 @@ def buildActiveShapeModels(radiographs, PCAComponents, sampleAmount):
     models = []
     for t in util.TEETH:
         models.append(
-            Model(
+            ToothModel(
                 name="Model tooter {}".format(t),
                 landmarks=[l for l in allLandmarks if l.toothNumber == t],
                 pcaComponents=PCAComponents,

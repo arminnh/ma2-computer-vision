@@ -1,28 +1,30 @@
+import math
+
 import numpy as np
 import scipy.spatial.distance
 from scipy import linalg
 
 import procrustes_analysis
+from InitializationModel import InitializationModel
 from Landmark import Landmark
-from scripts.InitModel import InitModel
 
 
-class Model:
+class ToothModel:
     def __init__(self, name, landmarks, pcaComponents, sampleAmount):
         self.name = name
         self.landmarks = landmarks
-        self.meanLandmark = None  # type: Landmark
         self.preprocessedLandmarks = []
+        self.meanLandmark = None  # type: Landmark
+        self.meanTheta = None
+        self.meanScale = None
         self.pcaComponents = pcaComponents
         self.eigenvalues = np.array([])
         self.eigenvectors = np.array([])
-        self.meanTheta = None
-        self.meanScale = None
         self.sampleAmount = sampleAmount
         self.y_ij = {}
         self.y_j_bar = {}
         self.C_yj = {}
-        self.initModel = InitModel(landmarks, 28)
+        self.initializationModel = InitializationModel(landmarks, 28)  # TODO
 
     def doProcrustesAnalysis(self):
         # procrustes_analysis.drawLandmarks(self.landmarks, "before")
@@ -144,7 +146,6 @@ class Model:
         return Landmark(self.meanLandmark.points + (self.eigenvectors @ b).flatten())
 
     def alignTwoShapes(self, l1, l2):
-        import math
         """
         :param x1:
         :param x2: the reference
@@ -218,6 +219,6 @@ class Model:
 
         reconstructed = self.reconstructLandmarkForCoefficients(b)
 
-        procrustes_analysis.drawLandmarks([landmark], "origin")
-        procrustes_analysis.drawLandmarks([reconstructed], "reconstructed")
+        procrustes_analysis.plotLandmarks([landmark], "origin")
+        procrustes_analysis.plotLandmarks([reconstructed], "reconstructed")
         return reconstructed

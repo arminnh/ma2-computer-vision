@@ -2,14 +2,13 @@ import numpy as np
 from scipy import linalg
 
 import util
-from Landmark import Landmark
-import math
 
-class InitModel:
+
+class InitializationModel:
 
     def __init__(self, landmarks, sampleAmount):
         self.landmarks = landmarks
-        self.meanOrigin = np.mean([np.mean(l.getPointsAsTuples(),0) for l in landmarks], 0)
+        self.meanOrigin = np.mean([np.mean(l.getPointsAsTuples(), 0) for l in landmarks], 0)
         self.sampleAmount = sampleAmount
         self.y_bar = None
         self.covInv = None
@@ -18,16 +17,16 @@ class InitModel:
 
     def sampleOriginGrayLevels(self):
         normalized = []
-        for i,l in enumerate(self.landmarks):
-            l: Landmark = l
-            origin = np.mean(l.getPointsAsTuples(), 0)
+        for i, landmark in enumerate(self.landmarks):
+            origin = np.mean(landmark.getPointsAsTuples(), 0)
 
             diagonalPoints1, diagonalPoints2, horizontalPoints, verticalPoints = self.sampleInitProfilePoints(origin)
 
             b1, b2, b3, b4, pixelProfile = self.getInitPixelProfile(diagonalPoints1, diagonalPoints2, horizontalPoints,
-                                                                    verticalPoints, l.radiograph)
+                                                                    verticalPoints, landmark.radiograph)
             normalized.append(pixelProfile)
-            self.profileForImage[i] = list(zip(b1, horizontalPoints))+ list(zip(b2,verticalPoints)) + list(zip(b3,diagonalPoints1)) + list(zip(b4,diagonalPoints2))
+            self.profileForImage[i] = list(zip(b1, horizontalPoints)) + list(zip(b2, verticalPoints)) + list(
+                zip(b3, diagonalPoints1)) + list(zip(b4, diagonalPoints2))
 
         self.y_bar = np.mean(normalized, 0)
         self.covInv = linalg.pinv(np.cov(np.transpose(normalized)))
@@ -56,14 +55,14 @@ class InitModel:
         return pMinusMeanTrans.T @ self.covInv @ pMinusMeanTrans
 
     def getBetterOrigin(self, currentOriginForModel, radiograph):
-        diagonalPoints1, diagonalPoints2, horizontalPoints, verticalPoints = self.sampleInitProfilePoints(currentOriginForModel)
+        diagonalPoints1, diagonalPoints2, horizontalPoints, verticalPoints = self.sampleInitProfilePoints(
+            currentOriginForModel)
 
-        points = diagonalPoints1 +  diagonalPoints2 + horizontalPoints + verticalPoints
+        points = diagonalPoints1 + diagonalPoints2 + horizontalPoints + verticalPoints
         distances = []
         for p in points:
             d1, d2, h1, v1 = self.sampleInitProfilePoints(p)
             _, _, _, _, pixelProfile = self.getInitPixelProfile(d1, d2, h1, v1, radiograph)
-            distances.append( (self.mahalanobisDistance(np.asarray(pixelProfile)), p) )
+            distances.append((self.mahalanobisDistance(np.asarray(pixelProfile)), p))
 
         return min(distances, key=lambda x: x[0])[1]
-

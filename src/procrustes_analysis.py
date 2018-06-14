@@ -7,14 +7,12 @@ from scipy.spatial import procrustes
 
 from Landmark import Landmark
 
-random.seed(123)
-
 
 def listToTuples(p):
     return np.asarray([(float(p[2 * j]), float(p[2 * j + 1])) for j in range(int(len(p) / 2))])
 
 
-def drawLandmarks(landmarks: List[Landmark], title):
+def plotLandmarks(landmarks: List[Landmark], title):
     plt.title(title)
     for l in landmarks:
         points = list(l.getPointsAsTuples())
@@ -29,28 +27,19 @@ def drawLandmarks(landmarks: List[Landmark], title):
 
 
 def performProcrustesAnalysis(landmarks: List[Landmark]):
-    print(landmarks)
-    """
-    # https://github.com/prlz77/prlz77.cvtools/blob/master/procrustes_align.py
-    :param landmarks: list of landmarks
-    """
     # drawLandmarks(landmarks, "procrustes input")
-
-    # First standardize all landmarks
-    # landmarks = [l.normalize() for l in landmarks]
-
-    # drawLandmarks(landmarks, "normalized")
 
     # Get a reference
     reference = random.choice(landmarks)
+    meanLandmark = reference
     # scipyProcrustesAnalysis(reference, landmarks)
+
     mean_theta = 0
     mean_scale = reference.getScale()
     reference.normalize()
 
     d = 10000
     iteration = 1
-    i = 0
     while d > 0.0001:
         # Superimpose all landmarks over the reference
         newLandmarks = []
@@ -59,7 +48,6 @@ def performProcrustesAnalysis(landmarks: List[Landmark]):
             newLandmarks.append(landmark)
             mean_theta += theta
             mean_scale += scale
-            i+=1
 
         landmarks = newLandmarks
 
@@ -71,12 +59,11 @@ def performProcrustesAnalysis(landmarks: List[Landmark]):
         d = meanLandmark.shapeDistance(reference)
         reference = meanLandmark
         iteration += 1
-    print("Procrustes analysis iterations: ", iteration)
 
     # drawLandmarks(landmarks, "after Procrustes")
 
-    mean_theta /= i
-    mean_scale /= i
+    mean_theta /= len(landmarks)
+    mean_scale /= len(landmarks)
     return landmarks, meanLandmark, mean_scale, mean_theta
 
 
@@ -100,4 +87,4 @@ def scipyProcrustesAnalysis(reference, landmarks):
         d = meanLandmark.shapeDistance(reference)
         reference = meanLandmark
 
-    drawLandmarks(input, "scipy normalized")
+    plotLandmarks(input, "scipy normalized")
