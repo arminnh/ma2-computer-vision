@@ -247,24 +247,25 @@ class GUI:
         self.preprocess = not self.preprocess
 
     def findBetterLandmark(self):
-        """ Execute an iteration of "matching model points to target points"
+        """
+        Execute an iteration of "matching model points to target points"
         model points are defined by the model, target points by the 'bestLandmark'
         """
-        landmark = self.currentLandmark
+        previousLandmark = self.currentLandmark
         d = 2
         i = 0
 
-        while d > 1 and i < 50:
-            self.currentLandmark = self.currentToothModel.findBetterFittingLandmark(self.currentLandmark,
-                                                                                    self.currentRadiograph)
-            self.currentLandmark = self.currentToothModel.matchModelPointsToTargetPoints(self.currentLandmark)
+        while d > 1 and i < 1:
+            newTargetPoints = self.currentToothModel.findBetterFittingLandmark(previousLandmark, self.currentRadiograph)
+            improvedLandmark = self.currentToothModel.matchModelPointsToTargetPoints(newTargetPoints)
 
-            d = landmark.shapeDistance(self.currentLandmark)
-            landmark = self.currentLandmark
+            d = improvedLandmark.shapeDistance(previousLandmark)
+            previousLandmark = improvedLandmark
 
             i += 1
-            print(i, d)
+            print("Improvement iteration {}, distance {}".format(i, d))
 
+        self.currentLandmark = previousLandmark
         self.img = PILtoCV(self.currentRadiograph.image)
         self.drawLandmark(self.currentLandmark, (255, 255, 255))
 

@@ -1,5 +1,3 @@
-import math
-
 import numpy as np
 import scipy.spatial.distance
 from scipy import linalg
@@ -42,7 +40,7 @@ class ToothModel:
 
     def getTranslatedAndInverseScaledMean(self, x, y):
         """ Returns the mean landmark rescaled back from unit variance (after procrustes) and translated to x and y. """
-        return self.meanLandmark.scale(self.meanScale).translate(x, y)
+        return self.meanLandmark.scale(self.meanScale*0.75).translate(x, y)
 
     def doPCA(self):
         """ Perform PCA on the landmarks after procrustes analysis and store the eigenvalues and eigenvectors. """
@@ -58,6 +56,13 @@ class ToothModel:
         self.eigenvectors = eigenvectors[:, sorted_values]
         # print(self.eigenvalues)
         return self
+
+    def getShapeParameters(self, landmark):
+        b = self.eigenvectors.T @ (landmark.points - self.meanLandmark.points)
+        return b.reshape((self.pcaComponents, -1))
+
+    def reconstructLandmarkForShapeParameters(self, b):
+        return Landmark(self.meanLandmark.points + (self.eigenvectors @ b).flatten())
 
     def buildGrayLevelModels(self):
         """
@@ -120,31 +125,45 @@ class ToothModel:
 
     def findBetterFittingLandmark(self, landmark, radiograph):
         """
-        Returns a landmark that is a better fit on the image than the given according to the gray level profiles of
+        Active Shape Model Algorithm: An iterative approach to improving the fit of an instance X.
+        Returns a landmark that is a better fit on the image than the given according to the gray level pointProfiles of
         points of the landmark and the mahalanobis distance.
         """
         landmark.radiograph = radiograph
 
-        # Get the gray level profiles of points on normal lines of the landmark's points
+        # Examine a region of the image around each point X_i to find the best nearby match for the point X_i'
+        # Get the gray level pointProfiles of points on normal lines of the landmark's points
         grayLevelProfiles = landmark.getGrayLevelProfilesForAllNormalPoints(self.sampleAmount)
 
         bestPoints = []
+        # pointIdx = the points 0 to 39 on the landmark
         for pointIdx in range(len(grayLevelProfiles)):
 
-            profiles = grayLevelProfiles[pointIdx]
+            pointProfiles = grayLevelProfiles[pointIdx]
             distances = []
 
-            for profile, normalPoint, _ in profiles:
+            for profile, normalPoint, _ in pointProfiles:
                 d = self.mahalanobisDistance(profile, pointIdx)
                 distances.append((abs(d), normalPoint))
                 # print("Mahalanobis dist: {:.2f}, p: {}".format(abs(d), normalPoint))
 
             bestPoints.append(min(distances, key=lambda x: x[0])[1])
 
-        return landmark.copy(np.asarray(bestPoints).flatten())
+        landmark = landmark.copy(np.asarray(bestPoints).flatten())
 
-    def reconstructLandmarkForCoefficients(self, b):
-        return Landmark(self.meanLandmark.points + (self.eigenvectors @ b).flatten())
+        # Find the parameters that best fit the new found points X
+        landmark, (translateX, translateY), scale, theta = landmark.superimpose(self.meanLandmark)
+
+        # Apply constraints to the parameters b to ensure plausible shapes
+        b = self.getShapeParameters(landmark)
+
+        # Constrain the coefficients to lie within certain limits
+        for i in range(len(b)):
+            limit = 2 * np.sqrt(abs(self.eigenvalues[i]))
+            b[i] = np.clip(b[i], -limit, limit)
+
+        return self.reconstructLandmarkForShapeParameters(b) \
+            .rotate(-theta).scale(scale).translate(-translateX, -translateY)
 
     def matchModelPointsToTargetPoints(self, landmarkY):
         """
@@ -160,29 +179,19 @@ class ToothModel:
 
         while diff > 1e-9:
             # Generate model points using x = x' + Pb
-            x = self.reconstructLandmarkForCoefficients(b)
+            x = self.reconstructLandmarkForShapeParameters(b)
 
             # Project Y into the model coordinate frame by superimposition
             # and get the parameters of the transformation
             y, (translateX, translateY), scale, theta = landmarkY.superimpose(x)
 
-            # Project y into the tangent plane to x_mean by scaling: y' = y / (y x_mean)
-            # As in "An Introduction to Active Shape Models" by Tim Cootes
-            if self.projectYIntoTangentPlane:
-                y.points /= y.points.dot(self.meanLandmark.points)
-
             # Update the model parameters b
-            newB = (self.eigenvectors.T @ (y.points - self.meanLandmark.points)).reshape((self.pcaComponents, -1))
-
-            # Constrain the coefficients to lie within certain limits
-            for i in range(len(newB)):
-                limit = 2 * np.sqrt(abs(self.eigenvalues[i]))
-                newB[i] = np.clip(newB[i], -limit, limit)
+            newB = self.getShapeParameters(y)
 
             diff = scipy.spatial.distance.euclidean(b, newB)
             b = newB
 
-        return self.reconstructLandmarkForCoefficients(b) \
+        return self.reconstructLandmarkForShapeParameters(b) \
             .rotate(-theta).scale(scale).translate(-translateX, -translateY)
 
     def reconstruct(self):
@@ -191,10 +200,9 @@ class ToothModel:
         Be sure to create b for a preprocessed landmark. PCA is done on preprocessed landmarks.
         """
         landmark = self.preprocessedLandmarks[0]
-        b = self.eigenvectors.T @ (landmark.points - self.meanLandmark.points)
-        b = b.reshape((self.pcaComponents, -1))
+        b = self.getShapeParameters(landmark)
 
-        reconstructed = self.reconstructLandmarkForCoefficients(b)
+        reconstructed = self.reconstructLandmarkForShapeParameters(b)
 
         procrustes_analysis.plotLandmarks([landmark], "origin")
         procrustes_analysis.plotLandmarks([reconstructed], "reconstructed")
