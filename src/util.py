@@ -123,33 +123,23 @@ def getSlopeOfInnerBisector(m1, m2):
 def sampleNormalLine(m, current, pixelsToSample):
     """
     Returns points on the normal line that goes through `current` by calculating the angle between `before` and `next`.
+    :param m: the slope of the line to sample on
+    :param current:  the position on the line to sample on each side from
     :param pixelsToSample: If given, samples a certain amount of pixels on each side of `current`
     """
     x = current[0]
     b = current[1]
+
     # dx = the distance that can be moved in X for there to be a max distance of 1 in Y
     dx = 1 / m if m != 0 else 1
 
-    # pixels = 30
     xOffset = pixelsToSample * dx if -1 < dx < 1 else pixelsToSample
     pStart = (x - xOffset)
     pEnd = (x + xOffset)
-    X = np.asarray([pStart + k / (pixelsToSample - 1) * (pEnd - pStart) for k in range(pixelsToSample)])
+
+    # 2 * pixelsToSample + 1 => as in "we have 2k+1 samples which can be put into a vector
+    X = np.linspace(pStart, pEnd, 2 * pixelsToSample + 1)
     Y = m * (X - current[0]) + b
-
-    # x1, y1 = X[0], Y[0]
-    # x2, y2 = X[-1], Y[-1]
-    # print("\nm: {}, dx: {}, line length: {}".format(m, dx, math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)))
-
-    # if pixelsToSample is not None:
-    #     # TODO: sample in a better way
-    #
-    #     beforeCurrentIdx = np.random.randint(0, round(len(X) / 2), pixelsToSample)
-    #     afterCurrentIdx = np.random.randint(round(len(X) / 2), len(X), pixelsToSample)
-    #     beforeCurrentIdx.sort()
-    #     afterCurrentIdx.sort()
-    #     X = np.concatenate((X[beforeCurrentIdx], X[afterCurrentIdx]))
-    #     Y = np.concatenate((Y[beforeCurrentIdx], Y[afterCurrentIdx]))
 
     return list(zip(X, Y))
 
@@ -169,7 +159,7 @@ def getNormalSlope(before, current, nextt):
     return m
 
 
-def getPixels(radiograph, points, getDeriv = True):
+def getPixels(radiograph, points, getDeriv=True):
     # Get pixel values on the sampled positions
     img = radiograph.image  # type: Image
     pixels = np.asarray([img.getpixel(p) for p in points])

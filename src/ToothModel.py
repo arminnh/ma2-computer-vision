@@ -57,7 +57,7 @@ class ToothModel:
         # print(self.eigenvalues)
         return self
 
-    def getShapeParameters(self, landmark):
+    def getShapeParametersForLandmark(self, landmark):
         b = self.eigenvectors.T @ (landmark.points - self.meanLandmark.points)
         return b.reshape((self.pcaComponents, -1))
 
@@ -155,7 +155,7 @@ class ToothModel:
         landmark, (translateX, translateY), scale, theta = landmark.superimpose(self.meanLandmark)
 
         # Apply constraints to the parameters b to ensure plausible shapes
-        b = self.getShapeParameters(landmark)
+        b = self.getShapeParametersForLandmark(landmark)
 
         # Constrain the coefficients to lie within certain limits
         for i in range(len(b)):
@@ -186,7 +186,7 @@ class ToothModel:
             y, (translateX, translateY), scale, theta = landmarkY.superimpose(x)
 
             # Update the model parameters b
-            newB = self.getShapeParameters(y)
+            newB = self.getShapeParametersForLandmark(y)
 
             diff = scipy.spatial.distance.euclidean(b, newB)
             b = newB
@@ -200,7 +200,7 @@ class ToothModel:
         Be sure to create b for a preprocessed landmark. PCA is done on preprocessed landmarks.
         """
         landmark = self.preprocessedLandmarks[0]
-        b = self.getShapeParameters(landmark)
+        b = self.getShapeParametersForLandmark(landmark)
 
         reconstructed = self.reconstructLandmarkForShapeParameters(b)
 
