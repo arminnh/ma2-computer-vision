@@ -228,8 +228,12 @@ class GUI:
         self.refreshCurrentImage()
         self.refreshOverlay()
 
+        #self.splitJaws()
+
         # Find line to split jaws into two images
-        yMin, yMax = 400, 675
+        (y,x) = self.img.shape
+
+        yMin, yMax = int(y / 2) - 200, int(y / 2) + 300
         splitLine = self.bestPathForJawSplit(yMin, yMax)
         for i, point in enumerate(splitLine):
             if i > 0:
@@ -382,3 +386,34 @@ class GUI:
             newOrigin = (int(newOrigin[0]), int(newOrigin[1]))
             self.toothCenters[i] = newOrigin
         self.refreshCurrentImage()
+
+    def splitJaws(self):
+        from matrixSearch import matrixSearch
+        import time
+        (y,x) = self.img.shape
+        currBestPath = []
+        currBestScore = float("inf")
+
+        # for i in range(int(y/2)-200, int(y/2)+300, 5):
+        #     (p,c) = viterbi_best_path(self.img, (0,i))
+        #     print(p)
+        #     if c < currBestScore:
+        #         currBestPath = p
+        #         currBestScore = c
+        #s = time.time()
+        #currBestPath = viterbi_best_path(self.img[int(y/2)-200:int(y/2)+300, :])
+        #print("Time: {}".format(time.time() - s))
+
+        from vitcython import viterbi_best_path as v2
+        s = time.time()
+        currBestPath = v2(self.img[int(y / 2) - 200:int(y / 2) + 300, :])
+        print("Time: {}".format(time.time() - s))
+
+        print(currBestPath)
+        currBestPath.append((len(self.img),currBestPath[-1][1]))
+        for i in range(len(currBestPath)-1):
+            p1 = currBestPath[i]
+            p2 = currBestPath[i+1]
+            p1 = (p1[0],p1[1]+int(y/2)-200)
+            p2 = (p2[0],p2[1]+int(y/2)-200)
+            cv2.line(self.img, p1, p2, 255,1)

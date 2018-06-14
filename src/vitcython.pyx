@@ -8,7 +8,7 @@ def _getNextPos(prev_layer, y, maxY, r=1):
 
     prev.append((y, prev_layer[y]))
 
-    if y-1 > 0:
+    if y > 0:
         prev.append((y-1, prev_layer[y-1]))
 
     return prev

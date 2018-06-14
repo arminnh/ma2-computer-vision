@@ -63,7 +63,7 @@ def loadRadiographImage(radiographFilename):
     y2 = int(y / 2)
 
     xStart, yStart = 375, 450
-    img = img.crop((x2 - xStart, y2 - yStart, x2 + xStart, y2 + yStart + 200))
+    img = img.crop((x2 - xStart, y2 - yStart, x2 + xStart, y2 + yStart + 250))
     XOffset = - (x2 - xStart)
     YOffset = - (y2 - yStart)
 

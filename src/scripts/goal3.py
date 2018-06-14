@@ -13,12 +13,12 @@ if __name__ == '__main__':
     PCAComponents = util.PCA_COMPONENTS
     sampleAmount = util.SAMPLE_AMOUNT
 
-    radiographNumbers = list(range(3))
+    radiographNumbers = list(range(8))
     radiographs = Radiograph.getRadiographs(radiographNumbers)
 
     models = scripts.goal1.buildActiveShapeModels(radiographs, PCAComponents, sampleAmount)
 
-    radiographs = Radiograph.getRadiographs([9, 14] + list(range(30)), extra=True)
+    radiographs = Radiograph.getRadiographs(list(range(30)), extra=True)
     gui = GUI(radiographs, models)
     gui.open()
 
