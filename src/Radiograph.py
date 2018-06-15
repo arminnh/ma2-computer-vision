@@ -61,15 +61,15 @@ class Radiograph:
             for i in range(len(points)):
                 plt.text(X[i] - 10, Y[i], i)
 
-            normals = landmark.normalSamplesForAllPoints(pixelsToSample)
+            normals = landmark.normalSamplesForAllPoints(util.SAMPLE_AMOUNT)
             grayLevelProfiles, normalizedGrayLevelProfiles, normalPointsOfLandmarkNr = landmark.grayLevelProfileForAllPoints(
-                pixelsToSample)
+                util.SAMPLE_AMOUNT)
 
             for i, profile in normalizedGrayLevelProfiles.items():
                 # plt.plot(normals[i][0], normals[i][1])
 
-                Xs = np.arange(X[i] - pixelsToSample, X[i] + pixelsToSample)
-                y = np.repeat(Y[i], 2 * pixelsToSample)
+                Xs = np.arange(X[i] - util.SAMPLE_AMOUNT, X[i] + util.SAMPLE_AMOUNT)
+                y = np.repeat(Y[i], 2 * util.SAMPLE_AMOUNT)
                 profile = profile + abs(profile.min())
                 profile = [str(p) for p in profile]
                 plt.scatter(x=Xs, y=y, c=profile, s=10, zorder=3)
