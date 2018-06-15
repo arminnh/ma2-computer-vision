@@ -4,7 +4,6 @@ import re
 
 import numpy as np
 import scipy.interpolate
-from PIL import Image
 
 import util
 

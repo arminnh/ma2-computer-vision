@@ -1,11 +1,10 @@
 import glob
 import math
 import os
-import time
 
 import numpy as np
 import scipy.interpolate
-from PIL import Image
+import cv2
 
 from preprocess_img import bilateralFilter, applyCLAHE
 
@@ -20,7 +19,7 @@ RIGHT_TEETH = {3, 4, 7, 8}
 CENTRAL_TEETH = {2, 3, 6, 7}
 LATERAL_TEETH = {1, 4, 5, 8}
 
-SAMPLE_AMOUNT = 20  # 10, 13, 15, 30
+SAMPLE_AMOUNT = 20
 
 PCA_COMPONENTS = 20
 
@@ -72,7 +71,6 @@ def findLineForJawSplit(img, yMin, yMax):
     The path consists of y values, the indices are x values.
     :type img: np.ndarray
     """
-    tttime = time.time()
     _, xMax = img.shape
     yMax = yMax - yMin
 
@@ -87,7 +85,6 @@ def findLineForJawSplit(img, yMin, yMax):
         trellis[y, 0, 0] = img[y + yMin, 0]
         trellis[y, 0, 1] = y
 
-    ttime = time.time()
     # forward pass
     for i in range(1, len(pathX)):
         x = pathX[i]
@@ -102,7 +99,7 @@ def findLineForJawSplit(img, yMin, yMax):
             bestPrevCost = trellis[bestPrevY, i - 1, 0]
 
             # new cost = previous best cost + current cost (colour intensity)
-            trellis[y, i, 0] = bestPrevCost + img[y + yMin, x]  # + self.transitionCost(bestPrevY, y)
+            trellis[y, i, 0] = bestPrevCost + img[y + yMin, x]  # + self.findLineForJawSplitTransitionCost(bestPrevY, y)
             trellis[y, i, 1] = bestPrevY
 
     # find the best path, backwards pass
@@ -112,8 +109,6 @@ def findLineForJawSplit(img, yMin, yMax):
     for i in range(len(pathX) - 1, -1, -1):
         pathY[i] = previousY + yMin
         previousY = int(trellis[previousY, i, 1])
-
-
 
     return np.asarray(list(zip(pathX, pathY)))
 
@@ -151,14 +146,15 @@ def loadRadiographImage(radiographFilename):
     # Find tif for radiograph number.
     filename = glob.glob(os.path.join(radioDir, "**", "{}.tif".format(radiographFilename)), recursive=True)[0]
 
-    # Open the radiograph image, convert it to grayscale, and convert the PIL Image to an np array
-    img = np.array(Image.open(filename).convert("L"))
+    # Open the radiograph image in grayscale
+    img = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
 
     # Select a region of interest
     img, XOffset, YOffset = cropRegionOfInterest(img)
 
     # preprocess the image
-    img = preprocessRadiographImage(img)
+    # TODO: ENABLE AGAIN
+    # img = preprocessRadiographImage(img)
 
     # Split image in two: upper and lower jaw
     # Find line to split jaws into two images. Only search in a certain y range.
@@ -263,20 +259,20 @@ def getNormalSlope(before, current, nextt):
     return m
 
 
-def getPixels(radiograph, points, getDeriv=True):
-    # Get pixel values on the sampled positions
+def getPixels(radiograph, points, derivative=True):
+    # Get pixel values on the given points
     img = radiograph.image  # type: Image
     pixels = np.asarray([img[int(y), int(x)] for (x, y) in points])
 
     beforeDeriv = pixels.copy()
-    if getDeriv:
+    if derivative:
         # Derivative profile of length n_p - 1
-        pixels = np.asarray([pixels[i + 1] - pixels[i - 1] for i in range(len(pixels) - 1)])  # np.diff(pixels)
+        pixels = np.asarray([pixels[i + 1] - pixels[i - 1] for i in range(1, len(pixels) - 1)])
+        # Not the same as np.diff(pixels)
 
     afterDeriv = pixels.copy()
 
     # Normalized derivative profile
-    # print("i {}, derivated profile: {}, divisor: {}".format(i, list(pixels), np.sum(np.abs(pixels))), end=", ")
     scale = np.sum(np.abs(pixels))
     if scale != 0:
         pixels = pixels / scale

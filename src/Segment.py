@@ -1,8 +1,6 @@
 import os
 import re
 
-from PIL import Image
-
 import util
 
 
@@ -10,7 +8,7 @@ class Segment:
     def __init__(self, radiographFilename, toothNumber, image):
         self.radiographFilename = radiographFilename
         self.toothNumber = toothNumber
-        self.image = image  # type: image
+        self.image = image
 
 
 def loadAllForRadiograph(radiographFilename):
