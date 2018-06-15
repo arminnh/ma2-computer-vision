@@ -1,6 +1,8 @@
 import os
 from typing import Dict
 
+import cv2
+
 import Landmark
 import Segment
 import images
@@ -29,8 +31,8 @@ class Radiograph:
 
     def showRaw(self):
         """ Shows the radiograph """
-        raise Exception("todo")
-        # self.imgshow()
+        windowName = "Radiograph {}".format(self.filename)
+        cv2.imshow(windowName, self.img)
 
     def showWithLandMarks(self):
         raise Exception("todo")
@@ -87,7 +89,7 @@ class Radiograph:
 
 
 def getRadiographs(numbers=None, extra=False):
-    numbers = ["%02d" % n for n in numbers] if numbers is not None else [numbers]
+    numbers = ["%02d" % n for n in numbers] if numbers is not None else []
     radiographs = []
 
     for n in numbers:

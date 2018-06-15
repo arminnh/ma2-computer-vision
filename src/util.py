@@ -1,6 +1,7 @@
 import glob
 import math
 import os
+import time
 
 import numpy as np
 import scipy.interpolate
@@ -21,6 +22,19 @@ SAMPLE_AMOUNT = 25
 PCA_COMPONENTS = 20
 
 np.seterr(all='raise')
+
+
+class Timer:
+    def __init__(self, message):
+        self.message = message
+        self.start = 0
+        print("> {}".format(self.message))
+
+    def __enter__(self):
+        self.start = time.time()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        print(">> {:.2f} seconds".format(time.time() - self.start))
 
 
 def getRadiographFilenames(number=None, extra=False):
