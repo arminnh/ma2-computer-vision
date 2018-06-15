@@ -72,44 +72,50 @@ def findLineForJawSplit(img, yMin, yMax):
     The path consists of y values, the indices are x values.
     :type img: np.ndarray
     """
-    print("findLineForJawSplit")
-    ttime = time.time()
+    tttime = time.time()
     _, xMax = img.shape
     yMax = yMax - yMin
 
+    pathX = np.linspace(0, xMax, xMax / 20, endpoint=False).astype(int)
+    pathY = np.zeros(len(pathX)).astype(int)
+
     # trellis (y, x, 2) shape. 2 to hold cost and previousY
-    trellis = np.full((yMax, xMax, 2), np.inf)
+    trellis = np.full((yMax, len(pathX), 2), np.inf)
 
     # set first column in trellis
     for y in range(yMax):
         trellis[y, 0, 0] = img[y + yMin, 0]
         trellis[y, 0, 1] = y
 
+    ttime = time.time()
     # forward pass
-    for x in range(1, xMax):
-        for y in range(yMax):
-            start = y - 1 if y > 0 else y
-            end = y + 2 if y < yMax - 1 else y
+    for i in range(1, len(pathX)):
+        x = pathX[i]
 
-            bestPrevY = trellis[start:end, x - 1, 0].argmin() + y - 1
-            bestPrevCost = trellis[bestPrevY, x - 1, 0]
+        for y in range(yMax):
+            # yWindow the area to look in for the next points
+            yWindow = 10
+            start = y - yWindow if y > yWindow - 1 else y
+            end = y + yWindow if y < yMax - yWindow else y
+
+            bestPrevY = trellis[start:end+1, i - 1, 0].argmin() + y - yWindow
+            bestPrevCost = trellis[bestPrevY, i - 1, 0]
 
             # new cost = previous best cost + current cost (colour intensity)
-            trellis[y, x, 0] = bestPrevCost + img[y + yMin, x]  # + self.transitionCost(bestPrevY, y)
-            trellis[y, x, 1] = bestPrevY
+            trellis[y, i, 0] = bestPrevCost + img[y + yMin, x]  # + self.transitionCost(bestPrevY, y)
+            trellis[y, i, 1] = bestPrevY
+    print("forward pass", time.time() - ttime)
 
     # find the best path, backwards pass
-    path = []
-
     # set first previousY value to set up backwards pass
     previousY = int(trellis[:, -1, 0].argmin())
 
-    for x in range(xMax - 1, -1, -1):
-        path.insert(0, previousY + yMin)
-        previousY = int(trellis[previousY, x, 1])
+    for i in range(len(pathX) - 1, -1, -1):
+        pathY[i] = previousY + yMin
+        previousY = int(trellis[previousY, i, 1])
 
-    print("total", time.time() - ttime)
-    return path
+    print("total", time.time() - tttime)
+    return list(zip(pathX, pathY))
 
 
 def findLineForJawSplitTransitionCost(prevY, currY):
@@ -161,7 +167,7 @@ def loadRadiographImage(radiographFilename):
     jawSplitLine = findLineForJawSplit(img, ySearchMin, ySearchMax)
 
     imgUpperJaw, imgLowerJaw = img.copy(), img.copy()
-    for x, y in enumerate(jawSplitLine):
+    for x, y in jawSplitLine:
         imgUpperJaw[y + 1:-1, x] = 255
         imgLowerJaw[0:y, x] = 255
 
