@@ -319,7 +319,7 @@ class GUI:
         self.drawLandmark(self.currentLandmark, (255, 255, 255))
 
     def refreshCurrentImage(self):
-        self.img = self.currentRadiograph.img
+        self.img = self.currentRadiograph.img.copy()
 
         jawSplitLine = self.currentRadiograph.jawSplitLine
         for i, (x, y) in enumerate(jawSplitLine):
@@ -330,13 +330,13 @@ class GUI:
         oldOrigins = self.toothCenters
         for i, m in enumerate(self.toothModels):
             currentOriginForModel = oldOrigins[i]
-            newOrigin = m.initializationModel.getBetterOrigin(currentOriginForModel, self.currentRadiograph.img)
+            newOrigin = m.initializationModel.getBetterOrigin(currentOriginForModel, self.currentRadiograph.img.copy())
             newOrigin = (int(newOrigin[0]), int(newOrigin[1]))
             self.toothCenters[i] = newOrigin
         self.refreshCurrentImage()
 
     def showLowerJaw(self):
-        self.img = self.currentRadiograph.imgLowerJaw
+        self.img = self.currentRadiograph.imgLowerJaw.copy()
 
     def showUpperJaw(self):
-        self.img = self.currentRadiograph.imgUpperJaw
+        self.img = self.currentRadiograph.imgUpperJaw.copy()

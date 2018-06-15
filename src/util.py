@@ -16,9 +16,11 @@ RIGHT_TEETH = {3, 4, 7, 8}
 CENTRAL_TEETH = {2, 3, 6, 7}
 LATERAL_TEETH = {1, 4, 5, 8}
 
-SAMPLE_AMOUNT = 20
+SAMPLE_AMOUNT = 25
 
 PCA_COMPONENTS = 20
+
+np.seterr(all='raise')
 
 
 def getRadiographFilenames(number=None, extra=False):

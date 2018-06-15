@@ -11,7 +11,7 @@ from util import DATA_DIR
 
 def getPixelProfile(img, points, derive=True):
     # Get pixel values on the given points
-    pixels = np.asarray([img[y, x] for (x, y) in points])
+    pixels = np.asarray([img[y, x] for (x, y) in points], dtype=np.int)
 
     rawPixelProfile = pixels.copy()
     if not derive:
@@ -142,11 +142,11 @@ def loadRadiographImage(radiographFilename):
 
     imgUpperJaw, imgLowerJaw = img.copy(), img.copy()
     jawSplitLine = findLineForJawSplit(img, ySearchMin, ySearchMax)
-    interpF = scipy.interpolate.CubicSpline(jawSplitLine[:, 0], jawSplitLine[:, 1])
-
-    for x in range(xMax):
-        y = int(interpF(x))
-        imgUpperJaw[x, y + 1:-1] = 255
-        imgLowerJaw[x, 0:y] = 255
+    # interpF = scipy.interpolate.CubicSpline(jawSplitLine[:, 0], jawSplitLine[:, 1])
+    #
+    # for x in range(xMax):
+    #     y = int(interpF(x))
+    #     imgUpperJaw[y + 1:-1, x] = 255
+    #     imgLowerJaw[0:y, x] = 255
 
     return img, imgUpperJaw, imgLowerJaw, jawSplitLine, XOffset, YOffset
