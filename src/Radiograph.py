@@ -10,15 +10,15 @@ import util
 
 class Radiograph:
 
-    def __init__(self, filename, image, imageLowerJaw, imageUpperJaw, jawSplitLine, landmarks, segments,
+    def __init__(self, filename, image, imageUpperJaw, imageLowerJaw, jawSplitLine, landmarks, segments,
                  mirrored=False):
         """
         :param filename: the filename/id of the Radiograph
         """
         self.filename = filename
         self.image = image  # type: Image
+        self.imageUpperJaw = imageUpperJaw  # type: Image
         self.imageLowerJaw = imageLowerJaw  # type: Image
-        self.imageLowerJaw = imageUpperJaw  # type: Image
         self.jawSplitLine = jawSplitLine
         self.landmarks = landmarks  # type: Dict[int, Landmark.Landmark]
         self.segments = segments  # type: Dict[int, Segment.Segment]
@@ -106,8 +106,8 @@ def getRadiographs(numbers=None, extra=False):
             radiographs.append(Radiograph(
                 filename=filename,
                 image=img,
-                imageLowerJaw=imgLowerJaw,
                 imageUpperJaw=imgUpperJaw,
+                imageLowerJaw=imgLowerJaw,
                 jawSplitLine=jawSplitLine,
                 landmarks=Landmark.loadAllForRadiograph(filename, XOffset, YOffset),
                 segments=segments

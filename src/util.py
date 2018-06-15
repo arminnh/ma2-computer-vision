@@ -73,7 +73,6 @@ def findLineForJawSplit(img, yMin, yMax):
     :type img: np.ndarray
     """
     print("findLineForJawSplit")
-    tttime = time.time()
     ttime = time.time()
     _, xMax = img.shape
     yMax = yMax - yMin
@@ -81,16 +80,10 @@ def findLineForJawSplit(img, yMin, yMax):
     # trellis (y, x, 2) shape. 2 to hold cost and previousY
     trellis = np.full((yMax, xMax, 2), np.inf)
 
-    print("init trellis", time.time() - ttime)
-    ttime = time.time()
-
     # set first column in trellis
     for y in range(yMax):
         trellis[y, 0, 0] = img[y + yMin, 0]
         trellis[y, 0, 1] = y
-
-    print("init first y trellis", time.time() - ttime)
-    ttime = time.time()
 
     # forward pass
     for x in range(1, xMax):
@@ -105,9 +98,6 @@ def findLineForJawSplit(img, yMin, yMax):
             trellis[y, x, 0] = bestPrevCost + img[y + yMin, x]  # + self.transitionCost(bestPrevY, y)
             trellis[y, x, 1] = bestPrevY
 
-    print("forward pass", time.time() - ttime)
-    ttime = time.time()
-
     # find the best path, backwards pass
     path = []
 
@@ -118,11 +108,7 @@ def findLineForJawSplit(img, yMin, yMax):
         path.insert(0, previousY + yMin)
         previousY = int(trellis[previousY, x, 1])
 
-    print("find path", time.time() - ttime)
-    ttime = time.time()
-
-    print("total", time.time() - tttime)
-    raise ValueError
+    print("total", time.time() - ttime)
     return path
 
 
@@ -172,7 +158,7 @@ def loadRadiographImage(radiographFilename):
     # Find line to split jaws into two images. Only search in a certain y range.
     yMax, _ = img.shape
     ySearchMin, ySearchMax = int((yMax / 2) - 200), int((yMax / 2) + 300)
-    jawSplitLine = findLineForJawSplit(img, 400, 675)
+    jawSplitLine = findLineForJawSplit(img, ySearchMin, ySearchMax)
 
     imgUpperJaw, imgLowerJaw = img.copy(), img.copy()
     for x, y in enumerate(jawSplitLine):

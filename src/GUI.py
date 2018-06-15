@@ -34,17 +34,17 @@ class GUI:
                 # draw edges
                 img = self.drawEdges(img)
 
-            # y, x = self.img.shape
-            # cv2.line(self.img, (int(x / 2), 0), (int(x / 2), int(y)), (255, 255, 255), 3)
-            # cv2.line(self.img, (0, int(y / 2)), (x, int(y / 2)), (255, 255, 255), 3)
+            y, x = self.img.shape
+            cv2.line(self.img, (int(x / 2), 0), (int(x / 2), int(y)), (255, 255, 255), 3)
+            cv2.line(self.img, (0, int(y / 2)), (x, int(y / 2)), (255, 255, 255), 3)
 
-            # for model in self.toothModels:
-            #     if self.currentRadiographIndex < len(model.landmarks):
-            #         landmark = model.landmarks[self.currentRadiographIndex]
-            #         self.drawLandmark(landmark, color=180, thickness=3)
-            #
-            #         self.drawOriginModel(model.initializationModel.profileForImage[self.currentRadiographIndex])
-            #         self.drawAllOrigins()
+            for model in self.toothModels:
+                if self.currentRadiographIndex < len(model.landmarks):
+                    landmark = model.landmarks[self.currentRadiographIndex]
+                    self.drawLandmark(landmark, color=180, thickness=3)
+
+                    self.drawOriginModel(model.initializationModel.profileForImage[self.currentRadiographIndex])
+                    self.drawAllOrigins()
 
             cv2.imshow(self.name, img)
 
@@ -131,11 +131,12 @@ class GUI:
 
             elif pressed_key == ord("n"):
                 self.findBetterLandmark()
-            elif pressed_key == ord("u"):
-                self.showLowerJaw()
 
-            elif pressed_key == ord("d"):
+            elif pressed_key == ord("u"):
                 self.showUpperJaw()
+
+            elif pressed_key == ord("l"):
+                self.showLowerJaw()
 
             if cv2.getWindowProperty(self.name, cv2.WND_PROP_VISIBLE) < 1:
                 break
@@ -151,7 +152,7 @@ class GUI:
 
     def drawAllOrigins(self):
         for pos in self.toothCenters.values():
-            cv2.circle(self.img, pos, 1, int(255), 2)
+            cv2.circle(self.img, pos, 1, int(200), 2)
 
     def drawOriginModel(self, originModel):
         for pixel, pos in originModel:
