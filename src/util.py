@@ -104,7 +104,6 @@ def findLineForJawSplit(img, yMin, yMax):
             # new cost = previous best cost + current cost (colour intensity)
             trellis[y, i, 0] = bestPrevCost + img[y + yMin, x]  # + self.transitionCost(bestPrevY, y)
             trellis[y, i, 1] = bestPrevY
-    print("forward pass", time.time() - ttime)
 
     # find the best path, backwards pass
     # set first previousY value to set up backwards pass
@@ -114,7 +113,6 @@ def findLineForJawSplit(img, yMin, yMax):
         pathY[i] = previousY + yMin
         previousY = int(trellis[previousY, i, 1])
 
-    print("total", time.time() - tttime)
     return list(zip(pathX, pathY))
 
 
@@ -164,11 +162,8 @@ def loadRadiographImage(radiographFilename):
     # Find line to split jaws into two images. Only search in a certain y range.
     yMax, _ = img.shape
     ySearchMin, ySearchMax = int((yMax / 2) - 200), int((yMax / 2) + 300)
-    from viterbi import findLineForJawSplit as j2
 
-    t = time.time()
-    jawSplitLine = j2(img.astype(np.long), ySearchMin, ySearchMax)
-    print("time: {}".format(time.time() - t))
+    jawSplitLine = findLineForJawSplit(img, ySearchMin, ySearchMax)
 
     imgUpperJaw, imgLowerJaw = img.copy(), img.copy()
     for x, y in jawSplitLine:
