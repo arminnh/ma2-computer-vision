@@ -3,6 +3,7 @@ import os
 
 import cv2
 import numpy as np
+import scipy.interpolate
 
 from preprocess_img import bilateralFilter, applyCLAHE
 from util import DATA_DIR
@@ -141,11 +142,13 @@ def loadRadiographImage(radiographFilename):
 
     imgUpperJaw, imgLowerJaw = img.copy(), img.copy()
     jawSplitLine = findLineForJawSplit(img, ySearchMin, ySearchMax)
-    # interpF = scipy.interpolate.CubicSpline(jawSplitLine[:, 0], jawSplitLine[:, 1])
-    #
-    # for x in range(xMax):
-    #     y = int(interpF(x))
-    #     imgUpperJaw[y + 1:-1, x] = 255
-    #     imgLowerJaw[0:y, x] = 255
+    interpF = scipy.interpolate.CubicSpline(jawSplitLine[:, 0], jawSplitLine[:, 1])
+
+    for x in range(xMax):
+        y = int(interpF(x))
+        imgUpperJaw[y + 1:-1, x] = 0
+        imgLowerJaw[0:y, x] = 0
+
+    raise ValueError
 
     return img, imgUpperJaw, imgLowerJaw, jawSplitLine, XOffset, YOffset
