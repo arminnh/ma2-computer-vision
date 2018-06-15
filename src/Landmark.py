@@ -108,20 +108,30 @@ class Landmark:
 
         return superimposed, translationXY, s, theta
 
-    def normalSamplesForAllPoints(self, pixelsToSample):
+    def normalizedGrayLevelProfilesForLandmarkPoints(self, img, sampleAmount):
         """
-        Returns samples from the normal lines on the landmark points
+        For every landmark point j (all points in this landmark) in the image i (the radiograph of this landmark) of
+        the training set, we extract a gray level profile g_ij of length n_p pixels, centered around the landmark point.
+        Not the actual gray level profile but its normalized derivative to get invariance to the offsets and uniform
+        scaling of the gray level.
+        The gray level profile of a landmark point j is a vector of n_p values.
+        ~ "Active Shape Models - Part I: Modeling Shape and Gray Level Variations"
         """
-        lines = {}
-
+        normalizedGrayLevelProfiles = {}
         points = self.getPointsAsTuples()
+
         for i, point in enumerate(points):
+            # Build gray level profile by sampling a few points on each side of the point.
+
+            # Sample points on normal line of the current landmark point
             m = util.getNormalSlope(points[i - 1], point, points[(i + 1) % len(points)])
-            normalPoints = util.sampleLine(m, point, pixelsToSample=pixelsToSample)
+            normalPoints = util.sampleLine(m, point, pixelsToSample=sampleAmount)
 
-            lines[i] = normalPoints
+            _, normalizedProfile = images.getPixelProfile(img, normalPoints, derive=True)
 
-        return lines
+            normalizedGrayLevelProfiles[i] = normalizedProfile
+
+        return normalizedGrayLevelProfiles
 
     def getGrayLevelProfilesForNormalPoints(self, img, sampleAmount, derive):
         profilesForLandmarkPoints = {}
@@ -135,53 +145,27 @@ class Landmark:
             # Sample points on normal line (slope m) of the current landmark point
             m = util.getNormalSlope(points[i - 1], point, points[(i + 1) % len(points)])
             normalPoints = util.sampleLine(m, point, pixelsToSample=sampleAmount)
-            print("Normal points for landmark point {}: {}".format(i, normalPoints))
+            # print("Normal points for landmark point {}: {}".format(i, normalPoints))
 
             # Loop over the sampled points and get the gray level profile of all them
             for normalPoint in normalPoints:
                 # Get pixel values on the sampled positions
                 grayLevelProfilePoints = util.sampleLine(m, normalPoint, pixelsToSample=sampleAmount)
 
-                rawPixelProfile, derivedProfile, normalizedProfile \
-                    = images.getPixelProfile(img, grayLevelProfilePoints, derive)
+                rawPixelProfile, normalizedProfile = images.getPixelProfile(img, grayLevelProfilePoints, derive)
 
                 if derive:
                     grayLevelProfile = normalizedProfile
                 else:
                     grayLevelProfile = rawPixelProfile
 
-                profilesForLandmarkPoints[i].append([grayLevelProfile, normalPoint, grayLevelProfilePoints])
+                profilesForLandmarkPoints[i].append({
+                    "normalPoint": normalPoint,
+                    "grayLevelProfile": grayLevelProfile,
+                    "grayLevelProfilePoints": grayLevelProfilePoints
+                })
 
         return profilesForLandmarkPoints
-
-    def grayLevelProfileForLandmarkPoints(self, img, sampleAmount):
-        """
-        For every landmark point j (all points in this landmark) in the image i (the radiograph of this landmark) of
-        the training set, we extract a gray level profile g_ij of length n_p pixels, centered around the landmark point.
-        Not the actual gray level profile but its normalized derivative to get invariance to the offsets and uniform
-        scaling of the gray level.
-        The gray level profile of a landmark point j is a vector of n_p values.
-        ~ "Active Shape Models - Part I: Modeling Shape and Gray Level Variations"
-        """
-        derivedGrayLevelProfiles = {}
-        normalizedGrayLevelProfiles = {}
-        normalPointsForLandmarkPoints = {}
-        points = self.getPointsAsTuples()
-
-        for i, point in enumerate(points):
-            # Build gray level profile by sampling a few points on each side of the point.
-
-            # Sample points on normal line of the current landmark point
-            m = util.getNormalSlope(points[i - 1], point, points[(i + 1) % len(points)])
-            normalPoints = util.sampleLine(m, point, pixelsToSample=sampleAmount)
-
-            _, derivedProfile, normalizedProfile = images.getPixelProfile(img, normalPoints, derive=True)
-
-            derivedGrayLevelProfiles[i] = derivedProfile
-            normalizedGrayLevelProfiles[i] = normalizedProfile
-            normalPointsForLandmarkPoints[i] = normalPoints
-
-        return derivedGrayLevelProfiles, normalizedGrayLevelProfiles, normalPointsForLandmarkPoints
 
 
 def loadLandmarkPoints(filename):

@@ -32,20 +32,19 @@ class GUI:
             img = self.img.copy()
 
             if self.showEdges:
-                # draw edges
                 img = self.drawEdges(img)
 
-            # y, x = img.shape
-            # cv2.line(img, (int(x / 2), 0), (int(x / 2), int(y)), (255, 255, 255), 3)
-            # cv2.line(img, (0, int(y / 2)), (x, int(y / 2)), (255, 255, 255), 3)
-            #
-            # for model in self.toothModels:
-            #     if self.currentRadiographIndex < len(model.landmarks):
-            #         landmark = model.landmarks[self.currentRadiographIndex]
-            #         self.drawLandmark(landmark, color=180, thickness=3)
-            #
-            #         self.drawOriginModel(model.initializationModel.profileForImage[self.currentRadiographIndex])
-            #         self.drawAllOrigins()
+            y, x = img.shape
+            cv2.line(img, (int(x / 2), 0), (int(x / 2), int(y)), (255, 255, 255), 3)
+            cv2.line(img, (0, int(y / 2)), (x, int(y / 2)), (255, 255, 255), 3)
+
+            for model in self.toothModels:
+                if self.currentRadiographIndex < len(model.landmarks):
+                    landmark = model.landmarks[self.currentRadiographIndex]
+                    self.drawLandmark(landmark, color=180, thickness=3)
+
+                    self.drawOriginModel(model.initializationModel.profileForImage[self.currentRadiographIndex])
+                    self.drawAllOrigins()
 
             cv2.imshow(self.name, img)
 
@@ -251,7 +250,7 @@ class GUI:
 
             cv2.line(self.img, origin, end, color, thickness)
 
-    def drawLandMarkWithNormals(self, landmark, color=(0, 0, 255), grayLevels=True):
+    def drawLandMarkWithNormals(self, landmark, grayLevels, color=(0, 0, 255)):
         points = landmark.getPointsAsTuples().round().astype(int)
 
         for i in range(len(points)):
@@ -272,19 +271,21 @@ class GUI:
             cv2.line(self.img, origin, end, color, 3)
 
         if grayLevels:
-            grayLevelProfiles = landmark.getGrayLevelProfilesForNormalPoints(
+            profilesForLandmarkPoints = landmark.getGrayLevelProfilesForNormalPoints(
                 img=self.currentRadiograph.img,
                 sampleAmount=self.currentToothModel.sampleAmount,
                 derive=False
             )
 
-            for r in grayLevelProfiles.values():
-                for [pixels, p, p2] in r:
-                    print(pixels)
-                    for z in range(len(p2)):
-                        orig = (int(p2[z][0]), int(p2[z][1]))
+            for landmarkPointIdx in range(len(profilesForLandmarkPoints)):
+                for profileContainer in profilesForLandmarkPoints[landmarkPointIdx]:
+                    grayLevelProfile = profileContainer["grayLevelProfile"]
+                    grayLevelProfilePoints = profileContainer["grayLevelProfilePoints"]
+                    print(grayLevelProfile)
+                    for z in range(len(grayLevelProfilePoints)):
+                        orig = (int(grayLevelProfilePoints[z][0]), int(grayLevelProfilePoints[z][1]))
 
-                        cv2.line(self.img, orig, orig, int(pixels[z]), thickness=2)
+                        cv2.line(self.img, orig, orig, int(grayLevelProfile[z]), thickness=2)
 
     def preprocessCurrentRadiograph(self):
         if not self.preprocess:
@@ -330,7 +331,7 @@ class GUI:
         oldOrigins = self.toothCenters
         for i, m in enumerate(self.toothModels):
             currentOriginForModel = oldOrigins[i]
-            newOrigin = m.initializationModel.getBetterOrigin(currentOriginForModel, self.currentRadiograph.img.copy())
+            newOrigin = m.initializationModel.getBetterOrigin(currentOriginForModel, self.currentRadiograph.img)
             newOrigin = (int(newOrigin[0]), int(newOrigin[1]))
             self.toothCenters[i] = newOrigin
         self.refreshCurrentImage()

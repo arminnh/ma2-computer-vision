@@ -33,12 +33,12 @@ class InitializationModel:
         self.covInv = linalg.pinv(np.cov(np.transpose(normalized)))
 
     def getInitPixelProfile(self, diagonalPoints1, diagonalPoints2, horizontalPoints, verticalPoints, img):
-        b1, n1, s1 = images.getPixelProfile(img, horizontalPoints, True)
-        b2, n2, s2 = images.getPixelProfile(img, verticalPoints, True)
-        b3, n3, s3 = images.getPixelProfile(img, diagonalPoints1, True)
-        b4, n4, s4 = images.getPixelProfile(img, diagonalPoints2, True)
-        pixelProfile = list(s1) + list(s2) + list(s3) + list(s4)
-        return b1, b2, b3, b4, pixelProfile
+        raw1, normalized1 = images.getPixelProfile(img, horizontalPoints, True)
+        raw2, normalized2 = images.getPixelProfile(img, verticalPoints, True)
+        raw3, normalized3 = images.getPixelProfile(img, diagonalPoints1, True)
+        raw4, normalized4 = images.getPixelProfile(img, diagonalPoints2, True)
+        normalizedProfile = list(normalized1) + list(normalized2) + list(normalized3) + list(normalized4)
+        return raw1, raw2, raw3, raw4, normalizedProfile
 
     def sampleInitProfilePoints(self, origin):
         horizontalPoints = util.sampleLine(0, origin, self.sampleAmount)

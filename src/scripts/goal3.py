@@ -13,13 +13,13 @@ if __name__ == '__main__':
     PCAComponents = util.PCA_COMPONENTS
     sampleAmount = util.SAMPLE_AMOUNT
 
-    radiographNumbers = list(range(14))
+    radiographNumbers = list(range(15))
     radiographs = Radiograph.getRadiographs(radiographNumbers)
 
     models = scripts.goal1.buildActiveShapeModels(radiographs, PCAComponents, sampleAmount)
 
     # Load other radiographs for GUI but do not load the ones above again
-    for radiographNumber in range(5):
+    for radiographNumber in range(15):
         if radiographNumber not in radiographNumbers:
             radiographs.append(Radiograph.getRadiographs([radiographNumber], extra=True)[0])
 

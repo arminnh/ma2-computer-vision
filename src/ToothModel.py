@@ -76,8 +76,10 @@ class ToothModel:
         # Build gray level model for each landmark
         for i, landmark in enumerate(self.landmarks):
             # Get the gray level profiles for each of the 40 landmark points
-            _, normalizedGrayLevelProfiles, _ = \
-                landmark.grayLevelProfileForLandmarkPoints(landmark.radiograph.img, sampleAmount=self.sampleAmount)
+            normalizedGrayLevelProfiles = landmark.normalizedGrayLevelProfilesForLandmarkPoints(
+                img=landmark.radiograph.img,
+                sampleAmount=self.sampleAmount
+            )
 
             for j, normalizedProfile in normalizedGrayLevelProfiles.items():
                 if j not in self.meanProfilesForLandmarkPoints:
@@ -122,11 +124,14 @@ class ToothModel:
 
         # landmarkPointIdx = the points 0 to 39 on the landmark
         for landmarkPointIdx in range(len(profilesForLandmarkPoints)):
-            # landmarkPointProfiles = list of [grayLevelProfile, normalPoint, grayLevelProfilePoints]
+            # landmarkPointProfiles = list of {grayLevelProfile, normalPoint, grayLevelProfilePoints}
             landmarkPointProfiles = profilesForLandmarkPoints[landmarkPointIdx]
             distances = []
 
-            for grayLevelProfile, normalPoint, _ in landmarkPointProfiles:
+            for profileContainer in landmarkPointProfiles:
+                grayLevelProfile = profileContainer["grayLevelProfile"]
+                normalPoint = profileContainer["normalPoint"]
+
                 d = self.mahalanobisDistance(grayLevelProfile, landmarkPointIdx)
                 distances.append((abs(d), normalPoint))
                 print("Mahalanobis dist: {:.2f}, p: {}".format(abs(d), normalPoint))
