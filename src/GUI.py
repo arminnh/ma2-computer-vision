@@ -21,6 +21,7 @@ class GUI:
         self.showEdges = False
         self.c = 0
         self.blockSize = 3
+        self.splitLine = None
 
     def open(self):
         self.createWindow()
@@ -133,6 +134,11 @@ class GUI:
 
             elif pressed_key == ord("n"):
                 self.findBetterLandmark()
+            elif pressed_key == ord("u"):
+                self.maskUpperJaw()
+                
+            elif pressed_key == ord("d"):
+                self.maskLowerJaw()
 
             if cv2.getWindowProperty(self.name, cv2.WND_PROP_VISIBLE) < 1:
                 break
@@ -234,10 +240,10 @@ class GUI:
         (y,x) = self.img.shape
 
         yMin, yMax = int(y / 2) - 200, int(y / 2) + 300
-        splitLine = self.bestPathForJawSplit(yMin, yMax)
-        for i, point in enumerate(splitLine):
+        self.splitLine = self.bestPathForJawSplit(yMin, yMax)
+        for i, point in enumerate(self.splitLine):
             if i > 0:
-                cv2.line(self.img, splitLine[i-1], point, 255, 2)
+                cv2.line(self.img, self.splitLine[i-1], point, 255, 2)
 
         return self
 
@@ -269,6 +275,7 @@ class GUI:
 
     def increaseRadiographIndex(self, amount):
         self.preprocess = False
+        self.splitLine = None
         self.currentRadiographIndex += amount
 
         if self.currentRadiographIndex < 0:
@@ -417,3 +424,19 @@ class GUI:
             p1 = (p1[0],p1[1]+int(y/2)-200)
             p2 = (p2[0],p2[1]+int(y/2)-200)
             cv2.line(self.img, p1, p2, 255,1)
+
+    def maskUpperJaw(self):
+        print("upperJaw")
+        if self.splitLine:
+            for pos in self.splitLine:
+                (x,y) = pos
+                self.img[0:y, x] = 255
+
+    def maskLowerJaw(self):
+        if self.splitLine:
+            for pos in self.splitLine:
+                (x, y) = pos
+                self.img[y+1:len(self.img), x] = 255
+
+
+
