@@ -1,5 +1,3 @@
-import time
-
 import util
 from preprocess_img import *
 
@@ -21,7 +19,6 @@ class GUI:
         self.showEdges = False
         self.c = 0
         self.blockSize = 3
-        self.splitLine = None
 
     def open(self):
         self.createWindow()
@@ -37,7 +34,7 @@ class GUI:
                 # draw edges
                 img = self.drawEdges(img)
 
-            y, x = self.img.shape
+            # y, x = self.img.shape
             # cv2.line(self.img, (int(x / 2), 0), (int(x / 2), int(y)), (255, 255, 255), 3)
             # cv2.line(self.img, (0, int(y / 2)), (x, int(y / 2)), (255, 255, 255), 3)
 
@@ -135,65 +132,15 @@ class GUI:
             elif pressed_key == ord("n"):
                 self.findBetterLandmark()
             elif pressed_key == ord("u"):
-                self.maskUpperJaw()
-                
+                self.showLowerJaw()
+
             elif pressed_key == ord("d"):
-                self.maskLowerJaw()
+                self.showUpperJaw()
 
             if cv2.getWindowProperty(self.name, cv2.WND_PROP_VISIBLE) < 1:
                 break
 
         cv2.destroyAllWindows()
-
-    def transitionCost(self, prevY, currY):
-        if prevY == currY:
-            return 2
-        elif currY - prevY == 1 or currY - prevY == -1:
-            return 1
-        return np.inf
-
-    def bestPathForJawSplit(self, yMin, yMax):
-        """ Find the best path to split the jaws in the image starting from position (0, y). """
-        ttime = time.time()
-        _, xMax = self.img.shape
-        yMax = yMax - yMin
-
-        # Set up arrays for output x and y values
-        xPath = np.linspace(0, xMax, xMax).astype(int)
-        yPath = np.zeros(len(xPath)).astype(int)
-
-        # trellis (y, x, 2) shape. 2 to hold cost and previousY
-        trellis = np.full((yMax, len(xPath), 2), np.inf)
-
-        # set first column in trellis
-        for y in range(yMax):
-            trellis[y, 0, 0] = self.img[y + yMin, 0]
-            trellis[y, 0, 1] = y
-
-        # forward pass
-        for x in range(1, len(xPath)):
-            print(x)
-            for y in range(yMax):
-                start = y - 1 if y > 0 else y
-                end = y + 1 if y < yMax - 1 else y
-
-                bestPrevY = trellis[start:end + 1, x - 1, 0].argmin() + y - 1
-                bestPrevCost = trellis[bestPrevY, x - 1, 0]
-
-                newCost = bestPrevCost + self.img[y + yMin, x]  # + self.transitionCost(bestPrevY, y)
-                trellis[y, x, 0] = newCost
-                trellis[y, x, 1] = bestPrevY
-
-        # find the best path, backwards pass
-        # set first previousY value to set up backwards pass
-        previousY = int(trellis[:, -1, 0].argmin())
-
-        for x in range(len(xPath) - 1, -1, -1):
-            yPath[x] = previousY + yMin
-            previousY = int(trellis[previousY, x, 1])
-
-        print(time.time() - ttime)
-        return list(zip(xPath, yPath))
 
     def getAllOrigins(self):
         c = {}
@@ -233,18 +180,6 @@ class GUI:
         self.toothCenters = self.getAllOrigins()
         self.refreshCurrentImage()
         self.refreshOverlay()
-
-        #self.splitJaws()
-
-        # Find line to split jaws into two images
-        (y,x) = self.img.shape
-
-        yMin, yMax = int(y / 2) - 200, int(y / 2) + 300
-        self.splitLine = self.bestPathForJawSplit(yMin, yMax)
-        for i, point in enumerate(self.splitLine):
-            if i > 0:
-                cv2.line(self.img, self.splitLine[i-1], point, 255, 2)
-
         return self
 
     def setCurrentModel(self, idx):
@@ -275,7 +210,6 @@ class GUI:
 
     def increaseRadiographIndex(self, amount):
         self.preprocess = False
-        self.splitLine = None
         self.currentRadiographIndex += amount
 
         if self.currentRadiographIndex < 0:
@@ -349,11 +283,7 @@ class GUI:
 
     def preprocessCurrentRadiograph(self):
         if not self.preprocess:
-            self.img = self.currentRadiograph.preprocessRadiograph([
-                PILtoCV,
-                bilateralFilter,
-                applyCLAHE
-            ])
+            self.img = util.preprocessRadiographImage(self.img)
         else:
             self.refreshCurrentImage()
 
@@ -383,7 +313,12 @@ class GUI:
         self.drawLandmark(self.currentLandmark, (255, 255, 255))
 
     def refreshCurrentImage(self):
-        self.img = PILtoCV(self.currentRadiograph.image)
+        self.img = self.currentRadiograph.image
+
+        jawSplitLine = self.currentRadiograph.jawSplitLine
+        for x, y in enumerate(jawSplitLine):
+            if x > 0:
+                cv2.line(self.img, (x - 1, jawSplitLine[x - 1]), (x, y), 255, 2)
 
     def updateOrigins(self):
         oldOrigins = self.toothCenters
@@ -394,18 +329,8 @@ class GUI:
             self.toothCenters[i] = newOrigin
         self.refreshCurrentImage()
 
-    def maskUpperJaw(self):
-        print("upperJaw")
-        if self.splitLine:
-            for pos in self.splitLine:
-                (x,y) = pos
-                self.img[0:y, x] = 255
+    def showLowerJaw(self):
+        self.img = self.currentRadiograph.imageLowerJaw
 
-    def maskLowerJaw(self):
-        if self.splitLine:
-            for pos in self.splitLine:
-                (x, y) = pos
-                self.img[y+1:len(self.img), x] = 255
-
-
-
+    def showUpperJaw(self):
+        self.img = self.currentRadiograph.imageUpperJaw

@@ -6,18 +6,20 @@ from PIL import ImageDraw, Image
 import Landmark
 import Segment
 import util
-from preprocess_img import PILtoCV, bilateralFilter, applyCLAHE, cvToPIL
 
 
 class Radiograph:
 
-    def __init__(self, filename, image, landmarks, segments, mirrored=False):
+    def __init__(self, filename, image, imageLowerJaw, imageUpperJaw, jawSplitLine, landmarks, segments,
+                 mirrored=False):
         """
         :param filename: the filename/id of the Radiograph
         """
         self.filename = filename
         self.image = image  # type: Image
-        self.image = self.preprocessRadiograph()
+        self.imageLowerJaw = imageLowerJaw  # type: Image
+        self.imageLowerJaw = imageUpperJaw  # type: Image
+        self.jawSplitLine = jawSplitLine
         self.landmarks = landmarks  # type: Dict[int, Landmark.Landmark]
         self.segments = segments  # type: Dict[int, Segment.Segment]
         self.mirrored = mirrored
@@ -43,7 +45,7 @@ class Radiograph:
             for i, point in enumerate(p):
                 draw.text(point, str(i))
 
-        img.show()
+        raise Exception("todo")
 
     def plotLandMarksWithGrayLevelModels(self):
         import matplotlib.pyplot as plt
@@ -83,21 +85,6 @@ class Radiograph:
         for segment in self.segments.values():
             segment.image.show()
 
-    def preprocessRadiograph(self, transformations=None):
-        if transformations is None:
-            transformations = [
-                PILtoCV,
-                bilateralFilter,
-                applyCLAHE,
-                bilateralFilter,
-                applyCLAHE,
-                cvToPIL
-            ]
-        img = self.image
-        for transform in transformations:
-            img = transform(img)
-        return img
-
     def save_img(self):
         self.image.save(
             "/Users/thierryderuyttere/Downloads/pycococreator-master/examples/shapes/train/" + "{}.jpg".format(
@@ -114,11 +101,14 @@ def getRadiographs(numbers=None, extra=False):
             print("Loading radiograph {}, {}".format(n, filepath))
 
             # Load the radiograph in as is
-            img, XOffset, YOffset = util.loadRadiographImage(filename)
+            img, imgUpperJaw, imgLowerJaw, jawSplitLine, XOffset, YOffset = util.loadRadiographImage(filename)
             segments = Segment.loadAllForRadiograph(filename)
             radiographs.append(Radiograph(
                 filename=filename,
                 image=img,
+                imageLowerJaw=imgLowerJaw,
+                imageUpperJaw=imgUpperJaw,
+                jawSplitLine=jawSplitLine,
                 landmarks=Landmark.loadAllForRadiograph(filename, XOffset, YOffset),
                 segments=segments
             ))

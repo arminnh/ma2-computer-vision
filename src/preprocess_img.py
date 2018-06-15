@@ -8,9 +8,6 @@ def equalizeHist(img):
     gray = cv2.equalizeHist(gray)
     return cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
 
-def cvToPIL(img):
-     return Image.fromarray(img)
-
 def bilateralFilter(img):
     return cv2.bilateralFilter(img, 9, 100, 100)
 
@@ -19,7 +16,7 @@ def tophat(img):
     return cv2.morphologyEx(img, cv2.MORPH_TOPHAT, kernel)
 
 def showImg(img):
-    cvToPIL(img).show()
+    Image.fromarray(img).show()
     return img
 
 def applyCLAHE(img):
@@ -42,9 +39,4 @@ def increaseContrast(img):
 
     lab = cv2.merge((l2, a, b))  # merge channels
     return cv2.cvtColor(lab, cv2.COLOR_LAB2BGR)  # convert from LAB to BGR
-
-def PILtoCV(img):
-    img = np.array(img)
-    # Change colors from RGB to BGR
-    return img.copy()
 

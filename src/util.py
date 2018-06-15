@@ -1,10 +1,13 @@
 import glob
 import math
 import os
+import time
 
 import numpy as np
 import scipy.interpolate
 from PIL import Image
+
+from preprocess_img import bilateralFilter, applyCLAHE
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "resources", "data")
 
@@ -48,6 +51,107 @@ def getSegmentationFilenames(radiographFilename):
     return glob.glob(segDir)
 
 
+def preprocessRadiographImage(image, transformations=None):
+    if transformations is None:
+        transformations = [
+            bilateralFilter,
+            applyCLAHE,
+            bilateralFilter,
+            applyCLAHE,
+        ]
+
+    for transform in transformations:
+        image = transform(image)
+
+    return image
+
+
+def findLineForJawSplit(img, yMin, yMax):
+    """
+    Find the best path to split the jaws in the image starting from position (0, y).
+    The path consists of y values, the indices are x values.
+    :type img: np.ndarray
+    """
+    print("findLineForJawSplit")
+    tttime = time.time()
+    ttime = time.time()
+    _, xMax = img.shape
+    yMax = yMax - yMin
+
+    # trellis (y, x, 2) shape. 2 to hold cost and previousY
+    trellis = np.full((yMax, xMax, 2), np.inf)
+
+    print("init trellis", time.time() - ttime)
+    ttime = time.time()
+
+    # set first column in trellis
+    for y in range(yMax):
+        trellis[y, 0, 0] = img[y + yMin, 0]
+        trellis[y, 0, 1] = y
+
+    print("init first y trellis", time.time() - ttime)
+    ttime = time.time()
+
+    # forward pass
+    for x in range(1, xMax):
+        for y in range(yMax):
+            start = y - 1 if y > 0 else y
+            end = y + 2 if y < yMax - 1 else y
+
+            bestPrevY = trellis[start:end, x - 1, 0].argmin() + y - 1
+            bestPrevCost = trellis[bestPrevY, x - 1, 0]
+
+            # new cost = previous best cost + current cost (colour intensity)
+            trellis[y, x, 0] = bestPrevCost + img[y + yMin, x]  # + self.transitionCost(bestPrevY, y)
+            trellis[y, x, 1] = bestPrevY
+
+    print("forward pass", time.time() - ttime)
+    ttime = time.time()
+
+    # find the best path, backwards pass
+    path = []
+
+    # set first previousY value to set up backwards pass
+    previousY = int(trellis[:, -1, 0].argmin())
+
+    for x in range(xMax - 1, -1, -1):
+        path.insert(0, previousY + yMin)
+        previousY = int(trellis[previousY, x, 1])
+
+    print("find path", time.time() - ttime)
+    ttime = time.time()
+
+    print("total", time.time() - tttime)
+    raise ValueError
+    return path
+
+
+def findLineForJawSplitTransitionCost(prevY, currY):
+    if prevY == currY:
+        return 2
+    elif currY - prevY == 1 or currY - prevY == -1:
+        return 1
+    return np.inf
+
+
+def cropRegionOfInterest(img):
+    y, x = img.shape
+    xMid, yMid = int(x / 2), int(y / 2)
+    xStart, yStart = 375, 450
+
+    cropY = slice(yMid - yStart, yMid + yStart + 250)
+    cropX = slice(xMid - xStart, xMid + xStart)
+
+    # Cut out the region of interest
+    img = img[cropY, cropX]
+
+    # X and Y offsets for the landmark points based on the region of interest selected
+    XOffset = - (xMid - xStart)
+    YOffset = - (yMid - yStart)
+
+    return img, XOffset, YOffset
+
+
 def loadRadiographImage(radiographFilename):
     """ Returns a tif file from the radiographs directory """
     radioDir = os.path.join(DATA_DIR, "radiographs")
@@ -55,21 +159,27 @@ def loadRadiographImage(radiographFilename):
     # Find tif for radiograph number.
     filename = glob.glob(os.path.join(radioDir, "**", "{}.tif".format(radiographFilename)), recursive=True)[0]
 
-    # Check if the tif of the current radioID is present in our current tifs
-    img = Image.open(filename)
+    # Open the radiograph image, convert it to grayscale, and convert the PIL Image to an np array
+    img = np.array(Image.open(filename).convert("L"))
 
-    x, y = img.size
-    x2 = int(x / 2)
-    y2 = int(y / 2)
+    # Select a region of interest
+    img, XOffset, YOffset = cropRegionOfInterest(img)
 
-    xStart, yStart = 375, 450
-    img = img.crop((x2 - xStart, y2 - yStart, x2 + xStart, y2 + yStart + 250))
-    XOffset = - (x2 - xStart)
-    YOffset = - (y2 - yStart)
+    # preprocess the image
+    img = preprocessRadiographImage(img)
 
-    img = img.convert("L")
+    # Split image in two: upper and lower jaw
+    # Find line to split jaws into two images. Only search in a certain y range.
+    yMax, _ = img.shape
+    ySearchMin, ySearchMax = int((yMax / 2) - 200), int((yMax / 2) + 300)
+    jawSplitLine = findLineForJawSplit(img, 400, 675)
 
-    return img, XOffset, YOffset
+    imgUpperJaw, imgLowerJaw = img.copy(), img.copy()
+    for x, y in enumerate(jawSplitLine):
+        imgUpperJaw[y + 1:-1, x] = 255
+        imgLowerJaw[0:y, x] = 255
+
+    return img, imgUpperJaw, imgLowerJaw, jawSplitLine, XOffset, YOffset
 
 
 def flipToothNumber(n):
@@ -161,7 +271,7 @@ def getNormalSlope(before, current, nextt):
 def getPixels(radiograph, points, getDeriv=True):
     # Get pixel values on the sampled positions
     img = radiograph.image  # type: Image
-    pixels = np.asarray([img.getpixel(p) for p in points])
+    pixels = np.asarray([img[int(y), int(x)] for (x, y) in points])
 
     beforeDeriv = pixels.copy()
     if getDeriv:

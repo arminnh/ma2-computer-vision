@@ -13,12 +13,10 @@ def runExercise():
     r = allRadiographs[0]
     r.showRaw()
     r.preprocessRadiograph([
-        PILtoCV,
         bilateralFilter,
         # increaseContrast,
         # tophat,
-        applyCLAHE,
+        applyCLAHE
         # showImg,
-        cvToPIL
     ])
     r.showRaw()
