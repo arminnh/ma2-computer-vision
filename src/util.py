@@ -76,7 +76,7 @@ def findLineForJawSplit(img, yMin, yMax):
     _, xMax = img.shape
     yMax = yMax - yMin
 
-    pathX = np.linspace(0, xMax, xMax / 20, endpoint=False).astype(int)
+    pathX = np.linspace(0, xMax-1, xMax / 20).astype(int)
     pathY = np.zeros(len(pathX)).astype(int)
 
     # trellis (y, x, 2) shape. 2 to hold cost and previousY
@@ -113,7 +113,9 @@ def findLineForJawSplit(img, yMin, yMax):
         pathY[i] = previousY + yMin
         previousY = int(trellis[previousY, i, 1])
 
-    return list(zip(pathX, pathY))
+
+
+    return np.asarray(list(zip(pathX, pathY)))
 
 
 def findLineForJawSplitTransitionCost(prevY, currY):
@@ -160,13 +162,15 @@ def loadRadiographImage(radiographFilename):
 
     # Split image in two: upper and lower jaw
     # Find line to split jaws into two images. Only search in a certain y range.
-    yMax, _ = img.shape
+    yMax, xMax = img.shape
     ySearchMin, ySearchMax = int((yMax / 2) - 200), int((yMax / 2) + 300)
 
     jawSplitLine = findLineForJawSplit(img, ySearchMin, ySearchMax)
+    interpF = scipy.interpolate.CubicSpline(jawSplitLine[:, 0], jawSplitLine[:, 1])
 
     imgUpperJaw, imgLowerJaw = img.copy(), img.copy()
-    for x, y in jawSplitLine:
+    for x in range(xMax):
+        y = int(interpF(x))
         imgUpperJaw[y + 1:-1, x] = 255
         imgLowerJaw[0:y, x] = 255
 
