@@ -3,7 +3,6 @@ import os
 import re
 
 import numpy as np
-import scipy.interpolate
 
 import images
 import util
@@ -11,18 +10,18 @@ import util
 
 class Landmark:
 
-    def __init__(self, points, radiographFilename=None, toothNumber=None, radiograph=None):
+    def __init__(self, points, radiographFilename=None, toothNumber=None):
         self.radiographFilename = radiographFilename
+        self.radiograph = None
         self.toothNumber = toothNumber
         self.points = points if isinstance(points, np.ndarray) else np.array(points)
-        self.radiograph = radiograph
 
     def __str__(self):
         return "Landmark for tooth {} for radiograph {}".format(self.toothNumber, self.radiographFilename)
 
     def copy(self, points=None):
         points = points if points is not None else self.points
-        return Landmark(points, self.radiographFilename, self.toothNumber, self.radiograph)
+        return Landmark(points, self.radiographFilename, self.toothNumber)
 
     def getPointsAsTuples(self):
         p = list(self.points)
@@ -58,15 +57,12 @@ class Landmark:
 
     def getMeanShiftedPoints(self):
         """ Returns the landmark points translated by their means. """
-        # https://en.wikipedia.org/wiki/Procrustes_analysis
         p = self.getPointsAsTuples()
         translateXY = -np.mean(p, axis=0)
         return p + translateXY, translateXY
 
     def getScale(self):
         """ Returns a statistical measure of the object's scale, root mean square distance (RMSD). """
-        # https://en.wikipedia.org/wiki/Procrustes_analysis
-        # TODO: check if this scaling factor is correct, maybe scale using SVD
         distance, _ = self.getMeanShiftedPoints()
         return np.sqrt(np.mean(np.square(distance)))
 
@@ -108,7 +104,7 @@ class Landmark:
         theta = self.getThetaForReference(other)
         s = self.getScale()
 
-        superimposed = self.translate(*translationXY).scale(1/s).rotate(theta)
+        superimposed = self.translate(*translationXY).scale(1 / s).rotate(theta)
 
         return superimposed, translationXY, s, theta
 
@@ -127,53 +123,38 @@ class Landmark:
 
         return lines
 
-    def getGrayLevelProfilesForAllNormalPoints(self, sampleAmount, getDeriv=True):
-        if self.radiograph is None:
-            raise Exception("Need radiograph for gray level profile")
-
-        normalizedGrayLevelProfilesWithPoints = {}
+    def getGrayLevelProfilesForNormalPoints(self, img, sampleAmount, derive):
+        profilesForLandmarkPoints = {}
 
         points = self.getPointsAsTuples()
         for i, point in enumerate(points):
-            # Build gray level profile by sampling a few points on each side of the point.
+            # Each landmark point will have a list of gray level models
+            # One gray level model for points on the normal line on the current landmark point
+            profilesForLandmarkPoints[i] = []
 
-            # Sample points on normal line of the current landmark point
+            # Sample points on normal line (slope m) of the current landmark point
             m = util.getNormalSlope(points[i - 1], point, points[(i + 1) % len(points)])
-            #tangentLineSlope = f(point[0])
-            # m = slope of normal line
-            #m = -1 / tangentLineSlope if tangentLineSlope != 0 else 0
+            normalPoints = util.sampleLine(m, point, pixelsToSample=sampleAmount)
+            print("Normal points for landmark point {}: {}".format(i, normalPoints))
 
-            normalSamplePoints = util.sampleLine(m, point, pixelsToSample=sampleAmount)
-            normalizedGrayLevelProfilesWithPoints[i] = []
-
-            # Loop over the sampled points
-            # We need to get the gray level profile of all these points
-            for normalPoint in normalSamplePoints:
+            # Loop over the sampled points and get the gray level profile of all them
+            for normalPoint in normalPoints:
                 # Get pixel values on the sampled positions
-                p2 = util.sampleLine(m, normalPoint, pixelsToSample=sampleAmount)
+                grayLevelProfilePoints = util.sampleLine(m, normalPoint, pixelsToSample=sampleAmount)
 
-                beforeDeriv, afterDeriv, scaled = images.getPixelProfile(self.radiograph, p2, getDeriv)
+                rawPixelProfile, derivedProfile, normalizedProfile \
+                    = images.getPixelProfile(img, grayLevelProfilePoints, derive)
 
-                #pixels = np.asarray([img.getpixel(p) for p in p2])
-
-                if getDeriv:
-                    pixels = scaled
-                    # Derivative profile of length n_p - 1
-                    #pixels = np.asarray([pixels[i+1] - pixels[i-1] for i in range(len(pixels)-1)])#np.diff(pixels)
-
-                    # Normalized derivative profile
-                    #scale = np.sum(np.abs(pixels))
-                    #if scale != 0:
-                    #    pixels = pixels / scale
+                if derive:
+                    grayLevelProfile = normalizedProfile
                 else:
-                    pixels = beforeDeriv
+                    grayLevelProfile = rawPixelProfile
 
-                normalizedGrayLevelProfilesWithPoints[i].append([pixels, normalPoint, p2])
-            # print("PROFILES SHAPE: ", pixels.shape)
+                profilesForLandmarkPoints[i].append([grayLevelProfile, normalPoint, grayLevelProfilePoints])
 
-        return normalizedGrayLevelProfilesWithPoints
+        return profilesForLandmarkPoints
 
-    def grayLevelProfileForAllPoints(self, pixelsToSample, getDeriv=True):
+    def grayLevelProfileForLandmarkPoints(self, img, sampleAmount):
         """
         For every landmark point j (all points in this landmark) in the image i (the radiograph of this landmark) of
         the training set, we extract a gray level profile g_ij of length n_p pixels, centered around the landmark point.
@@ -182,12 +163,9 @@ class Landmark:
         The gray level profile of a landmark point j is a vector of n_p values.
         ~ "Active Shape Models - Part I: Modeling Shape and Gray Level Variations"
         """
-        if self.radiograph is None:
-            raise Exception("Need radiograph for gray level profile")
-
-        grayLevelProfiles = {}
+        derivedGrayLevelProfiles = {}
         normalizedGrayLevelProfiles = {}
-        normalPointsOfLandmarkNr = {}
+        normalPointsForLandmarkPoints = {}
         points = self.getPointsAsTuples()
 
         for i, point in enumerate(points):
@@ -195,49 +173,16 @@ class Landmark:
 
             # Sample points on normal line of the current landmark point
             m = util.getNormalSlope(points[i - 1], point, points[(i + 1) % len(points)])
-            #tangentLineSlope = f(point[0])
-            # m = slope of normal line
-            #m = -1 / tangentLineSlope if tangentLineSlope != 0 else 0
+            normalPoints = util.sampleLine(m, point, pixelsToSample=sampleAmount)
 
-            normalPoints = util.sampleLine(m, point, pixelsToSample=pixelsToSample)
+            _, derivedProfile, normalizedProfile = images.getPixelProfile(img, normalPoints, derive=True)
 
-            _, afterDeriv, scaled = images.getPixelProfile(self.radiograph.img, normalPoints, getDeriv)
-            grayLevelProfiles[i] = afterDeriv
-            # Get pixel values on the sampled positions
-            #pixels = np.asarray([img.getpixel(p) for p in normalPoints])
-            #
-            # if getDeriv:
-            #     # Derivative profile of length n_p - 1
-            #     pixels = np.asarray([pixels[i+1] - pixels[i-1] for i in range(len(pixels)-1)])#np.diff(pixels)
-            #
-            # grayLevelProfiles[i] = pixels
-            #
-            # # Normalized derivative profile
-            # # print("i {}, derivated profile: {}, divisor: {}".format(i, list(pixels), np.sum(np.abs(pixels))), end=", ")
-            # scale = np.sum(np.abs(pixels))
-            # if scale != 0:
-            #     pixels = pixels / scale
-            # # print("normalized profile: {}".format(list(pixels)))
+            derivedGrayLevelProfiles[i] = derivedProfile
+            normalizedGrayLevelProfiles[i] = normalizedProfile
+            normalPointsForLandmarkPoints[i] = normalPoints
 
-            normalizedGrayLevelProfiles[i] = scaled
-            normalPointsOfLandmarkNr[i] = normalPoints
-            # print("PROFILES SHAPE: ", pixels.shape)
+        return derivedGrayLevelProfiles, normalizedGrayLevelProfiles, normalPointsForLandmarkPoints
 
-        return grayLevelProfiles, normalizedGrayLevelProfiles, normalPointsOfLandmarkNr
-
-    def calculateDerivative(self, points):
-        xx = points[:, 0]
-        yy = points[:, 1]
-        sorted_xx = xx.argsort()
-        # Fuck you scipy and your strictly increasing x values
-        xx = xx[sorted_xx]
-        for i in range(len(xx)):
-            xx[i] += 0.001 * (i + 1)
-        yy = yy[sorted_xx]
-        # y = m x + b
-
-        f = scipy.interpolate.CubicSpline(xx, yy).derivative()
-        return f
 
 def loadLandmarkPoints(filename):
     f = open(filename, "r")
@@ -256,6 +201,7 @@ def loadAllForRadiograph(radiographFilename, XOffset, YOffset):
     for filepath in util.getLandmarkFilenames(radiographFilename):
         filename = os.path.split(filepath)[-1]
         toothNumber = int(re.match("landmarks{}-([0-9]).txt".format(radiographFilename), filename).group(1))
-        landmarks[toothNumber] = Landmark(loadLandmarkPoints(filepath), radiographFilename, toothNumber).translate(XOffset, YOffset)
+        landmarks[toothNumber] = Landmark(loadLandmarkPoints(filepath), radiographFilename, toothNumber)\
+            .translate(XOffset, YOffset)
 
     return landmarks

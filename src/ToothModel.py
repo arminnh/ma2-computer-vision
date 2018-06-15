@@ -20,7 +20,7 @@ class ToothModel:
         self.eigenvectors = np.array([])
         self.sampleAmount = sampleAmount
         self.y_ij = {}
-        self.y_j_bar = {}
+        self.meanProfilesForLandmarkPoints = {}
         self.C_yj = {}
         self.initializationModel = InitializationModel(landmarks, 28)  # TODO
         self.projectYIntoTangentPlane = projectY
@@ -71,79 +71,63 @@ class ToothModel:
         point of each landmark.
         """
         self.C_yj = {}
-        self.y_j_bar = {}
-        # Build gray level model for each landmark and add it
+        self.meanProfilesForLandmarkPoints = {}
+
+        # Build gray level model for each landmark
         for i, landmark in enumerate(self.landmarks):
-            grayLevelProfiles, normalizedGrayLevelProfiles, _ = \
-                landmark.grayLevelProfileForAllPoints(self.sampleAmount)
-            for j, profile in grayLevelProfiles.items():
-                if j not in self.y_j_bar:
-                    self.y_j_bar[j] = []
+            # Get the gray level profiles for each of the 40 landmark points
+            _, normalizedGrayLevelProfiles, _ = \
+                landmark.grayLevelProfileForLandmarkPoints(landmark.radiograph.img, sampleAmount=self.sampleAmount)
 
-                self.y_j_bar[j].append(normalizedGrayLevelProfiles[j])
-                # self.y_ij[i][j] = normalizedGrayLevelProfiles[j]
+            for j, normalizedProfile in normalizedGrayLevelProfiles.items():
+                if j not in self.meanProfilesForLandmarkPoints:
+                    self.meanProfilesForLandmarkPoints[j] = []
 
-        # for i in range(len(self.meanLandmark.getPointsAsTuples())):
-        #     self.normalizedGrayLevelModels[i] = []
-        #
-        #     # Build gray level model for each landmark and add it
-        #     for landmark in self.landmarks:
-        #         grayLevelProfiles, normalizedGrayLevelProfiles, _ = \
-        #             landmark.grayLevelProfileForAllPoints(self.sampleAmount)
-        #
-        #         for pointIndex, profile in grayLevelProfiles.items():
-        #             if pointIndex not in self.grayLevelModels:
-        #                 self.grayLevelModels[pointIndex] = np.zeros(profile.shape)
-        #             self.grayLevelModels[pointIndex] += profile
-        #
-        #             self.normalizedGrayLevelModels[i].append(normalizedGrayLevelProfiles[pointIndex])
+                self.meanProfilesForLandmarkPoints[j].append(normalizedProfile)
 
-        for j in range(len(self.y_j_bar)):
-            cov = np.cov(np.transpose(self.y_j_bar[j]))
-            self.y_j_bar[j] = np.mean(self.y_j_bar[j], axis=0)
-            # cov = np.zeros((self.sampleAmount-1, self.sampleAmount-1))
-            # for i in range(len(self.landmarks)):
-            #     p = (self.y_ij[i][j] - self.y_j_bar[j])
-            #     p.resize(len(p), 1)
-            #     res = np.matmul(p, p.T)
-            #     cov += res
-            # cov /= len(self.landmarks)
-            # cov = np.cov(self.y_ij)
-            self.C_yj[j] = linalg.pinv(cov)
+        for pointIdx in range(len(self.meanProfilesForLandmarkPoints)):
+            cov = np.cov(np.transpose(self.meanProfilesForLandmarkPoints[pointIdx]))
+            self.C_yj[pointIdx] = linalg.pinv(cov)
+
+            # Replace each point's list of gray level profiles by their means
+            self.meanProfilesForLandmarkPoints[pointIdx] = np.mean(self.meanProfilesForLandmarkPoints[pointIdx], axis=0)
 
         return self
 
-    def mahalanobisDistance(self, profile, landmarkPointIndex):
+    def mahalanobisDistance(self, normalizedGrayLevelProfile, landmarkPointIndex):
         """
         Returns the squared Mahalanobis distance of a new gray level profile from the built gray level model with index
         landmarkPointIndex.
         """
         Sp = self.C_yj[landmarkPointIndex]
-        pMinusMeanTrans = (profile - self.y_j_bar[landmarkPointIndex])
+        pMinusMeanTrans = (normalizedGrayLevelProfile - self.meanProfilesForLandmarkPoints[landmarkPointIndex])
 
         return pMinusMeanTrans.T @ Sp @ pMinusMeanTrans
 
-    def findBetterFittingLandmark(self, landmark, radiograph):
+    def findBetterFittingLandmark(self, landmark, img):
         """
         Active Shape Model Algorithm: An iterative approach to improving the fit of an instance X.
         Returns a landmark that is a better fit on the image than the given according to the gray level pointProfiles of
         points of the landmark and the mahalanobis distance.
         """
-        landmark.radiograph = radiograph
-
         # Examine a region of the image around each point X_i to find the best nearby match for the point X_i'
         # Get the gray level pointProfiles of points on normal lines of the landmark's points
-        grayLevelProfiles = landmark.getGrayLevelProfilesForAllNormalPoints(self.sampleAmount, self.sampleAmount)
+        profilesForLandmarkPoints = landmark.getGrayLevelProfilesForNormalPoints(
+                img=img,
+                sampleAmount=self.sampleAmount,
+                derive=True
+        )
 
         bestPoints = []
-        # pointIdx = the points 0 to 39 on the landmark
-        for pointIdx in range(len(grayLevelProfiles)):
 
-            pointProfiles = grayLevelProfiles[pointIdx]
+        # landmarkPointIdx = the points 0 to 39 on the landmark
+        for landmarkPointIdx in range(len(profilesForLandmarkPoints)):
+            # landmarkPointProfiles = list of [grayLevelProfile, normalPoint, grayLevelProfilePoints]
+            landmarkPointProfiles = profilesForLandmarkPoints[landmarkPointIdx]
             distances = []
 
-            for profile, normalPoint, _ in pointProfiles:
-                d = self.mahalanobisDistance(profile, pointIdx)
+            for grayLevelProfile, normalPoint, _ in landmarkPointProfiles:
+                d = self.mahalanobisDistance(grayLevelProfile, landmarkPointIdx)
                 distances.append((abs(d), normalPoint))
                 print("Mahalanobis dist: {:.2f}, p: {}".format(abs(d), normalPoint))
 
@@ -151,13 +135,13 @@ class ToothModel:
 
         landmark = landmark.copy(np.asarray(bestPoints).flatten())
 
-        # Find the parameters that best fit the new found points X
+        # Find the pose parameters that best fit the new found points X
         landmark, (translateX, translateY), scale, theta = landmark.superimpose(self.meanLandmark)
 
         # Apply constraints to the parameters b to ensure plausible shapes
         b = self.getShapeParametersForLandmark(landmark)
 
-        # Constrain the coefficients to lie within certain limits
+        # Constrain the shape parameters to lie within certain limits
         for i in range(len(b)):
             limit = 2 * np.sqrt(abs(self.eigenvalues[i]))
             b[i] = np.clip(b[i], -limit, limit)

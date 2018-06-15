@@ -9,26 +9,25 @@ from preprocess_img import bilateralFilter, applyCLAHE
 from util import DATA_DIR
 
 
-def getPixelProfile(img, points, derivative=True):
+def getPixelProfile(img, points, derive=True):
     # Get pixel values on the given points
     pixels = np.asarray([img[y, x] for (x, y) in points])
 
-    beforeDeriv = pixels.copy()
-    if derivative:
-        # Derivative profile of length n_p - 1
-        pixels = np.asarray([pixels[i + 1] - pixels[i - 1] for i in range(1, len(pixels) - 1)])
-        # Not the same as np.diff(pixels)
+    rawPixelProfile = pixels.copy()
+    if not derive:
+        return rawPixelProfile, None, None
 
-    afterDeriv = pixels.copy()
+    # Derivative profile of length n_p - 1
+    derivedProfile = np.asarray([pixels[i + 1] - pixels[i - 1] for i in range(1, len(pixels) - 1)])
 
     # Normalized derivative profile
     scale = np.sum(np.abs(pixels))
     if scale != 0:
-        pixels = pixels / scale
+        normalizedProfile = pixels / scale
+    else:
+        normalizedProfile = pixels.copy()
 
-    scaled = pixels.copy()
-
-    return beforeDeriv, afterDeriv, scaled
+    return rawPixelProfile, derivedProfile, normalizedProfile
 
 
 def preprocessRadiographImage(image, transformations=None):

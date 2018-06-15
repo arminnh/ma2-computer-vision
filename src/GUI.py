@@ -35,17 +35,17 @@ class GUI:
                 # draw edges
                 img = self.drawEdges(img)
 
-            y, x = img.shape
-            cv2.line(img, (int(x / 2), 0), (int(x / 2), int(y)), (255, 255, 255), 3)
-            cv2.line(img, (0, int(y / 2)), (x, int(y / 2)), (255, 255, 255), 3)
-
-            for model in self.toothModels:
-                if self.currentRadiographIndex < len(model.landmarks):
-                    landmark = model.landmarks[self.currentRadiographIndex]
-                    self.drawLandmark(landmark, color=180, thickness=3)
-
-                    self.drawOriginModel(model.initializationModel.profileForImage[self.currentRadiographIndex])
-                    self.drawAllOrigins()
+            # y, x = img.shape
+            # cv2.line(img, (int(x / 2), 0), (int(x / 2), int(y)), (255, 255, 255), 3)
+            # cv2.line(img, (0, int(y / 2)), (x, int(y / 2)), (255, 255, 255), 3)
+            #
+            # for model in self.toothModels:
+            #     if self.currentRadiographIndex < len(model.landmarks):
+            #         landmark = model.landmarks[self.currentRadiographIndex]
+            #         self.drawLandmark(landmark, color=180, thickness=3)
+            #
+            #         self.drawOriginModel(model.initializationModel.profileForImage[self.currentRadiographIndex])
+            #         self.drawAllOrigins()
 
             cv2.imshow(self.name, img)
 
@@ -272,9 +272,12 @@ class GUI:
             cv2.line(self.img, origin, end, color, 3)
 
         if grayLevels:
-            landmark.radiograph = self.currentRadiograph
-            grayLevelProfiles = landmark.getGrayLevelProfilesForAllNormalPoints(self.currentToothModel.sampleAmount,
-                                                                                False)
+            grayLevelProfiles = landmark.getGrayLevelProfilesForNormalPoints(
+                img=self.currentRadiograph.img,
+                sampleAmount=self.currentToothModel.sampleAmount,
+                derive=False
+            )
+
             for r in grayLevelProfiles.values():
                 for [pixels, p, p2] in r:
                     print(pixels)
@@ -301,7 +304,8 @@ class GUI:
         i = 0
 
         while d > 1 and i < 1:
-            newTargetPoints = self.currentToothModel.findBetterFittingLandmark(previousLandmark, self.currentRadiograph)
+            newTargetPoints = self.currentToothModel.findBetterFittingLandmark(previousLandmark,
+                                                                               self.currentRadiograph.img)
             improvedLandmark = self.currentToothModel.matchModelPointsToTargetPoints(newTargetPoints)
 
             d = improvedLandmark.shapeDistance(previousLandmark)
