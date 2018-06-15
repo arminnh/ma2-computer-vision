@@ -1,6 +1,7 @@
 import glob
 import math
 import os
+import time
 
 import numpy as np
 import scipy.interpolate
@@ -21,6 +22,19 @@ SAMPLE_AMOUNT = 25
 PCA_COMPONENTS = 20
 
 np.seterr(all='raise')
+
+
+class Timer:
+    def __init__(self, message):
+        self.message = message
+        self.start = 0
+        print("> {}".format(self.message))
+
+    def __enter__(self):
+        self.start = time.time()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        print(">> {:.2f} seconds".format(time.time() - self.start))
 
 
 def getRadiographFilenames(number=None, extra=False):
@@ -127,12 +141,14 @@ def getNormalSlope(before, current, nextt):
     xx = np.asarray([before[0], current[0], nextt[0]])
     yy = np.asarray([before[1], current[1], nextt[1]])
     sorted_xx = xx.argsort()
-    # Fuck you scipy and your strictly increasing x values
+
+    # For scipy strictly increasing x values
     xx = xx[sorted_xx] + [0, 0.00000001, 0.00000002]
     yy = yy[sorted_xx]
-    # y = m x + b
+
     f = scipy.interpolate.CubicSpline(xx, yy).derivative()
     tangentLineSlope = f(current[0])
+
     # m = slope of normal line
     m = -1 / tangentLineSlope if tangentLineSlope != 0 else 0
     return m

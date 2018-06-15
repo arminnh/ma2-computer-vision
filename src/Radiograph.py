@@ -1,6 +1,10 @@
 import os
 from typing import Dict
 
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+
 import Landmark
 import Segment
 import images
@@ -29,51 +33,59 @@ class Radiograph:
 
     def showRaw(self):
         """ Shows the radiograph """
-        raise Exception("todo")
-        # self.imgshow()
+        windowName = "Radiograph {}".format(self.filename)
+        cv2.imshow(windowName, self.img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
     def showWithLandMarks(self):
-        raise Exception("todo")
-        # img = self.imgcopy()
-        # draw = ImageDraw.Draw(img)
-        #
-        # for toothNumber, landmark in self.landmarks.items():
-        #     # PIL can't work with numpy arrays so convert to list of tuples
-        #     p = landmark.getPointsAsList()
-        #     p = [(float(p[2 * j]), float(p[2 * j + 1])) for j in range(int(len(p) / 2))]
-        #     draw.line(p + [p[0]], fill="red", width=2)
-        #     for i, point in enumerate(p):
-        #         draw.text(point, str(i))
+        img = self.img.copy()
+
+        for toothNumber, landmark in self.landmarks.items():
+            points = landmark.getPointsAsTuples()
+
+            for i, (x, y) in enumerate(points):
+                (x2, y2) = points[(i + 1) % len(points)]
+                cv2.line(img, (int(x), int(y)), (int(x2), int(y2)), 255, 3)
+
+                cv2.putText(img, str(i), (int(x), int(y)), 2, 0.4, 180)
+
+        windowName = "Radiograph {} with landmarks".format(self.filename)
+        cv2.imshow(windowName, img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
     def plotLandMarksWithGrayLevelModels(self):
-        import matplotlib.pyplot as plt
-        import numpy as np
         plt.figure()
 
         for toothNumber, landmark in self.landmarks.items():
-            # PIL can't work with numpy arrays so convert to list of tuples
             points = landmark.getPointsAsTuples()
             X = points[:, 0]
             Y = points[:, 1]
+
             plt.plot(X, Y, 'x', label="tooth " + str(toothNumber))
             for i in range(len(points)):
                 plt.text(X[i] - 10, Y[i], i)
 
-            # normals = landmark.normalSamplesForAllPoints(util.SAMPLE_AMOUNT)
-            # grayLevelProfiles, normalizedGrayLevelProfiles, normalPointsOfLandmarkNr = landmark.grayLevelProfileForAllPoints(
-            #     util.SAMPLE_AMOUNT)
-            #
-            # for i, profile in normalizedGrayLevelProfiles.items():
-            #     # plt.plot(normals[i][0], normals[i][1])
-            #
-            #     Xs = np.arange(X[i] - util.SAMPLE_AMOUNT, X[i] + util.SAMPLE_AMOUNT)
-            #     y = np.repeat(Y[i], 2 * util.SAMPLE_AMOUNT)
-            #     profile = profile + abs(profile.min())
-            #     profile = [str(p) for p in profile]
-            #     plt.scatter(x=Xs, y=y, c=profile, s=10, zorder=3)
+            normalizedGrayLevelProfiles = landmark.normalizedGrayLevelProfilesForLandmarkPoints(
+                img=self.img,
+                sampleAmount=util.SAMPLE_AMOUNT,
+            )
+
+            for i, profile in normalizedGrayLevelProfiles.items():
+                # plt.plot(normals[i][0], normals[i][1])
+
+                m = util.getNormalSlope(points[i - 1], points[i], points[(i + 1) % len(points)])
+                normalPoints = np.asarray(util.sampleLine(m, points[i], pixelsToSample=util.SAMPLE_AMOUNT))
+                normalX = normalPoints[:, 0]
+                normalY = normalPoints[:, 1]
+
+                profile = profile + abs(profile.min())
+                profile = [str(p) for p in profile]
+                plt.scatter(x=normalX, y=normalY, c=profile, s=2, zorder=3)
 
         plt.legend()
-        plt.title("Tooters of radiograph {}".format(self.filename))
+        plt.title("Teeth of radiograph {}".format(self.filename))
         ax = plt.gca()
         ax.set_ylim(ax.get_ylim()[::-1])
         plt.axis("equal")
@@ -86,7 +98,7 @@ class Radiograph:
 
 
 def getRadiographs(numbers=None, extra=False):
-    numbers = ["%02d" % n for n in numbers] if numbers is not None else [numbers]
+    numbers = ["%02d" % n for n in numbers] if numbers is not None else []
     radiographs = []
 
     for n in numbers:

@@ -19,9 +19,8 @@ class ToothModel:
         self.eigenvalues = np.array([])
         self.eigenvectors = np.array([])
         self.sampleAmount = sampleAmount
-        self.y_ij = {}
         self.meanProfilesForLandmarkPoints = {}
-        self.C_yj = {}
+        self.grayLevelModelCovarianceMatrices = {}
         self.initializationModel = InitializationModel(landmarks, 28)  # TODO
         self.projectYIntoTangentPlane = projectY
 
@@ -70,7 +69,7 @@ class ToothModel:
         Build gray level models for each of the mean landmark points by averaging the gray level profiles for each
         point of each landmark.
         """
-        self.C_yj = {}
+        self.grayLevelModelCovarianceMatrices = {}
         self.meanProfilesForLandmarkPoints = {}
 
         # Build gray level model for each landmark
@@ -89,7 +88,7 @@ class ToothModel:
 
         for pointIdx in range(len(self.meanProfilesForLandmarkPoints)):
             cov = np.cov(np.transpose(self.meanProfilesForLandmarkPoints[pointIdx]))
-            self.C_yj[pointIdx] = linalg.pinv(cov)
+            self.grayLevelModelCovarianceMatrices[pointIdx] = linalg.pinv(cov)
 
             # Replace each point's list of gray level profiles by their means
             self.meanProfilesForLandmarkPoints[pointIdx] = np.mean(self.meanProfilesForLandmarkPoints[pointIdx], axis=0)
@@ -101,12 +100,12 @@ class ToothModel:
         Returns the squared Mahalanobis distance of a new gray level profile from the built gray level model with index
         landmarkPointIndex.
         """
-        Sp = self.C_yj[landmarkPointIndex]
+        Sp = self.grayLevelModelCovarianceMatrices[landmarkPointIndex]
         pMinusMeanTrans = (normalizedGrayLevelProfile - self.meanProfilesForLandmarkPoints[landmarkPointIndex])
 
         return pMinusMeanTrans.T @ Sp @ pMinusMeanTrans
 
-    def findBetterFittingLandmark(self, landmark, img):
+    def findBetterFittingLandmark(self, img, landmark):
         """
         Active Shape Model Algorithm: An iterative approach to improving the fit of an instance X.
         Returns a landmark that is a better fit on the image than the given according to the gray level pointProfiles of
