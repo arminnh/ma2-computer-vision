@@ -149,6 +149,4 @@ def loadRadiographImage(radiographFilename):
         imgUpperJaw[y + 1:-1, x] = 0
         imgLowerJaw[0:y, x] = 0
 
-    raise ValueError
-
     return img, imgUpperJaw, imgLowerJaw, jawSplitLine, XOffset, YOffset

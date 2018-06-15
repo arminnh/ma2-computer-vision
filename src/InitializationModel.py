@@ -9,61 +9,56 @@ class InitializationModel:
 
     def __init__(self, landmarks, sampleAmount):
         self.landmarks = landmarks
-        self.meanOrigin = np.mean([np.mean(l.getPointsAsTuples(), 0) for l in landmarks], 0)
         self.sampleAmount = sampleAmount
-        self.y_bar = None
-        self.covInv = None
-        self.profileForImage = {}
+        self.meanCenter = np.mean([np.mean(l.getPointsAsTuples(), 0) for l in landmarks], 0)
+        self.meanGrayLevelProfile = {}
+        self.grayLevelProfileCovarianceMatrix = {}
+        self.grayLevelProfileForImage = {}
+
         self.sampleOriginGrayLevels()
+
+    def sampleInitProfilePoints(self, center):
+        verticalPoints = util.sampleLine(1000, center, self.sampleAmount*2)
+        diagonalPoints1 = util.sampleLine(0.1, center, self.sampleAmount)
+        horizontalPoints = util.sampleLine(0, center, self.sampleAmount)
+        diagonalPoints2 = util.sampleLine(-0.1, center, self.sampleAmount)
+
+        return horizontalPoints + verticalPoints + diagonalPoints1 + diagonalPoints2
 
     def sampleOriginGrayLevels(self):
         normalized = []
+
         for i, landmark in enumerate(self.landmarks):
-            origin = np.mean(landmark.getPointsAsTuples(), 0)
+            center = np.mean(landmark.getPointsAsTuples(), 0)
 
-            diagonalPoints1, diagonalPoints2, horizontalPoints, verticalPoints = self.sampleInitProfilePoints(origin)
+            points = self.sampleInitProfilePoints(center)
 
-            b1, b2, b3, b4, pixelProfile = self.getInitPixelProfile(diagonalPoints1, diagonalPoints2, horizontalPoints,
-                                                                    verticalPoints, landmark.radiograph.img)
-            normalized.append(pixelProfile)
-            self.profileForImage[i] = list(zip(b1, horizontalPoints)) + list(zip(b2, verticalPoints)) + list(
-                zip(b3, diagonalPoints1)) + list(zip(b4, diagonalPoints2))
+            rawProfile, normalizedProfile = images.getPixelProfile(landmark.radiograph.img, points, derive=True)
+            normalized.append(normalizedProfile)
 
-        self.y_bar = np.mean(normalized, 0)
-        self.covInv = linalg.pinv(np.cov(np.transpose(normalized)))
+            self.grayLevelProfileForImage[i] = (points, rawProfile)
 
-    def getInitPixelProfile(self, diagonalPoints1, diagonalPoints2, horizontalPoints, verticalPoints, img):
-        raw1, normalized1 = images.getPixelProfile(img, horizontalPoints, True)
-        raw2, normalized2 = images.getPixelProfile(img, verticalPoints, True)
-        raw3, normalized3 = images.getPixelProfile(img, diagonalPoints1, True)
-        raw4, normalized4 = images.getPixelProfile(img, diagonalPoints2, True)
-        normalizedProfile = list(normalized1) + list(normalized2) + list(normalized3) + list(normalized4)
-        return raw1, raw2, raw3, raw4, normalizedProfile
+        self.meanGrayLevelProfile = np.mean(normalized, 0)
+        self.grayLevelProfileCovarianceMatrix = linalg.pinv(np.cov(np.transpose(normalized)))
 
-    def sampleInitProfilePoints(self, origin):
-        horizontalPoints = util.sampleLine(0, origin, self.sampleAmount)
-        verticalPoints = util.sampleLine(1000, origin, self.sampleAmount)
-        diagonalPoints1 = util.sampleLine(1, origin, self.sampleAmount)
-        diagonalPoints2 = util.sampleLine(-1, origin, self.sampleAmount)
-        return diagonalPoints1, diagonalPoints2, horizontalPoints, verticalPoints
-
-    def mahalanobisDistance(self, profile):
+    def mahalanobisDistance(self, normalizedGrayLevelProfile):
         """
         Returns the squared Mahalanobis distance of a new gray level profile from the built gray level model
         """
-        pMinusMeanTrans = (profile - self.y_bar)
+        pMinusMeanTrans = (normalizedGrayLevelProfile - self.meanGrayLevelProfile)
 
-        return pMinusMeanTrans.T @ self.covInv @ pMinusMeanTrans
+        return pMinusMeanTrans.T @ self.grayLevelProfileCovarianceMatrix @ pMinusMeanTrans
 
-    def getBetterOrigin(self, currentOriginForModel, img):
-        diagonalPoints1, diagonalPoints2, horizontalPoints, verticalPoints = self.sampleInitProfilePoints(
-            currentOriginForModel)
+    def getBetterCenter(self, img, currentCenter):
+        points = self.sampleInitProfilePoints(currentCenter)
 
-        points = diagonalPoints1 + diagonalPoints2 + horizontalPoints + verticalPoints
         distances = []
         for p in points:
-            d1, d2, h1, v1 = self.sampleInitProfilePoints(p)
-            _, _, _, _, pixelProfile = self.getInitPixelProfile(d1, d2, h1, v1, img)
-            distances.append((self.mahalanobisDistance(np.asarray(pixelProfile)), p))
+            points2 = self.sampleInitProfilePoints(p)
 
-        return min(distances, key=lambda x: x[0])[1]
+            _, normalizedProfile = images.getPixelProfile(img, points2, derive=True)
+
+            distances.append((abs(self.mahalanobisDistance(normalizedProfile)), p))
+
+        distance, point = min(distances, key=lambda x: x[0])
+        return distance, point

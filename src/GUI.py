@@ -13,7 +13,7 @@ class GUI:
         self.toothModels = models
         self.currentToothModel = None
         self.currentToothModelIndex = 0
-        self.toothCenters = self.getAllOrigins()
+        self.toothCenters = self.getAllToothCenters()
         self.img = None
         self.preprocess = False
         self.currentLandmark = None
@@ -35,16 +35,17 @@ class GUI:
                 img = self.drawEdges(img)
 
             y, x = img.shape
-            cv2.line(img, (int(x / 2), 0), (int(x / 2), int(y)), (255, 255, 255), 3)
-            cv2.line(img, (0, int(y / 2)), (x, int(y / 2)), (255, 255, 255), 3)
+            cv2.line(img, (int(x / 2), 0), (int(x / 2), int(y)), 255, 2)
+            cv2.line(img, (0, int(y / 2)), (x, int(y / 2)), 255, 2)
 
             for model in self.toothModels:
                 if self.currentRadiographIndex < len(model.landmarks):
                     landmark = model.landmarks[self.currentRadiographIndex]
                     self.drawLandmark(landmark, color=180, thickness=3)
 
-                    self.drawOriginModel(model.initializationModel.profileForImage[self.currentRadiographIndex])
-                    self.drawAllOrigins()
+                    points, profile = model.initializationModel.grayLevelProfileForImage[self.currentRadiographIndex]
+                    self.drawGreyLevelProfile(points, profile)
+                    self.drawToothCenters()
 
             cv2.imshow(self.name, img)
 
@@ -126,8 +127,7 @@ class GUI:
                 break
 
             elif pressed_key == ord("o"):
-                # self.showOriginalTooth()
-                self.updateOrigins()
+                self.findBetterToothCenters()
 
             elif pressed_key == ord("n"):
                 self.findBetterLandmark()
@@ -142,22 +142,6 @@ class GUI:
                 break
 
         cv2.destroyAllWindows()
-
-    def getAllOrigins(self):
-        c = {}
-        for i, model in enumerate(self.toothModels):
-            orig = model.initializationModel.meanOrigin
-            c[i] = int(orig[0]), int(orig[1])
-        return c
-
-    def drawAllOrigins(self):
-        for pos in self.toothCenters.values():
-            cv2.circle(self.img, pos, 1, int(200), 2)
-
-    def drawOriginModel(self, originModel):
-        for pixel, pos in originModel:
-            orig = (int(pos[0]), int(pos[1]))
-            cv2.circle(self.img, orig, 1, int(pixel), 2)
 
     def createWindow(self):
         cv2.namedWindow(self.name, cv2.WINDOW_KEEPRATIO)
@@ -175,10 +159,18 @@ class GUI:
         )
         return self
 
+    def refreshCurrentImage(self):
+        self.img = self.currentRadiograph.img.copy()
+
+        jawSplitLine = self.currentRadiograph.jawSplitLine
+        for i, (x, y) in enumerate(jawSplitLine):
+            if i > 0:
+                cv2.line(self.img, (jawSplitLine[i - 1][0], jawSplitLine[i - 1][1]), (x, y), 255, 2)
+
     def setCurrentImage(self, idx):
         self.currentRadiographIndex = idx
         self.currentRadiograph = self.radiographs[idx]
-        self.toothCenters = self.getAllOrigins()
+        self.toothCenters = self.getAllToothCenters()
         self.refreshCurrentImage()
         self.refreshOverlay()
         return self
@@ -235,22 +227,20 @@ class GUI:
     # mouse callback function
     def mouseListener(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
-            print("click x: {}, y: {}".format(x, y))
-
             self.currentLandmark = self.currentToothModel.getTranslatedAndInverseScaledMean(x, y)
 
             self.drawLandMarkWithNormals(self.currentLandmark, grayLevels=True)
 
-    def drawLandmark(self, landmark, color=(0, 0, 255), thickness=1):
+    def drawLandmark(self, landmark, color, thickness=1):
         points = landmark.getPointsAsTuples().round().astype(int)
 
         for i in range(len(points)):
-            origin = (points[i][0], points[i][1])
+            start = (points[i][0], points[i][1])
             end = (points[(i + 1) % len(points)][0], points[(i + 1) % len(points)][1])
 
-            cv2.line(self.img, origin, end, color, thickness)
+            cv2.line(self.img, start, end, color, thickness)
 
-    def drawLandMarkWithNormals(self, landmark, grayLevels, color=(0, 0, 255)):
+    def drawLandMarkWithNormals(self, landmark, grayLevels, color=255):
         points = landmark.getPointsAsTuples().round().astype(int)
 
         for i in range(len(points)):
@@ -260,15 +250,12 @@ class GUI:
             y2 = p[:, 1]
 
             for j in range(len(x2)):
-                cv2.line(self.img,
-                         (int(x2[j]), int(y2[j])),
-                         (int(x2[j]), int(y2[j])),
-                         (255, 0, 0), 1)
+                cv2.line(self.img, (x2[j], y2[j]), (x2[j], y2[j]), 255, 1)
 
-            origin = (int(points[i][0]), int(points[i][1]))
-            end = (int(points[(i + 1) % len(points)][0]), int(points[(i + 1) % len(points)][1]))
+            start = points[i][0], points[i][1]
+            end = points[(i + 1) % points][0], points[(i + 1) % len(points)][1]
 
-            cv2.line(self.img, origin, end, color, 3)
+            cv2.line(self.img, start, end, color, 3)
 
         if grayLevels:
             profilesForLandmarkPoints = landmark.getGrayLevelProfilesForNormalPoints(
@@ -283,9 +270,9 @@ class GUI:
                     grayLevelProfilePoints = profileContainer["grayLevelProfilePoints"]
                     print(grayLevelProfile)
                     for z in range(len(grayLevelProfilePoints)):
-                        orig = (int(grayLevelProfilePoints[z][0]), int(grayLevelProfilePoints[z][1]))
+                        start = (int(grayLevelProfilePoints[z][0]), int(grayLevelProfilePoints[z][1]))
 
-                        cv2.line(self.img, orig, orig, int(grayLevelProfile[z]), thickness=2)
+                        cv2.line(self.img, start, start, int(grayLevelProfile[z]), thickness=2)
 
     def preprocessCurrentRadiograph(self):
         if not self.preprocess:
@@ -305,8 +292,8 @@ class GUI:
         i = 0
 
         while d > 1 and i < 1:
-            newTargetPoints = self.currentToothModel.findBetterFittingLandmark(previousLandmark,
-                                                                               self.currentRadiograph.img)
+            newTargetPoints = self.currentToothModel.findBetterFittingLandmark(self.currentRadiograph.img,
+                                                                               previousLandmark)
             improvedLandmark = self.currentToothModel.matchModelPointsToTargetPoints(newTargetPoints)
 
             d = improvedLandmark.shapeDistance(previousLandmark)
@@ -317,27 +304,52 @@ class GUI:
 
         self.currentLandmark = previousLandmark
         self.refreshCurrentImage()
-        self.drawLandmark(self.currentLandmark, (255, 255, 255))
-
-    def refreshCurrentImage(self):
-        self.img = self.currentRadiograph.img.copy()
-
-        jawSplitLine = self.currentRadiograph.jawSplitLine
-        for i, (x, y) in enumerate(jawSplitLine):
-            if i > 0:
-                cv2.line(self.img, (jawSplitLine[i - 1][0], jawSplitLine[i - 1][1]), (x, y), 255, 2)
-
-    def updateOrigins(self):
-        oldOrigins = self.toothCenters
-        for i, m in enumerate(self.toothModels):
-            currentOriginForModel = oldOrigins[i]
-            newOrigin = m.initializationModel.getBetterOrigin(currentOriginForModel, self.currentRadiograph.img)
-            newOrigin = (int(newOrigin[0]), int(newOrigin[1]))
-            self.toothCenters[i] = newOrigin
-        self.refreshCurrentImage()
+        self.drawLandmark(self.currentLandmark, 255)
 
     def showLowerJaw(self):
         self.img = self.currentRadiograph.imgLowerJaw.copy()
 
     def showUpperJaw(self):
         self.img = self.currentRadiograph.imgUpperJaw.copy()
+
+    def getAllToothCenters(self):
+        c = {}
+        for i, model in enumerate(self.toothModels):
+            center = model.initializationModel.meanCenter
+            c[i] = int(center[0]), int(center[1])
+        return c
+
+    def drawToothCenters(self):
+        for pos in self.toothCenters.values():
+            cv2.circle(self.img, pos, 1, 255, 5)
+
+    def drawGreyLevelProfile(self, points, profile):
+        for i, point in enumerate(points):
+            cv2.circle(self.img, point, 1, int(profile[i]), 2)
+
+    def findBetterToothCenters(self):
+        oldCenters = self.toothCenters
+
+        converged = False
+        cumulativeDistance = float("inf")
+
+        while not converged:
+            previousDistance = cumulativeDistance
+            cumulativeDistance = 0
+
+            for i, m in enumerate(self.toothModels):
+                currentCenterForModel = oldCenters[i]
+                distance, newCenter = m.initializationModel.getBetterCenter(
+                    img=self.currentRadiograph.img,
+                    currentCenter=currentCenterForModel
+                )
+                self.toothCenters[i] = newCenter
+                cumulativeDistance += distance
+
+            print("center improvement iteration cumulative distance:", cumulativeDistance)
+            converged = previousDistance - cumulativeDistance < 0.01
+
+        print("centers converged")
+
+        self.refreshCurrentImage()
+
