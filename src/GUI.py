@@ -5,7 +5,7 @@ from preprocess_img import *
 
 class GUI:
 
-    def __init__(self, radiographs, models):
+    def __init__(self, radiographs, models, incisorModels):
         self.name = "Computer Vision KU Leuven"
         self.radiographs = radiographs
         self.currentRadiograph = None
@@ -14,6 +14,7 @@ class GUI:
         self.currentToothModel = None
         self.currentToothModelIndex = 0
         self.toothCenters = self.getAllOrigins()
+        self.incisorModels = incisorModels
         self.img = None
         self.preprocess = False
         self.currentLandmark = None
@@ -38,13 +39,13 @@ class GUI:
             cv2.line(img, (int(x / 2), 0), (int(x / 2), int(y)), (255, 255, 255), 3)
             cv2.line(img, (0, int(y / 2)), (x, int(y / 2)), (255, 255, 255), 3)
 
-            for model in self.toothModels:
-                if self.currentRadiographIndex < len(model.landmarks):
-                    landmark = model.landmarks[self.currentRadiographIndex]
-                    self.drawLandmark(landmark, color=180, thickness=3)
-
-                    self.drawOriginModel(model.initializationModel.profileForImage[self.currentRadiographIndex])
-                    self.drawAllOrigins()
+            # for model in self.toothModels:
+            #     if self.currentRadiographIndex < len(model.landmarks):
+            #         landmark = model.landmarks[self.currentRadiographIndex]
+            #         self.drawLandmark(landmark, color=180, thickness=3)
+            #
+            #         self.drawOriginModel(model.initializationModel.profileForImage[self.currentRadiographIndex])
+            #         self.drawAllOrigins()
 
             cv2.imshow(self.name, img)
 
@@ -138,6 +139,12 @@ class GUI:
             elif pressed_key == ord("l"):
                 self.showLowerJaw()
 
+            elif pressed_key == ord("w"):
+                self.crazyLineDetector()
+
+            elif pressed_key == ord("s"):
+                self.setIncisorModel()
+
             if cv2.getWindowProperty(self.name, cv2.WND_PROP_VISIBLE) < 1:
                 break
 
@@ -181,6 +188,7 @@ class GUI:
         self.toothCenters = self.getAllOrigins()
         self.refreshCurrentImage()
         self.refreshOverlay()
+
         return self
 
     def setCurrentModel(self, idx):
@@ -275,7 +283,8 @@ class GUI:
                 img = self.currentRadiograph.imgLowerJaw
             else:
                 img = self.currentRadiograph.imgUpperJaw
-
+            if self.currentToothModel.name == -1:
+                img = self.currentRadiograph.img
             profilesForLandmarkPoints = landmark.getGrayLevelProfilesForNormalPoints(
                 img=img,
                 sampleAmount=self.currentToothModel.sampleAmount,
@@ -310,6 +319,9 @@ class GUI:
         i = 0
 
         correctHalf = self.currentRadiograph.imgUpperJaw if self.currentToothModel.name <= 4 else self.currentRadiograph.imgLowerJaw
+        if self.currentToothModel.name == -1:
+            correctHalf = self.currentRadiograph.img
+
         while d > 1 and i < 1:
             newTargetPoints = self.currentToothModel.findBetterFittingLandmark(previousLandmark,
                                                                                correctHalf)
@@ -333,11 +345,16 @@ class GUI:
             if i > 0:
                 cv2.line(self.img, (jawSplitLine[i - 1][0], jawSplitLine[i - 1][1]), (x, y), 255, 2)
 
+        self.meanSplitLine = int(np.mean(jawSplitLine[:,1]))
+        cv2.line(self.img, (0,self.meanSplitLine), (self.img.shape[1],self.meanSplitLine), 200, 2)
+
     def updateOrigins(self):
         oldOrigins = self.toothCenters
         for i, m in enumerate(self.toothModels):
             currentOriginForModel = oldOrigins[i]
-            newOrigin = m.initializationModel.getBetterOrigin(currentOriginForModel, self.currentRadiograph.img)
+            correctHalf = self.currentRadiograph.imgUpperJaw if m.name <= 4 else self.currentRadiograph.imgLowerJaw
+
+            newOrigin = m.initializationModel.getBetterOrigin(currentOriginForModel, correctHalf)
             newOrigin = (int(newOrigin[0]), int(newOrigin[1]))
             self.toothCenters[i] = newOrigin
         self.refreshCurrentImage()
@@ -347,3 +364,13 @@ class GUI:
 
     def showUpperJaw(self):
         self.img = self.currentRadiograph.imgUpperJaw.copy()
+
+    def crazyLineDetector(self):
+        y, x = self.img.shape
+        midX = int(x/2)
+
+    def setIncisorModel(self):
+        self.currentToothModel = self.incisorModels[2]
+
+
+

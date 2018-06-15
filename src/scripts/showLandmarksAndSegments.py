@@ -8,7 +8,7 @@ import util
 import Radiograph
 
 if __name__ == '__main__':
-    radiographs = Radiograph.getRadiographs([1])  # type: Radiograph
+    radiographs = Radiograph.getRadiographs(range(15))  # type: Radiograph
 
     for r in radiographs:
         r.landmarks = {k: v for k, v in r.landmarks.items() if k in util.UPPER_TEETH & util.CENTRAL_TEETH}

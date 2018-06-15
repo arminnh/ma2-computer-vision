@@ -20,14 +20,19 @@ class Landmark:
         return "Landmark for tooth {} for radiograph {}".format(self.toothNumber, self.radiographFilename)
 
     def getCorrectRadiographPart(self):
+        if self.toothNumber == -1:
+            return self.radiograph.img
+
+
         if self.toothNumber > 4:
             return self.radiograph.imgLowerJaw
-
         return self.radiograph.imgUpperJaw
 
     def copy(self, points=None):
         points = points if points is not None else self.points
-        return Landmark(points, self.radiographFilename, self.toothNumber)
+        l = Landmark(points, self.radiographFilename, self.toothNumber)
+        l.radiograph = self.radiograph
+        return l
 
     def getPointsAsTuples(self):
         p = list(self.points)

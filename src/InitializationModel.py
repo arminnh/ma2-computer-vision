@@ -24,7 +24,7 @@ class InitializationModel:
             diagonalPoints1, diagonalPoints2, horizontalPoints, verticalPoints = self.sampleInitProfilePoints(origin)
 
             b1, b2, b3, b4, pixelProfile = self.getInitPixelProfile(diagonalPoints1, diagonalPoints2, horizontalPoints,
-                                                                    verticalPoints, landmark.radiograph.img)
+                                                                    verticalPoints, landmark.getCorrectRadiographPart())
             normalized.append(pixelProfile)
             self.profileForImage[i] = list(zip(b1, horizontalPoints)) + list(zip(b2, verticalPoints)) + list(
                 zip(b3, diagonalPoints1)) + list(zip(b4, diagonalPoints2))
