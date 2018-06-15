@@ -317,9 +317,9 @@ class GUI:
         self.img = self.currentRadiograph.image
 
         jawSplitLine = self.currentRadiograph.jawSplitLine
-        for x, y in enumerate(jawSplitLine):
-            if x > 0:
-                cv2.line(self.img, (x - 1, jawSplitLine[x - 1]), (x, y), 255, 2)
+        for i, (x, y) in enumerate(jawSplitLine):
+            if i > 0:
+                cv2.line(self.img, (jawSplitLine[i - 1][0], jawSplitLine[i - 1][1]), (x, y), 255, 2)
 
     def updateOrigins(self):
         oldOrigins = self.toothCenters
