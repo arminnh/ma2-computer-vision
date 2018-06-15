@@ -1,14 +1,16 @@
 import os
 import re
 
+import cv2
+
 import util
 
 
 class Segment:
-    def __init__(self, radiographFilename, toothNumber, image):
+    def __init__(self, radiographFilename, toothNumber, img):
         self.radiographFilename = radiographFilename
         self.toothNumber = toothNumber
-        self.image = image
+        self.img = img
 
 
 def loadAllForRadiograph(radiographFilename):
@@ -21,7 +23,7 @@ def loadAllForRadiograph(radiographFilename):
     for filepath in util.getSegmentationFilenames(radiographFilename):
         filename = os.path.split(filepath)[-1]
         toothNumber = int(re.match("[0-9]{2}-([0-7]).png", filename).group(1)) + 1
-        img = Image.open(filepath)
+        img = cv2.imread(filename)
         segments[toothNumber] = Segment(radiographFilename, toothNumber, img)
 
     return segments

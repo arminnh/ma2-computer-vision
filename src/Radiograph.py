@@ -3,20 +3,20 @@ from typing import Dict
 
 import Landmark
 import Segment
+import images
 import util
 
 
 class Radiograph:
 
-    def __init__(self, filename, image, imageUpperJaw, imageLowerJaw, jawSplitLine, landmarks, segments,
-                 mirrored=False):
+    def __init__(self, filename, img, imgUpperJaw, imgLowerJaw, jawSplitLine, landmarks, segments, mirrored=False):
         """
         :param filename: the filename/id of the Radiograph
         """
         self.filename = filename
-        self.image = image
-        self.imageUpperJaw = imageUpperJaw
-        self.imageLowerJaw = imageLowerJaw
+        self.img = img
+        self.imgUpperJaw = imgUpperJaw
+        self.imgLowerJaw = imgLowerJaw
         self.jawSplitLine = jawSplitLine
         self.landmarks = landmarks  # type: Dict[int, Landmark.Landmark]
         self.segments = segments  # type: Dict[int, Segment.Segment]
@@ -29,11 +29,12 @@ class Radiograph:
 
     def showRaw(self):
         """ Shows the radiograph """
-        self.image.show()
+        raise Exception("todo")
+        # self.imgshow()
 
     def showWithLandMarks(self):
         raise Exception("todo")
-        # img = self.image.copy()
+        # img = self.imgcopy()
         # draw = ImageDraw.Draw(img)
         #
         # for toothNumber, landmark in self.landmarks.items():
@@ -80,13 +81,9 @@ class Radiograph:
         # plt.show()
 
     def showWithSegments(self):
-        for segment in self.segments.values():
-            segment.image.show()
-
-    def save_img(self):
-        self.image.save(
-            "/Users/thierryderuyttere/Downloads/pycococreator-master/examples/shapes/train/" + "{}.jpg".format(
-                self.filename))
+        raise Exception("todo")
+        # for segment in self.segments.values():
+        #     segment.imgshow()
 
 
 def getRadiographs(numbers=None, extra=False):
@@ -99,13 +96,13 @@ def getRadiographs(numbers=None, extra=False):
             print("Loading radiograph {}, {}".format(n, filepath))
 
             # Load the radiograph in as is
-            img, imgUpperJaw, imgLowerJaw, jawSplitLine, XOffset, YOffset = util.loadRadiographImage(filename)
+            img, imgUpperJaw, imgLowerJaw, jawSplitLine, XOffset, YOffset = images.loadRadiographImage(filename)
             segments = Segment.loadAllForRadiograph(filename)
             radiographs.append(Radiograph(
                 filename=filename,
-                image=img,
-                imageUpperJaw=imgUpperJaw,
-                imageLowerJaw=imgLowerJaw,
+                img=img,
+                imgUpperJaw=imgUpperJaw,
+                imgLowerJaw=imgLowerJaw,
                 jawSplitLine=jawSplitLine,
                 landmarks=Landmark.loadAllForRadiograph(filename, XOffset, YOffset),
                 segments=segments
@@ -120,12 +117,12 @@ def getRadiographs(numbers=None, extra=False):
             #     landmarks[util.flipToothNumber(v.toothNumber)] = v.addToXValues(mirrorXOffset)
             #
             # for segment in segments.values():
-            #     segment.image = ImageOps.mirror(segment.image)
+            #     segment.img = ImageOps.mirror(segment.img)
             #     segment.toothNumber = util.flipToothNumber(segment.toothNumber)
             #
             # radiographs.append(Radiograph(
             #     filename=filename,
-            #     image=ImageOps.mirror(img),
+            #     img=ImageOps.mirror(img),
             #     landmarks=landmarks,
             #     segments=segments,
             #     mirrored=True

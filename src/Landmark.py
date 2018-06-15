@@ -5,6 +5,7 @@ import re
 import numpy as np
 import scipy.interpolate
 
+import images
 import util
 
 
@@ -151,9 +152,8 @@ class Landmark:
                 # Get pixel values on the sampled positions
                 p2 = util.sampleLine(m, normalPoint, pixelsToSample=sampleAmount)
 
-                beforeDeriv, afterDeriv, scaled = util.getPixels(self.radiograph, p2, getDeriv)
+                beforeDeriv, afterDeriv, scaled = images.getPixelProfile(self.radiograph, p2, getDeriv)
 
-                #img = self.radiograph.image#.convert("L")  # type: Image
                 #pixels = np.asarray([img.getpixel(p) for p in p2])
 
                 if getDeriv:
@@ -201,10 +201,9 @@ class Landmark:
 
             normalPoints = util.sampleLine(m, point, pixelsToSample=pixelsToSample)
 
-            _, afterDeriv, scaled = util.getPixels(self.radiograph, normalPoints, getDeriv)
+            _, afterDeriv, scaled = images.getPixelProfile(self.radiograph.img, normalPoints, getDeriv)
             grayLevelProfiles[i] = afterDeriv
             # Get pixel values on the sampled positions
-            #img = self.radiograph.image  # type: Image
             #pixels = np.asarray([img.getpixel(p) for p in normalPoints])
             #
             # if getDeriv:

@@ -1,3 +1,4 @@
+import images
 import util
 from preprocess_img import *
 
@@ -34,9 +35,9 @@ class GUI:
                 # draw edges
                 img = self.drawEdges(img)
 
-            y, x = self.img.shape
-            cv2.line(self.img, (int(x / 2), 0), (int(x / 2), int(y)), (255, 255, 255), 3)
-            cv2.line(self.img, (0, int(y / 2)), (x, int(y / 2)), (255, 255, 255), 3)
+            y, x = img.shape
+            cv2.line(img, (int(x / 2), 0), (int(x / 2), int(y)), (255, 255, 255), 3)
+            cv2.line(img, (0, int(y / 2)), (x, int(y / 2)), (255, 255, 255), 3)
 
             for model in self.toothModels:
                 if self.currentRadiographIndex < len(model.landmarks):
@@ -284,7 +285,7 @@ class GUI:
 
     def preprocessCurrentRadiograph(self):
         if not self.preprocess:
-            self.img = util.preprocessRadiographImage(self.img)
+            self.img = images.preprocessRadiographImage(self.img)
         else:
             self.refreshCurrentImage()
 
@@ -314,7 +315,7 @@ class GUI:
         self.drawLandmark(self.currentLandmark, (255, 255, 255))
 
     def refreshCurrentImage(self):
-        self.img = self.currentRadiograph.image
+        self.img = self.currentRadiograph.img
 
         jawSplitLine = self.currentRadiograph.jawSplitLine
         for i, (x, y) in enumerate(jawSplitLine):
@@ -325,13 +326,13 @@ class GUI:
         oldOrigins = self.toothCenters
         for i, m in enumerate(self.toothModels):
             currentOriginForModel = oldOrigins[i]
-            newOrigin = m.initializationModel.getBetterOrigin(currentOriginForModel, self.currentRadiograph)
+            newOrigin = m.initializationModel.getBetterOrigin(currentOriginForModel, self.currentRadiograph.img)
             newOrigin = (int(newOrigin[0]), int(newOrigin[1]))
             self.toothCenters[i] = newOrigin
         self.refreshCurrentImage()
 
     def showLowerJaw(self):
-        self.img = self.currentRadiograph.imageLowerJaw
+        self.img = self.currentRadiograph.imgLowerJaw
 
     def showUpperJaw(self):
-        self.img = self.currentRadiograph.imageUpperJaw
+        self.img = self.currentRadiograph.imgUpperJaw

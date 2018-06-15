@@ -1,6 +1,7 @@
 import numpy as np
 from scipy import linalg
 
+import images
 import util
 
 
@@ -23,7 +24,7 @@ class InitializationModel:
             diagonalPoints1, diagonalPoints2, horizontalPoints, verticalPoints = self.sampleInitProfilePoints(origin)
 
             b1, b2, b3, b4, pixelProfile = self.getInitPixelProfile(diagonalPoints1, diagonalPoints2, horizontalPoints,
-                                                                    verticalPoints, landmark.radiograph)
+                                                                    verticalPoints, landmark.radiograph.img)
             normalized.append(pixelProfile)
             self.profileForImage[i] = list(zip(b1, horizontalPoints)) + list(zip(b2, verticalPoints)) + list(
                 zip(b3, diagonalPoints1)) + list(zip(b4, diagonalPoints2))
@@ -31,11 +32,11 @@ class InitializationModel:
         self.y_bar = np.mean(normalized, 0)
         self.covInv = linalg.pinv(np.cov(np.transpose(normalized)))
 
-    def getInitPixelProfile(self, diagonalPoints1, diagonalPoints2, horizontalPoints, verticalPoints, radiograph):
-        b1, n1, s1 = util.getPixels(radiograph, horizontalPoints, True)
-        b2, n2, s2 = util.getPixels(radiograph, verticalPoints, True)
-        b3, n3, s3 = util.getPixels(radiograph, diagonalPoints1, True)
-        b4, n4, s4 = util.getPixels(radiograph, diagonalPoints2, True)
+    def getInitPixelProfile(self, diagonalPoints1, diagonalPoints2, horizontalPoints, verticalPoints, img):
+        b1, n1, s1 = images.getPixelProfile(img, horizontalPoints, True)
+        b2, n2, s2 = images.getPixelProfile(img, verticalPoints, True)
+        b3, n3, s3 = images.getPixelProfile(img, diagonalPoints1, True)
+        b4, n4, s4 = images.getPixelProfile(img, diagonalPoints2, True)
         pixelProfile = list(s1) + list(s2) + list(s3) + list(s4)
         return b1, b2, b3, b4, pixelProfile
 
@@ -54,7 +55,7 @@ class InitializationModel:
 
         return pMinusMeanTrans.T @ self.covInv @ pMinusMeanTrans
 
-    def getBetterOrigin(self, currentOriginForModel, radiograph):
+    def getBetterOrigin(self, currentOriginForModel, img):
         diagonalPoints1, diagonalPoints2, horizontalPoints, verticalPoints = self.sampleInitProfilePoints(
             currentOriginForModel)
 
@@ -62,7 +63,7 @@ class InitializationModel:
         distances = []
         for p in points:
             d1, d2, h1, v1 = self.sampleInitProfilePoints(p)
-            _, _, _, _, pixelProfile = self.getInitPixelProfile(d1, d2, h1, v1, radiograph)
+            _, _, _, _, pixelProfile = self.getInitPixelProfile(d1, d2, h1, v1, img)
             distances.append((self.mahalanobisDistance(np.asarray(pixelProfile)), p))
 
         return min(distances, key=lambda x: x[0])[1]
