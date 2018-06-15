@@ -164,7 +164,11 @@ def loadRadiographImage(radiographFilename):
     # Find line to split jaws into two images. Only search in a certain y range.
     yMax, _ = img.shape
     ySearchMin, ySearchMax = int((yMax / 2) - 200), int((yMax / 2) + 300)
-    jawSplitLine = findLineForJawSplit(img, ySearchMin, ySearchMax)
+    from viterbi import findLineForJawSplit as j2
+
+    t = time.time()
+    jawSplitLine = j2(img.astype(np.long), ySearchMin, ySearchMax)
+    print("time: {}".format(time.time() - t))
 
     imgUpperJaw, imgLowerJaw = img.copy(), img.copy()
     for x, y in jawSplitLine:
