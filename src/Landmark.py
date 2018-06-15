@@ -19,6 +19,12 @@ class Landmark:
     def __str__(self):
         return "Landmark for tooth {} for radiograph {}".format(self.toothNumber, self.radiographFilename)
 
+    def getCorrectRadiographPart(self):
+        if self.toothNumber > 4:
+            return self.radiograph.imgLowerJaw
+
+        return self.radiograph.imgUpperJaw
+
     def copy(self, points=None):
         points = points if points is not None else self.points
         return Landmark(points, self.radiographFilename, self.toothNumber)

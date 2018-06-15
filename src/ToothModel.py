@@ -76,7 +76,7 @@ class ToothModel:
         for i, landmark in enumerate(self.landmarks):
             # Get the gray level profiles for each of the 40 landmark points
             normalizedGrayLevelProfiles = landmark.normalizedGrayLevelProfilesForLandmarkPoints(
-                img=landmark.radiograph.img,
+                img=landmark.getCorrectRadiographPart(),
                 sampleAmount=self.sampleAmount
             )
 

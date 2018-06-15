@@ -258,8 +258,13 @@ class GUI:
             cv2.line(self.img, start, end, color, 3)
 
         if grayLevels:
+            if self.currentToothModel.name > 4:
+                img = self.currentRadiograph.imgLowerJaw
+            else:
+                img = self.currentRadiograph.imgUpperJaw
+
             profilesForLandmarkPoints = landmark.getGrayLevelProfilesForNormalPoints(
-                img=self.currentRadiograph.img,
+                img=img,
                 sampleAmount=self.currentToothModel.sampleAmount,
                 derive=False
             )
@@ -291,9 +296,13 @@ class GUI:
         d = 2
         i = 0
 
+        if self.currentToothModel.name <= 4:
+            jawImg = self.currentRadiograph.imgUpperJaw
+        else:
+            jawImg = self.currentRadiograph.imgLowerJaw
+
         while d > 1 and i < 1:
-            newTargetPoints = self.currentToothModel.findBetterFittingLandmark(self.currentRadiograph.img,
-                                                                               previousLandmark)
+            newTargetPoints = self.currentToothModel.findBetterFittingLandmark(jawImg, previousLandmark)
             improvedLandmark = self.currentToothModel.matchModelPointsToTargetPoints(newTargetPoints)
 
             d = improvedLandmark.shapeDistance(previousLandmark)
@@ -352,4 +361,3 @@ class GUI:
         print("centers converged")
 
         self.refreshCurrentImage()
-
