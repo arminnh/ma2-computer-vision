@@ -17,7 +17,7 @@ def buildActiveShapeModels(radiographs, PCAComponents, sampleAmount):
     for t in util.TEETH:
         models.append(
             ToothModel(
-                name="Model tooter {}".format(t),
+                name=t,
                 landmarks=[l for l in allLandmarks if l.toothNumber == t],
                 pcaComponents=PCAComponents,
                 sampleAmount=sampleAmount,

@@ -271,8 +271,13 @@ class GUI:
             cv2.line(self.img, origin, end, color, 3)
 
         if grayLevels:
+            if self.currentToothModel.name > 4:
+                img = self.currentRadiograph.imgLowerJaw
+            else:
+                img = self.currentRadiograph.imgUpperJaw
+
             profilesForLandmarkPoints = landmark.getGrayLevelProfilesForNormalPoints(
-                img=self.currentRadiograph.img,
+                img=img,
                 sampleAmount=self.currentToothModel.sampleAmount,
                 derive=False
             )
@@ -304,9 +309,10 @@ class GUI:
         d = 2
         i = 0
 
+        correctHalf = self.currentRadiograph.imgUpperJaw if self.currentToothModel.name <= 4 else self.currentRadiograph.imgLowerJaw
         while d > 1 and i < 1:
             newTargetPoints = self.currentToothModel.findBetterFittingLandmark(previousLandmark,
-                                                                               self.currentRadiograph.img)
+                                                                               correctHalf)
             improvedLandmark = self.currentToothModel.matchModelPointsToTargetPoints(newTargetPoints)
 
             d = improvedLandmark.shapeDistance(previousLandmark)
