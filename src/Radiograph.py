@@ -140,7 +140,8 @@ def getRadiographs(numbers=None, extra=False, resolutionLevels=4):
 
             mirroredImgUpperJaw = imgUpperJaw[:, ::-1]
             mirroredImgLowerJaw = imgLowerJaw[:, ::-1]
-            mirroredJawSplitLine = jawSplitLine[::-1, :]
+            mirroredJawSplitLine = jawSplitLine.copy()[::-1]
+            mirroredJawSplitLine[:, 0] = mirroredJawSplitLine[::-1, 0]
 
             radiographs.append(Radiograph(
                 filename=filename,

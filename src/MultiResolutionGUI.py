@@ -85,13 +85,14 @@ class MultiResolutionGUI:
     def refreshCurrentImage(self):
         self.img = self.currentRadiograph.imgPyramid[self.currentResolutionLevel].copy()
 
-        jawSplitLine = self.currentRadiograph.jawSplitLine
+        step = int(1 / 0.5 ** self.currentResolutionLevel)
+        print("step = ", step)
+        jawSplitLine = self.currentRadiograph.jawSplitLine.copy()[0::step]
+        jawSplitLine[:, 1] = jawSplitLine[:, 1] * 0.5 ** self.currentResolutionLevel
+
         for i, (x, y) in enumerate(jawSplitLine):
             if i > 0:
-                y = int(round(y * 0.5 ** self.currentResolutionLevel))
-                prevY = int(round(jawSplitLine[i - 1][1] * 0.5 ** self.currentResolutionLevel))
-
-                cv2.line(self.img, (jawSplitLine[i - 1][0], prevY), (x, y), 255, 1)
+                cv2.line(self.img, (jawSplitLine[i - 1][0], jawSplitLine[i - 1][1]), (x, y), 255, 1)
 
     def setCurrentImage(self, idx):
         self.currentRadiographIndex = idx
