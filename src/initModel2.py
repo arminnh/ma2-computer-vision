@@ -260,3 +260,9 @@ class initModel:
             y = meanSplitline + self.meanHeight / 2
         return self.getTranslatedAndInverseScaledMean(int(x)/2, y)
 
+    def getCentersOfInitModel(self, landmark):
+        points = landmark.getPointsAsTuples()
+
+        splitted = [list(points[40*i:40*(i+1)]) for i in range(4)]
+        return np.mean(splitted,1)
+
