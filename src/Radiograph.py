@@ -109,7 +109,7 @@ def getRadiographs(numbers=None, extra=False, resolutionLevels=4):
             # Load the radiograph in as is
             imgPyramid, imgUpperJaw, imgLowerJaw, jawSplitLine, XOffset, YOffset \
                 = images.loadRadiographImage(filename, resolutionLevels)
-
+            landmarks = Landmark.loadAllForRadiograph(filename, XOffset, YOffset)
             segments = Segment.loadAllForRadiograph(filename)
 
             radiographs.append(Radiograph(
@@ -118,28 +118,38 @@ def getRadiographs(numbers=None, extra=False, resolutionLevels=4):
                 imgUpperJaw=imgUpperJaw,
                 imgLowerJaw=imgLowerJaw,
                 jawSplitLine=jawSplitLine,
-                landmarks=Landmark.loadAllForRadiograph(filename, XOffset, YOffset),
+                landmarks=landmarks,
                 segments=segments
             ))
 
-            # TODO: do image mirroring in radiograph
             # Load a mirrored version
-            # mirrorXOffset = img.size[0]
-            # landmarks = {}
-            # for k, v in Landmark.loadAllForRadiograph(int(filename) + 14).items():
-            #     # Correct mirrored landmark toothNumber and add offset to X values to put landmark in correct position
-            #     landmarks[util.flipToothNumber(v.toothNumber)] = v.addToXValues(mirrorXOffset)
-            #
-            # for segment in segments.values():
-            #     segment.img = ImageOps.mirror(segment.img)
-            #     segment.toothNumber = util.flipToothNumber(segment.toothNumber)
-            #
-            # radiographs.append(Radiograph(
-            #     filename=filename,
-            #     img=ImageOps.mirror(img),
-            #     landmarks=landmarks,
-            #     segments=segments,
-            #     mirrored=True
-            # ))
+            xSize = imgPyramid[0].shape[1]
+
+            mirroredLandmarks = {}
+            for k, v in landmarks.items():
+                mirroredLandmark = v.copy()
+                points = mirroredLandmark.getPointsAsTuples()
+                for i, (x, y) in enumerate(points):
+                    points[i] = (xSize - x, y)
+                mirroredLandmark.points = points[::-1].flatten()
+                mirroredLandmarks[util.flipToothNumber(v.toothNumber)] = mirroredLandmark
+
+            mirroredImgPyramid = []
+            for img in imgPyramid:
+                mirroredImgPyramid.append(img[:, ::-1])
+
+            mirroredImgUpperJaw = imgUpperJaw[:, ::-1]
+            mirroredImgLowerJaw = imgLowerJaw[:, ::-1]
+            mirroredJawSplitLine = jawSplitLine[::-1, :]
+
+            radiographs.append(Radiograph(
+                filename=filename,
+                imgPyramid=mirroredImgPyramid,
+                imgUpperJaw=mirroredImgUpperJaw,
+                imgLowerJaw=mirroredImgLowerJaw,
+                jawSplitLine=mirroredJawSplitLine,
+                landmarks=mirroredLandmarks,
+                segments=segments
+            ))
 
     return radiographs
