@@ -470,6 +470,7 @@ class GUI:
             cv2.fillPoly(mask, [points], 255)
 
             masked_image = cv2.bitwise_and(self.currentRadiograph.origImg, mask)
+            masked_image[np.where(masked_image > 0)] = 255
 
             cv2.imwrite('predicted_{}-{}.png'.format(self.currentRadiograph.number, i), masked_image)
 
