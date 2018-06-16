@@ -1,9 +1,14 @@
+import glob
+import os
+
 import cv2
 import numpy as np
 
 import Radiograph
 import util
 import models.active_shape_model as asm
+
+DATA_DIR = os.path.join(os.path.dirname(__file__), "../../", "resources", "data")
 
 class MaskGenerator:
 
@@ -101,38 +106,80 @@ class MaskGenerator:
 
         self.currentLandmark = previousLandmark
 
-    def generateMask(self):
+    def generateMaskForAllTeeth(self):
         # get offsets
         (offsetX, offsetY) = self.currentRadiograph.offsets
 
-        # Save current model
-        oldModel = self.currentToothModel
-
         # For each model we will get a landmark
         for i, model in enumerate(self.toothModels):
-            # Create empty mask
-            mask = np.zeros_like(self.currentRadiograph.origImg)
-
-            # Set currentToothModel
-            self.currentToothModel = model
-
-            # Create a landmark for this model
-            self.autoFitToothModel()
-
-            # Get the current landmark
-            landmark = self.currentLandmark
-
-            points = np.asarray([(-offsetX + int(p[0]), -offsetY + int(p[1])) for p in landmark.getPointsAsTuples()])
-
-            cv2.fillPoly(mask, [points], 255)
-
-            masked_image = cv2.bitwise_and(self.currentRadiograph.origImg, mask)
-            masked_image[np.where(masked_image > 0)] = 255
-
+            masked_image = self.createMaskForOneTooth(model, offsetX, offsetY)
             cv2.imwrite('output/predicted_{}-{}.png'.format(self.currentRadiograph.number, i), masked_image)
 
-        self.currentToothModel = oldModel
+    def createMaskForOneTooth(self, model, offsetX, offsetY):
+        # Create empty mask
+        mask = np.zeros_like(self.currentRadiograph.origImg)
+        # Set currentToothModel
+        self.currentToothModel = model
+        # Create a landmark for this model
+        self.autoFitToothModel()
+        # Get the current landmark
+        landmark = self.currentLandmark
+        points = np.asarray([(-offsetX + int(p[0]), -offsetY + int(p[1])) for p in landmark.getPointsAsTuples()])
+        cv2.fillPoly(mask, [points], 255)
+        masked_image = cv2.bitwise_and(self.currentRadiograph.origImg, mask)
+        masked_image[np.where(masked_image > 0)] = 255
+        return masked_image
 
+    def compareSegmentations(self):
+        # get offsets
+        (offsetX, offsetY) = self.currentRadiograph.offsets
+        truthSegmentationDir = os.path.join(DATA_DIR, "segmentations/")
+        ourSegmentationDir = "output/"
+
+        tmpPrediction = np.zeros_like(self.currentRadiograph.origImg)
+        # For each model we will get a landmark
+        for i, model in enumerate(self.toothModels):
+            tmpPrediction += self.createMaskForOneTooth(model, offsetX, offsetY)
+
+        tmpGroundTruth = np.zeros_like(self.currentRadiograph.origImg)
+        originalSegments = glob.glob(truthSegmentationDir + "{}-*.png".format(self.currentRadiograph.number))
+        for original in enumerate(originalSegments):
+            groundTruth = cv2.imread(original, cv2.IMREAD_GRAYSCALE)
+
+            tmpGroundTruth += groundTruth
+
+        # Our colored pixels
+        ourIx = np.where(tmpGroundTruth > 0)
+        ourPixelsIx = set(zip(ourIx[0], ourIx[1]))
+
+        # Our black pixels
+        ourBlackPixels = np.where(tmpPrediction == 0)
+        ourBlackPixels = set(zip(ourBlackPixels[0], ourBlackPixels[1]))
+
+        # Ground truth colord pixels
+        grdTr = np.where(tmpPrediction > 0)
+        groundTruthPixelsIx = set(zip(grdTr[0], grdTr[1]))
+
+        # Ground truth black pixels
+        groundBlackPixels = np.where(tmpGroundTruth == 0)
+        groundBlackPixels = set(zip(groundBlackPixels[0], groundBlackPixels[1]))
+
+        tp = len(ourPixelsIx & groundTruthPixelsIx)
+        fp = len(ourPixelsIx - groundTruthPixelsIx)
+        tn = len(ourBlackPixels & groundBlackPixels)
+        fn = len(ourBlackPixels - groundBlackPixels)
+
+        acc = (tp + tn) / (tp + fp + tn + fn)
+        prec = tp / (tp + fp)
+        rec = tp / (tp + fn)
+
+        print("Accuracy: {:.2f}%".format(acc * 100))
+        print("Precision: {:.2f}%".format(prec * 100))
+        print("Recall: {:.2f}%".format(rec * 100))
+
+        print("tp: {}, fp: {}, tn: {}, fn: {}".format(tp, fp, tn, fn))
+        finalOverlay = tmpGroundTruth + tmpPrediction
+        cv2.imwrite("output/final_{}.png".format(self.currentRadiograph.number), finalOverlay)
 
 
 if __name__ == '__main__':
@@ -157,6 +204,12 @@ if __name__ == '__main__':
 
     for r in radiographs:
         gen = MaskGenerator(r, models, initModels)
-        gen.generateMask()
+
+        # Generate 8 different masks
+        #gen.generateMaskForAllTeeth()
+
+        # Generate 1 mask that consists of our predicted teeth and the ground truth
+        # and
+        #gen.compareSegmentations()
 
     # print(models)
