@@ -89,7 +89,7 @@ class initModel:
 
     def doPCA(self):
         """ Perform PCA on the landmarks after procrustes analysis and store the eigenvalues and eigenvectors. """
-        data = [l.getPointsAsList() for l in self.preprocessedLandmarks]
+        data = [l.points for l in self.preprocessedLandmarks]
         data.append(data[0])
 
         S = np.cov(np.transpose(data))
@@ -123,7 +123,7 @@ class initModel:
             # Get the gray level profiles for each of the 40 landmark points
             normalizedGrayLevelProfiles = landmark.normalizedGrayLevelProfilesForLandmarkPoints(
                 img=landmark.getCorrectRadiographPart(),
-                sampleAmount=self.sampleAmount
+                grayLevelModelSize=self.sampleAmount
             )
 
             for j, normalizedProfile in normalizedGrayLevelProfiles.items():
@@ -162,6 +162,7 @@ class initModel:
         profilesForLandmarkPoints = landmark.getGrayLevelProfilesForNormalPoints(
             img=img,
             sampleAmount=self.sampleAmount,
+            grayLevelModelSize=self.sampleAmount,
             derive=True
         )
 

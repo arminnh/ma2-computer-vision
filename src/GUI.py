@@ -279,6 +279,7 @@ class GUI:
             profilesForLandmarkPoints = landmark.getGrayLevelProfilesForNormalPoints(
                 img=img,
                 sampleAmount=self.currentToothModel.sampleAmount,
+                grayLevelModelSize=self.currentToothModel.sampleAmount,
                 derive=False
             )
 
