@@ -16,6 +16,7 @@ class GUI:
         self.toothCenters = self.getAllToothCenters()
         self.incisorModels = incisorModels
         self.img = None
+        self.currentInitLandmark = None
         self.preprocess = False
         self.currentLandmark = None
         self.showEdges = False
@@ -222,6 +223,7 @@ class GUI:
         if self.currentRadiographIndex >= len(self.radiographs):
             self.currentRadiographIndex = len(self.radiographs) - 1
 
+        self.currentInitLandmark = None
         return self
 
     def increaseModelIndex(self, amount):
@@ -394,19 +396,34 @@ class GUI:
     def autoFitToothModel(self):
         currentToothModel = self.currentToothModel
 
-        # First set correct initialisation model
-        if currentToothModel.name <= 4:
-            # Upper jaw
-            self.initIncisorModels(0)
+        optim = False
+        # Check if we can optimize
+        if self.currentInitLandmark:
+            if (self.currentInitLandmark.toothNumber == 1 and currentToothModel.name <= 4) or \
+                    (self.currentInitLandmark.toothNumber == 5 and currentToothModel.name > 4):
+                # Ok optimize!
+                optim = True
+
+        if not optim:
+            # First set correct initialisation model
+            if currentToothModel.name <= 4:
+                # Upper jaw
+                self.initIncisorModels(0)
+            else:
+                # lower jaw
+                self.initIncisorModels(1)
+
+            # Now we fit it
+            self.findBetterLandmark()
+
+            self.currentInitLandmark = self.currentLandmark
+
+            # Once this is done, we get the origins
+            origins = util.getCentersOfInitModel(self.currentLandmark)
+
         else:
-            # lower jaw
-            self.initIncisorModels(1)
-
-        # Now we fit it
-        self.findBetterLandmark()
-
-        # Once this is done, we get the origins
-        origins = self.currentToothModel.getCentersOfInitModel(self.currentLandmark)
+            # Optimize by just getting the centers of the saved init model
+            origins = util.getCentersOfInitModel(self.currentInitLandmark)
 
         # Now we reset the correct tooth model
         self.currentToothModel = currentToothModel

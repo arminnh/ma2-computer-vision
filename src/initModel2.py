@@ -71,6 +71,7 @@ class initModel:
         self.preprocessedLandmarks, self.meanLandmark, self.meanScale, self.meanTheta \
             = procrustes_analysis.performProcrustesAnalysis(self.crownLandmarks)
 
+        self.meanLandmark.toothNumber = self.name
         #procrustes_analysis.plotLandmarks([self.meanLandmark], "mean")
         #procrustes_analysis.plotLandmarks(self.preprocessedLandmarks, "after")
         return self
@@ -224,8 +225,10 @@ class initModel:
             diff = scipy.spatial.distance.euclidean(b, newB)
             b = newB
 
-        return self.reconstructLandmarkForShapeParameters(b) \
+        newLandmark = self.reconstructLandmarkForShapeParameters(b) \
             .rotate(-theta).scale(scale).translate(-translateX, -translateY)
+        newLandmark.toothNumber = self.name
+        return newLandmark
 
     def reconstruct(self):
         """
@@ -259,10 +262,4 @@ class initModel:
         else:
             y = meanSplitline + self.meanHeight / 2
         return self.getTranslatedAndInverseScaledMean(int(x)/2, y)
-
-    def getCentersOfInitModel(self, landmark):
-        points = landmark.getPointsAsTuples()
-
-        splitted = [list(points[40*i:40*(i+1)]) for i in range(4)]
-        return np.mean(splitted,1)
 
