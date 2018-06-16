@@ -9,7 +9,7 @@ from Landmark import Landmark
 class TeethActiveShapeModel:
     """ Data structure for Multi-resolution Active Shape Model search """
 
-    def __init__(self, individualLandmarks, setLandmarks, maxResolutionLevel, maxLevelIterations, grayLevelModelSize,
+    def __init__(self, individualLandmarks, setLandmarks, resolutionLevels, maxLevelIterations, grayLevelModelSize,
                  sampleAmount, pClose, pcaComponents):
         # dict of toothnumber -> list landmarks for tooth
         self.toothLandmarks = individualLandmarks
@@ -22,7 +22,7 @@ class TeethActiveShapeModel:
         self.meanMouthLandmark = None
         self.meanMouthTheta = 0
         self.meanMouthScale = 1
-        self.maxResolutionLevel = maxResolutionLevel
+        self.resolutionLevels = resolutionLevels
         self.maxLevelIterations = maxLevelIterations
         self.grayLevelModelSize = grayLevelModelSize
         self.sampleAmount = sampleAmount
@@ -30,8 +30,7 @@ class TeethActiveShapeModel:
         self.pcaComponents = pcaComponents
         self.eigenvalues = {}
         self.eigenvectors = {}
-        self.meanProfilesForLandmarkPoints = {}
-        self.grayLevelModelCovarianceMatrices = {}
+        self.grayLevelModelPyramid = {}
 
     def doProcrustesAnalysis(self):
         for toothNumber, landmarks in self.toothLandmarks.items():
@@ -81,29 +80,41 @@ class TeethActiveShapeModel:
         Build gray level models for each of the mean landmark points by averaging the gray level profiles for each
         point of each landmark.
         """
-        self.grayLevelModelCovarianceMatrices = {}
-        self.meanProfilesForLandmarkPoints = {}
+        self.grayLevelModelPyramid = {}
 
-        # Build gray level model for each landmark
-        for i, landmark in enumerate(self.mouthLandmarks):
-            # Get the gray level profiles for each of the 40 landmark points
-            normalizedGrayLevelProfiles = landmark.normalizedGrayLevelProfilesForLandmarkPoints(
-                img=landmark.radiograph.img,
-                grayLevelModelSize=self.grayLevelModelSize
-            )
+        # Build a gray level model for each resolution level
+        for level in range(self.resolutionLevels):
+            profilesForLandmarkPoints = {}
+            covarianceForLandmarkPoints = {}
 
-            for j, normalizedProfile in normalizedGrayLevelProfiles.items():
-                if j not in self.meanProfilesForLandmarkPoints:
-                    self.meanProfilesForLandmarkPoints[j] = []
+            # Scale the landmarks down so that their coordinates fit in the image at this resolution level
+            scaledLandmarks = [l.scale(0.5**level) for l in self.mouthLandmarks]
 
-                self.meanProfilesForLandmarkPoints[j].append(normalizedProfile)
+            # Build gray level model for each landmark
+            for i, landmark in enumerate(scaledLandmarks):
+                # Get the gray level profiles for each of the 40 landmark points
+                normalizedGrayLevelProfiles = landmark.normalizedGrayLevelProfilesForLandmarkPoints(
+                    img=landmark.radiograph.imgPyramid[level],
+                    grayLevelModelSize=self.grayLevelModelSize
+                )
 
-        for pointIdx in range(len(self.meanProfilesForLandmarkPoints)):
-            cov = np.cov(np.transpose(self.meanProfilesForLandmarkPoints[pointIdx]))
-            self.grayLevelModelCovarianceMatrices[pointIdx] = linalg.pinv(cov)
+                for j, normalizedProfile in normalizedGrayLevelProfiles.items():
+                    if j not in profilesForLandmarkPoints:
+                        profilesForLandmarkPoints[j] = []
 
-            # Replace each point's list of gray level profiles by their means
-            self.meanProfilesForLandmarkPoints[pointIdx] = np.mean(self.meanProfilesForLandmarkPoints[pointIdx], axis=0)
+                    profilesForLandmarkPoints[j].append(normalizedProfile)
+
+            for pointIdx in range(len(profilesForLandmarkPoints)):
+                cov = np.cov(np.transpose(profilesForLandmarkPoints[pointIdx]))
+                covarianceForLandmarkPoints[pointIdx] = linalg.pinv(cov)
+
+                # Replace each point's list of gray level profiles by their means
+                profilesForLandmarkPoints[pointIdx] = np.mean(profilesForLandmarkPoints[pointIdx], axis=0)
+
+            self.grayLevelModelPyramid[level] = {
+                "profilesForLandmarkPoints": profilesForLandmarkPoints,
+                "covarianceForLandmarkPoints": covarianceForLandmarkPoints
+            }
 
         return self
 

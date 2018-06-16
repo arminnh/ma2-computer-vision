@@ -119,7 +119,7 @@ def cropRegionOfInterest(img):
     return img, XOffset, YOffset
 
 
-def loadRadiographImage(radiographFilename):
+def loadRadiographImage(radiographFilename, pyramidLevels):
     """ Returns a tif file from the radiographs directory """
     radioDir = os.path.join(DATA_DIR, "radiographs")
 
@@ -135,6 +135,11 @@ def loadRadiographImage(radiographFilename):
     # preprocess the image
     img = preprocessRadiographImage(img)
 
+    # create gaussian image pyramid. level 0 = original image. each level higher is subsampled and blurred
+    imgPyramid = [img]
+    for i in range(pyramidLevels - 1):
+        imgPyramid.append(cv2.pyrDown(imgPyramid[-1]))
+
     # Split image in two: upper and lower jaw
     # Find line to split jaws into two images. Only search in a certain y range.
     yMax, xMax = img.shape
@@ -149,4 +154,4 @@ def loadRadiographImage(radiographFilename):
         imgUpperJaw[y + 1:-1, x] = 0
         imgLowerJaw[0:y, x] = 0
 
-    return img, imgUpperJaw, imgLowerJaw, jawSplitLine, XOffset, YOffset
+    return imgPyramid, imgUpperJaw, imgLowerJaw, jawSplitLine, XOffset, YOffset

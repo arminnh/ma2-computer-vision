@@ -13,12 +13,12 @@ import util
 
 class Radiograph:
 
-    def __init__(self, filename, img, imgUpperJaw, imgLowerJaw, jawSplitLine, landmarks, segments, mirrored=False):
+    def __init__(self, filename, imgPyramid, imgUpperJaw, imgLowerJaw, jawSplitLine, landmarks, segments, mirrored=False):
         """
         :param filename: the filename/id of the Radiograph
         """
         self.filename = filename
-        self.img = img
+        self.imgPyramid = imgPyramid
         self.imgUpperJaw = imgUpperJaw
         self.imgLowerJaw = imgLowerJaw
         self.jawSplitLine = jawSplitLine
@@ -34,12 +34,12 @@ class Radiograph:
     def showRaw(self):
         """ Shows the radiograph """
         windowName = "Radiograph {}".format(self.filename)
-        cv2.imshow(windowName, self.img)
+        cv2.imshow(windowName, self.imgPyramid[0])
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
     def showWithLandMarks(self):
-        img = self.img.copy()
+        img = self.imgPyramid[0].copy()
 
         for toothNumber, landmark in self.landmarks.items():
             points = landmark.getPointsAsTuples()
@@ -68,7 +68,7 @@ class Radiograph:
                 plt.text(X[i] - 10, Y[i], i)
 
             normalizedGrayLevelProfiles = landmark.normalizedGrayLevelProfilesForLandmarkPoints(
-                img=self.img,
+                img=self.imgPyramid[0],
                 grayLevelModelSize=util.SAMPLE_AMOUNT,
             )
 
@@ -97,7 +97,7 @@ class Radiograph:
         #     segment.imgshow()
 
 
-def getRadiographs(numbers=None, extra=False):
+def getRadiographs(numbers=None, extra=False, resolutionLevels=4):
     numbers = ["%02d" % n for n in numbers] if numbers is not None else []
     radiographs = []
 
@@ -107,11 +107,14 @@ def getRadiographs(numbers=None, extra=False):
             print("Loading radiograph {}, {}".format(n, filepath))
 
             # Load the radiograph in as is
-            img, imgUpperJaw, imgLowerJaw, jawSplitLine, XOffset, YOffset = images.loadRadiographImage(filename)
+            imgPyramid, imgUpperJaw, imgLowerJaw, jawSplitLine, XOffset, YOffset \
+                = images.loadRadiographImage(filename, resolutionLevels)
+
             segments = Segment.loadAllForRadiograph(filename)
+
             radiographs.append(Radiograph(
                 filename=filename,
-                img=img,
+                imgPyramid=imgPyramid,
                 imgUpperJaw=imgUpperJaw,
                 imgLowerJaw=imgLowerJaw,
                 jawSplitLine=jawSplitLine,

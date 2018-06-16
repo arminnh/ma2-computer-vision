@@ -1,8 +1,8 @@
 import cv2
 import numpy as np
 
-import models.TeethActiveShapeModel
 import util
+from models import TeethActiveShapeModel
 
 
 class MultiResolutionGUI:
@@ -13,6 +13,7 @@ class MultiResolutionGUI:
         self.currentRadiograph = None
         self.currentRadiographIndex = 0
         self.model = teethActiveShapeModel  # type: TeethActiveShapeModel
+        self.currentResolutionLevel = self.model.resolutionLevels - 1
         self.img = None
         self.currentLandmark = None
 
@@ -26,12 +27,13 @@ class MultiResolutionGUI:
             img = self.img.copy()
 
             y, x = img.shape
-            cv2.line(img, (int(x / 2), 0), (int(x / 2), int(y)), 255, 2)
-            cv2.line(img, (0, int(y / 2)), (x, int(y / 2)), 255, 2)
+            cv2.line(img, (int(x / 2), 0), (int(x / 2), int(y)), 255, 1)
+            cv2.line(img, (0, int(y / 2)), (x, int(y / 2)), 255, 1)
 
             if self.currentRadiographIndex < len(self.model.mouthLandmarks):
                 landmark = self.model.mouthLandmarks[self.currentRadiographIndex]
-                self.drawLandmark(landmark, color=180, thickness=3)
+                landmark = landmark.scale(0.5 ** self.currentResolutionLevel)
+                self.drawLandmark(landmark, color=180, thickness=1)
 
             cv2.imshow(self.name, img)
 
@@ -49,6 +51,12 @@ class MultiResolutionGUI:
             elif pressed_key == ord("n"):
                 self.findBetterLandmark()
 
+            elif pressed_key == ord("u"):
+                cv2.setTrackbarPos("resolution level", self.name, self.currentResolutionLevel + 1)
+
+            elif pressed_key == ord("d"):
+                cv2.setTrackbarPos("resolution level", self.name, self.currentResolutionLevel - 1)
+
             if cv2.getWindowProperty(self.name, cv2.WND_PROP_VISIBLE) < 1:
                 break
 
@@ -65,12 +73,15 @@ class MultiResolutionGUI:
         return self
 
     def refreshCurrentImage(self):
-        self.img = self.currentRadiograph.img.copy()
+        self.img = self.currentRadiograph.imgPyramid[self.currentResolutionLevel].copy()
 
         jawSplitLine = self.currentRadiograph.jawSplitLine
         for i, (x, y) in enumerate(jawSplitLine):
             if i > 0:
-                cv2.line(self.img, (jawSplitLine[i - 1][0], jawSplitLine[i - 1][1]), (x, y), 255, 2)
+                y = int(round(y * 0.5 ** self.currentResolutionLevel))
+                prevY = int(round(jawSplitLine[i - 1][1] * 0.5 ** self.currentResolutionLevel))
+
+                cv2.line(self.img, (jawSplitLine[i - 1][0], prevY), (x, y), 255, 1)
 
     def setCurrentImage(self, idx):
         self.currentRadiographIndex = idx
@@ -79,10 +90,26 @@ class MultiResolutionGUI:
         self.refreshOverlay()
         return self
 
+    def setCurrentResolutionLevel(self, level):
+        self.currentResolutionLevel = level
+
+        if self.currentResolutionLevel < 0:
+            self.currentResolutionLevel = 0
+
+        if self.currentResolutionLevel >= self.model.resolutionLevels:
+            self.currentResolutionLevel = self.model.resolutionLevels - 1
+
+        self.refreshCurrentImage()
+        self.refreshOverlay()
+        return self
+
     def initTrackBars(self):
         if len(self.radiographs) > 1:
             cv2.createTrackbar("radiograph", self.name, self.currentRadiographIndex, len(self.radiographs) - 1,
                                self.setCurrentImage)
+
+        cv2.createTrackbar("resolution level", self.name, self.currentResolutionLevel, self.model.resolutionLevels - 1,
+                           self.setCurrentResolutionLevel)
 
         return self
 
@@ -138,7 +165,7 @@ class MultiResolutionGUI:
         # draw gray level profiles
         if withGrayLevels:
             profilesForLandmarkPoints = landmark.getGrayLevelProfilesForNormalPoints(
-                img=self.currentRadiograph.img.copy(),
+                img=self.currentRadiograph.imgPyramid[self.currentResolutionLevel].copy(),
                 sampleAmount=self.model.sampleAmount,
                 grayLevelModelSize=self.model.grayLevelModelSize,
                 derive=False
@@ -160,7 +187,8 @@ class MultiResolutionGUI:
         i = 0
 
         while d > 1 and i < 1:
-            newTargetPoints = self.model.findBetterFittingLandmark(self.currentRadiograph.img.copy(), previousLandmark)
+            newTargetPoints = self.model.findBetterFittingLandmark(
+                self.currentRadiograph.imgPyramid[self.currentResolutionLevel].copy(), previousLandmark)
             improvedLandmark = self.model.matchModelPointsToTargetPoints(newTargetPoints)
 
             d = improvedLandmark.shapeDistance(previousLandmark)
