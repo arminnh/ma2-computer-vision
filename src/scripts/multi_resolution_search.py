@@ -12,30 +12,22 @@ from Landmark import Landmark
 from models.TeethActiveShapeModel import TeethActiveShapeModel
 
 
-def buildModel(radiographs, resolutionLevels=5, maxLevelIterations=5, grayLevelModelSize=7, sampleAmount=5,
-               pClose=0.9, pcaComponents=20):
-    # dict of toothnumber -> landmarks for tooth
-    individualLandmarks = {}
-    # list of landmarks that contain all 8 teeth
-    setLandmarks = []
+def buildModel(radiographs, resolutionLevels=5, maxLevelIterations=5, grayLevelModelSize=10, sampleAmount=3,
+               pClose=0.9, pcaComponents=25):
+
+    mouthLandmarks = []  # list of landmarks that contain all 8 teeth
 
     for rad in radiographs:
-        setLandmark = Landmark(np.asarray([]), radiographFilename=None, toothNumber=-1)
-        setLandmark.radiograph = rad
+        mouthLandmark = Landmark(np.asarray([]), radiographFilename=None, toothNumber=-1)
+        mouthLandmark.radiograph = rad
 
         for toothNumber, landmark in sorted(rad.landmarks.items(), key=lambda i: i[0]):
-            if toothNumber not in individualLandmarks:
-                individualLandmarks[toothNumber] = [landmark]
-            else:
-                individualLandmarks[toothNumber].append(landmark)
+            mouthLandmark.points = np.concatenate((mouthLandmark.points, landmark.points))
 
-            setLandmark.points = np.concatenate((setLandmark.points, landmark.points))
-
-        setLandmarks.append(setLandmark)
+        mouthLandmarks.append(mouthLandmark)
 
     model = TeethActiveShapeModel(
-        individualLandmarks=individualLandmarks,
-        setLandmarks=setLandmarks,
+        mouthLandmarks=mouthLandmarks,
         resolutionLevels=resolutionLevels,
         maxLevelIterations=maxLevelIterations,
         grayLevelModelSize=grayLevelModelSize,
@@ -43,16 +35,22 @@ def buildModel(radiographs, resolutionLevels=5, maxLevelIterations=5, grayLevelM
         pClose=pClose,
         pcaComponents=pcaComponents
     )
-    model.buildGrayLevelModels()
-    model.doProcrustesAnalysis()
-    model.doPCA()
+
+    with util.Timer("> Building multi resolution active shape model: Gray level models"):
+        model.buildGrayLevelModels()
+
+    with util.Timer("> Building multi resolution active shape model: Procrustes analysis"):
+        model.doProcrustesAnalysis()
+
+    with util.Timer("> Building multi resolution active shape model: PCA"):
+        model.doPCA()
 
     return model
 
 
 if __name__ == '__main__':
     resolutionLevels = 4
-    radiographNumbers = list(range(30))
+    radiographNumbers = list(range(15))
 
     with util.Timer("Loading images"):
         radiographs = Radiograph.getRadiographs(numbers=radiographNumbers, resolutionLevels=resolutionLevels)
@@ -60,14 +58,20 @@ if __name__ == '__main__':
     with util.Timer("Building multi resolution active shape model"):
         model = buildModel(radiographs, resolutionLevels=resolutionLevels)
 
-    # for r in Radiograph.getRadiographs([14]):
-    #     model.reconstruct(r.landmarks)
+    # # Reconstruct some images which were not in the training set to check reconstruction performance
+    # for r in Radiograph.getRadiographs([13, 14]):
+    #     setLandmark = Landmark(np.asarray([]))
+    #
+    #     for toothNumber, landmark in sorted(r.landmarks.items(), key=lambda i: i[0]):
+    #         setLandmark.points = np.concatenate((setLandmark.points, landmark.points))
+    #
+    #     model.reconstruct(setLandmark)
 
-    # # Load other radiographs for GUI but do not load the ones above again
-    # with util.Timer("Loading remaining images (without landmarks)"):
-    #     for radiographNumber in range(15):
-    #         if radiographNumber not in radiographNumbers:
-    #             radiographs.append(Radiograph.getRadiographs([radiographNumber], extra=True)[0])
+    # Load other radiographs for GUI but do not load the ones above again
+    with util.Timer("Loading remaining images (without landmarks)"):
+        for radiographNumber in range(5):
+            if radiographNumber not in radiographNumbers:
+                radiographs.append(Radiograph.getRadiographs([radiographNumber], extra=True)[0])
 
     gui = MultiResolutionGUI(radiographs, model)
     gui.open()

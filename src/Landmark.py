@@ -32,7 +32,7 @@ class Landmark:
         return self.radiograph.imgUpperJaw
 
     def copy(self, points=None):
-        points = points if points is not None else self.points
+        points = points if points is not None else self.points.copy()
         l = Landmark(points, self.radiographFilename, self.toothNumber)
         l.radiograph = self.radiograph
         return l

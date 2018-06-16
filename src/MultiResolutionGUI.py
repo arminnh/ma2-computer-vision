@@ -194,9 +194,8 @@ class MultiResolutionGUI:
             )
 
             improvedLandmark = self.model.matchModelPointsToTargetPoints(newTargetLandmark)
-            # improvedLandmark = newTargetLandmark
 
-            # d = improvedLandmark.shapeDistance(previousLandmark)
+            d = improvedLandmark.shapeDistance(previousLandmark)
             previousLandmark = improvedLandmark
 
             i += 1
