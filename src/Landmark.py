@@ -14,7 +14,10 @@ class Landmark:
         self.radiographFilename = radiographFilename
         self.radiograph = None
         self.toothNumber = toothNumber
-        self.points = points if isinstance(points, np.ndarray) else np.array(points)
+        if isinstance(points, np.ndarray):
+            self.points = points.astype(np.float)
+        else:
+            self.points = np.asarray(points, dtype=np.float)
 
     def __str__(self):
         return "Landmark for tooth {} for radiograph {}".format(self.toothNumber, self.radiographFilename)
@@ -30,12 +33,7 @@ class Landmark:
         return Landmark(points, self.radiographFilename, self.toothNumber)
 
     def getPointsAsTuples(self):
-        p = list(self.points)
-        # [ [x_0, y_0], [x_1, y_1] ... ]
-        return np.asarray([(float(p[2 * j]), float(p[2 * j + 1])) for j in range(int(len(p) / 2))])
-
-    def getPointsAsList(self):
-        return self.points
+        return np.asarray([(self.points[2 * i], self.points[2 * i + 1]) for i in range(int(len(self.points) / 2))])
 
     def translate(self, x, y):
         """ Translates the points of the landmark. """
@@ -93,7 +91,7 @@ class Landmark:
 
     def shapeDistance(self, other):
         """ Returns the SSD from an other landmark. """
-        return np.sqrt(np.sum(np.square(self.getPointsAsList() - other.getPointsAsList())))
+        return np.sqrt(np.sum(np.square(self.points - other.points)))
 
     def getNormalizedPoints(self):
         """ Returns an array of normalized landmark points.  """
@@ -114,7 +112,7 @@ class Landmark:
 
         return superimposed, translationXY, s, theta
 
-    def normalizedGrayLevelProfilesForLandmarkPoints(self, img, sampleAmount):
+    def normalizedGrayLevelProfilesForLandmarkPoints(self, img, grayLevelModelSize):
         """
         For every landmark point j (all points in this landmark) in the image i (the radiograph of this landmark) of
         the training set, we extract a gray level profile g_ij of length n_p pixels, centered around the landmark point.
@@ -131,7 +129,7 @@ class Landmark:
 
             # Sample points on normal line of the current landmark point
             m = util.getNormalSlope(points[i - 1], point, points[(i + 1) % len(points)])
-            normalPoints = util.sampleLine(m, point, pixelsToSample=sampleAmount)
+            normalPoints = util.sampleLine(m, point, pixelsToSample=grayLevelModelSize)
 
             _, normalizedProfile = images.getPixelProfile(img, normalPoints, derive=True)
 
@@ -139,7 +137,7 @@ class Landmark:
 
         return normalizedGrayLevelProfiles
 
-    def getGrayLevelProfilesForNormalPoints(self, img, sampleAmount, derive):
+    def getGrayLevelProfilesForNormalPoints(self, img, sampleAmount, grayLevelModelSize, derive):
         profilesForLandmarkPoints = {}
 
         points = self.getPointsAsTuples()
@@ -156,7 +154,7 @@ class Landmark:
             # Loop over the sampled points and get the gray level profile of all them
             for normalPoint in normalPoints:
                 # Get pixel values on the sampled positions
-                grayLevelProfilePoints = util.sampleLine(m, normalPoint, pixelsToSample=sampleAmount)
+                grayLevelProfilePoints = util.sampleLine(m, normalPoint, pixelsToSample=grayLevelModelSize)
 
                 rawPixelProfile, normalizedProfile = images.getPixelProfile(img, grayLevelProfilePoints, derive)
 
@@ -191,7 +189,8 @@ def loadAllForRadiograph(radiographFilename, XOffset, YOffset):
     for filepath in util.getLandmarkFilenames(radiographFilename):
         filename = os.path.split(filepath)[-1]
         toothNumber = int(re.match("landmarks{}-([0-9]).txt".format(radiographFilename), filename).group(1))
-        landmarks[toothNumber] = Landmark(loadLandmarkPoints(filepath), radiographFilename, toothNumber)\
-            .translate(XOffset, YOffset)
+
+        landmarks[toothNumber] = \
+            Landmark(loadLandmarkPoints(filepath), radiographFilename, toothNumber).translate(XOffset, YOffset)
 
     return landmarks

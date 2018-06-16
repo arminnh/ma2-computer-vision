@@ -112,10 +112,10 @@ def getSlopeOfInnerBisector(m1, m2):
 
 def sampleLine(m, current, pixelsToSample):
     """
-    Returns points on the normal line that goes through `current` by calculating the angle between `before` and `next`.
+    Returns points on a line that goes through `current` with slope m.
     :param m: the slope of the line to sample on
-    :param current:  the position on the line to sample on each side from
-    :param pixelsToSample: If given, samples a certain amount of pixels on each side of `current`
+    :param current: the position on the line to sample on each side from
+    :param pixelsToSample: The amount of pixels on the line to sample on each side of m
     """
     x = current[0]
     b = current[1]
@@ -128,7 +128,7 @@ def sampleLine(m, current, pixelsToSample):
     pEnd = (x + xOffset)
 
     # 2 * pixelsToSample + 1 => as in "we have 2k+1 samples which can be put into a vector
-    X = np.linspace(pStart, pEnd, pixelsToSample + 1)
+    X = np.linspace(pStart, pEnd, 2 * pixelsToSample + 1)
     Y = m * (X - current[0]) + b
 
     X = X.round().astype(int)

@@ -16,9 +16,11 @@ def plotLandmarks(landmarks: List[Landmark], title):
     plt.title(title)
     for l in landmarks:
         points = list(l.getPointsAsTuples())
-        points.append(points[0])
-        points = np.asarray(points)
-        plt.plot(points[:, 0], points[:, 1])
+        for i in range(int(len(points)/40)):
+            subpoints = points[i*40:(i+1)*40]
+            subpoints.append(subpoints[0])
+            subpoints = np.asarray(subpoints)
+            plt.plot(subpoints[:, 0], subpoints[:, 1])
     # plt.plot(x1, y1, x2, y2, marker='o')
     ax = plt.gca()
     ax.set_ylim(ax.get_ylim()[::-1])
@@ -52,7 +54,7 @@ def performProcrustesAnalysis(landmarks: List[Landmark]):
         landmarks = newLandmarks
 
         # Get the new mean
-        meanPoints = np.mean(np.asarray([l.getPointsAsList() for l in landmarks]), axis=0)
+        meanPoints = np.mean(np.asarray([l.points for l in landmarks]), axis=0)
         meanLandmark = Landmark(points=meanPoints)
 
         # Update distance for convergence check
@@ -80,7 +82,7 @@ def scipyProcrustesAnalysis(reference, landmarks):
         input = tempPoints
 
         # Get the new mean
-        meanPoints = np.mean(np.asarray([l.getPointsAsList() for l in tempPoints]), axis=0)
+        meanPoints = np.mean(np.asarray([l.points for l in tempPoints]), axis=0)
         meanLandmark = Landmark(meanPoints)
 
         # Update distance for convergence check

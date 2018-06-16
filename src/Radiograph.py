@@ -69,7 +69,7 @@ class Radiograph:
 
             normalizedGrayLevelProfiles = landmark.normalizedGrayLevelProfilesForLandmarkPoints(
                 img=self.img,
-                sampleAmount=util.SAMPLE_AMOUNT,
+                grayLevelModelSize=util.SAMPLE_AMOUNT,
             )
 
             for i, profile in normalizedGrayLevelProfiles.items():
@@ -140,10 +140,3 @@ def getRadiographs(numbers=None, extra=False):
             # ))
 
     return radiographs
-
-
-def getAllLandmarksInRadiographs(radiographs):
-    landmarks = []
-    for r in radiographs:
-        landmarks += list(r.landmarks.values())
-    return landmarks
