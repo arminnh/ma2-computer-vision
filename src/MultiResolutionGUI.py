@@ -206,20 +206,21 @@ class MultiResolutionGUI:
         self.drawLandMarkWithNormals(self.currentLandmark, withNormalLines=True, withGrayLevels=True)
 
     def multiResolutionSearch(self):
-        self.setCurrentResolutionLevel(self.model.resolutionLevels)
-        self.initializeLandmark()
+        with util.Timer("Multi resolution search"):
+            self.setCurrentResolutionLevel(self.model.resolutionLevels)
+            self.initializeLandmark()
 
-        for level in range(self.model.resolutionLevels - 1, -1, -1):
-            self.setCurrentResolutionLevel(level)
-            self.drawLandMarkWithNormals(self.currentLandmark)
-            cv2.imshow(self.name, self.img)
-            cv2.waitKey(1)
+            for level in range(self.model.resolutionLevels - 1, -1, -1):
+                self.setCurrentResolutionLevel(level)
+                self.drawLandMarkWithNormals(self.currentLandmark)
+                cv2.imshow(self.name, self.img)
+                cv2.waitKey(1)
 
-            self.currentLandmark = self.model.improveLandmarkForResolutionLevel(
-                resolutionLevel=level,
-                img=self.currentRadiograph.imgPyramid[level].copy(),
-                landmark=self.currentLandmark
-            )
+                self.currentLandmark = self.model.improveLandmarkForResolutionLevel(
+                    resolutionLevel=level,
+                    img=self.currentRadiograph.imgPyramid[level].copy(),
+                    landmark=self.currentLandmark
+                )
 
     def drawGrayLevelProfile(self, points, profile):
         for i, point in enumerate(points):
