@@ -12,10 +12,7 @@ def compareSegmentations(numbers):
     ourSegmentationDir = "output/"
 
     for n in numbers:
-        ourPixelsIx = []
-        groundTruthPixelsIx =[]
         predicted = glob.glob(ourSegmentationDir+"predicted_{}-*.png".format(n))
-        comparison = None
         tmpGroundTruth = None
         tmpPrediction = None
         for i, pred in enumerate(predicted):
@@ -23,7 +20,6 @@ def compareSegmentations(numbers):
             groundTruth = cv2.imread(truthSegmentationDir + "{}-{}.png".format(n, i), cv2.IMREAD_GRAYSCALE)
 
             if i ==0:
-                comparison = np.zeros_like(ourImg)
                 tmpGroundTruth = np.zeros_like(ourImg)
                 tmpPrediction = np.zeros_like(ourImg)
 
