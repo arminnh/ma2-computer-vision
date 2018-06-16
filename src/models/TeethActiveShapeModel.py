@@ -10,7 +10,7 @@ class TeethActiveShapeModel:
     """ Data structure for Multi-resolution Active Shape Model search """
 
     def __init__(self, mouthLandmarks, resolutionLevels, maxLevelIterations, grayLevelModelSize,
-                 sampleAmount, pClose, pcaComponents):
+                 sampleAmount, pcaComponents):
 
         self.mouthLandmarks = mouthLandmarks  # list of landmarks that contain all 8 teeth
         self.preprocessedLandmarks = []
@@ -21,7 +21,6 @@ class TeethActiveShapeModel:
         self.maxLevelIterations = maxLevelIterations
         self.grayLevelModelSize = grayLevelModelSize
         self.sampleAmount = sampleAmount
-        self.pClose = pClose
         self.pcaComponents = pcaComponents
         self.eigenvalues = np.asarray([])
         self.eigenvectors = np.asarray([])
@@ -181,6 +180,28 @@ class TeethActiveShapeModel:
 
         return self.reconstructLandmarkForShapeParameters(b) \
             .rotate(-theta).scale(scale).translate(-translateX, -translateY)
+
+    def improveLandmarkForResolutionLevel(self, resolutionLevel, img, landmark):
+        """ Iteratively improve a landmark for a certain resolution level. """
+        d = 100
+        i = 0
+
+        while d > 3 and i < self.maxLevelIterations:
+            newTargetLandmark = self.findBetterFittingLandmark(
+                resolutionLevel=resolutionLevel,
+                img=img,
+                landmark=landmark
+            )
+
+            improvedLandmark = self.matchModelPointsToTargetPoints(newTargetLandmark)
+
+            d = improvedLandmark.shapeDistance(landmark)
+            landmark = improvedLandmark
+
+            i += 1
+            print("Multi resolution search: resolution {}, iteration {}, distance {:.2f}".format(resolutionLevel, i, d))
+
+        return landmark
 
     def reconstruct(self, mouthLandmark):
         """

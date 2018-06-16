@@ -14,6 +14,7 @@ class MultiResolutionGUI:
         self.currentRadiographIndex = 0
         self.model = teethActiveShapeModel  # type: TeethActiveShapeModel
         self.currentResolutionLevel = self.model.resolutionLevels - 1
+        self.mouthMiddle = 0
         self.img = None
         self.currentLandmark = None
 
@@ -26,9 +27,9 @@ class MultiResolutionGUI:
             # clone the img
             img = self.img.copy()
 
-            y, x = img.shape
-            cv2.line(img, (int(x / 2), 0), (int(x / 2), int(y)), 255, 1)
-            cv2.line(img, (0, int(y / 2)), (x, int(y / 2)), 255, 1)
+            yMax, xMax = img.shape
+            cv2.line(img, (int(xMax / 2), 0), (int(xMax / 2), int(yMax)), 255, 1)
+            cv2.line(img, (0, int(yMax / 2)), (xMax, int(yMax / 2)), 255, 1)
 
             if self.currentRadiographIndex < len(self.model.mouthLandmarks):
                 landmark = self.model.mouthLandmarks[self.currentRadiographIndex]
@@ -50,9 +51,18 @@ class MultiResolutionGUI:
 
             elif pressed_key == ord("n"):
                 if self.currentLandmark is None:
-                    cv2.displayOverlay(self.name, "No landmark set yet!", 1000)
+                    self.initializeLandmark()
                 else:
-                    self.findBetterLandmark()
+                    self.currentLandmark = self.model.improveLandmarkForResolutionLevel(
+                        resolutionLevel=self.currentResolutionLevel,
+                        img=self.currentRadiograph.imgPyramid[self.currentResolutionLevel].copy(),
+                        landmark=self.currentLandmark
+                    )
+                    self.refreshCurrentImage()
+                    self.drawLandmark(self.currentLandmark, 255)
+
+            elif pressed_key == ord("m"):
+                self.multiResolutionSearch()
 
             elif pressed_key == ord("u"):
                 cv2.setTrackbarPos("resolution level", self.name, self.currentResolutionLevel + 1)
@@ -84,15 +94,12 @@ class MultiResolutionGUI:
 
     def refreshCurrentImage(self):
         self.img = self.currentRadiograph.imgPyramid[self.currentResolutionLevel].copy()
+        _, xMax = self.img.shape
 
-        step = int(1 / 0.5 ** self.currentResolutionLevel)
-        print("step = ", step)
-        jawSplitLine = self.currentRadiograph.jawSplitLine.copy()[0::step]
-        jawSplitLine[:, 1] = jawSplitLine[:, 1] * 0.5 ** self.currentResolutionLevel
+        meanSplitLine = self.currentRadiograph.jawSplitLine[:, 1].mean() * 0.5 ** self.currentResolutionLevel
+        self.mouthMiddle = int(round(meanSplitLine))
 
-        for i, (x, y) in enumerate(jawSplitLine):
-            if i > 0:
-                cv2.line(self.img, (jawSplitLine[i - 1][0], jawSplitLine[i - 1][1]), (x, y), 255, 1)
+        cv2.line(self.img, (0, self.mouthMiddle), (xMax, self.mouthMiddle), 180, 1)
 
     def setCurrentImage(self, idx):
         self.currentRadiographIndex = idx
@@ -102,16 +109,25 @@ class MultiResolutionGUI:
         return self
 
     def setCurrentResolutionLevel(self, level):
+        if level >= self.model.resolutionLevels:
+            level = self.model.resolutionLevels - 1
+
+        if level < 0:
+            level = 0
+
+        if self.currentLandmark is not None:
+            if level > self.currentResolutionLevel:
+                self.currentLandmark = self.currentLandmark.scale(0.5)
+            elif level < self.currentResolutionLevel:
+                self.currentLandmark = self.currentLandmark.scale(2)
+
         self.currentResolutionLevel = level
 
-        if self.currentResolutionLevel < 0:
-            self.currentResolutionLevel = 0
-
-        if self.currentResolutionLevel >= self.model.resolutionLevels:
-            self.currentResolutionLevel = self.model.resolutionLevels - 1
-
         self.refreshCurrentImage()
-        self.refreshOverlay()
+
+        if self.currentLandmark is not None:
+            self.drawLandMarkWithNormals(self.currentLandmark)
+
         return self
 
     def initTrackBars(self):
@@ -125,6 +141,8 @@ class MultiResolutionGUI:
         return self
 
     def increaseRadiographIndex(self, amount):
+        self.currentLandmark = None
+
         self.currentRadiographIndex += amount
 
         if self.currentRadiographIndex < 0:
@@ -178,33 +196,30 @@ class MultiResolutionGUI:
 
         self.drawLandmark(landmark, color)
 
-    def findBetterLandmark(self):
-        """
-        Execute an iteration of "matching model points to target points"
-        model points are defined by the model, target points by the 'bestLandmark'
-        """
-        previousLandmark = self.currentLandmark
-        d = 2
-        i = 0
+    def initializeLandmark(self):
+        _, xMax = self.img.shape
 
-        while d > 1 and i < 1:
-            newTargetLandmark = self.model.findBetterFittingLandmark(
-                resolutionLevel=self.currentResolutionLevel,
-                img=self.currentRadiograph.imgPyramid[self.currentResolutionLevel].copy(),
-                landmark=previousLandmark
+        self.currentLandmark = self.model.getTranslatedAndInverseScaledMeanMouth(
+            self.currentResolutionLevel, (xMax / 2), self.mouthMiddle
+        )
+
+        self.drawLandMarkWithNormals(self.currentLandmark, withNormalLines=True, withGrayLevels=True)
+
+    def multiResolutionSearch(self):
+        self.setCurrentResolutionLevel(self.model.resolutionLevels)
+        self.initializeLandmark()
+
+        for level in range(self.model.resolutionLevels - 1, -1, -1):
+            self.setCurrentResolutionLevel(level)
+            self.drawLandMarkWithNormals(self.currentLandmark)
+            cv2.imshow(self.name, self.img)
+            cv2.waitKey(1)
+
+            self.currentLandmark = self.model.improveLandmarkForResolutionLevel(
+                resolutionLevel=level,
+                img=self.currentRadiograph.imgPyramid[level].copy(),
+                landmark=self.currentLandmark
             )
-
-            improvedLandmark = self.model.matchModelPointsToTargetPoints(newTargetLandmark)
-
-            d = improvedLandmark.shapeDistance(previousLandmark)
-            previousLandmark = improvedLandmark
-
-            i += 1
-            print("Improvement iteration {}, distance {}".format(i, d))
-
-        self.currentLandmark = previousLandmark
-        self.refreshCurrentImage()
-        self.drawLandmark(self.currentLandmark, 255)
 
     def drawGrayLevelProfile(self, points, profile):
         for i, point in enumerate(points):

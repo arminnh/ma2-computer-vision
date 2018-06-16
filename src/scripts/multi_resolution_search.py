@@ -12,9 +12,8 @@ from Landmark import Landmark
 from models.TeethActiveShapeModel import TeethActiveShapeModel
 
 
-def buildModel(radiographs, resolutionLevels=5, maxLevelIterations=5, grayLevelModelSize=10, sampleAmount=3,
-               pClose=0.9, pcaComponents=25):
-
+def buildModel(radiographs, resolutionLevels=5, maxLevelIterations=20, grayLevelModelSize=7, sampleAmount=3,
+               pcaComponents=25):
     mouthLandmarks = []  # list of landmarks that contain all 8 teeth
 
     for rad in radiographs:
@@ -32,31 +31,29 @@ def buildModel(radiographs, resolutionLevels=5, maxLevelIterations=5, grayLevelM
         maxLevelIterations=maxLevelIterations,
         grayLevelModelSize=grayLevelModelSize,
         sampleAmount=sampleAmount,
-        pClose=pClose,
         pcaComponents=pcaComponents
     )
 
-    with util.Timer("> Building multi resolution active shape model: Gray level models"):
+    with util.Timer("Building multi resolution active shape model: Gray level models"):
         model.buildGrayLevelModels()
 
-    with util.Timer("> Building multi resolution active shape model: Procrustes analysis"):
+    with util.Timer("Building multi resolution active shape model: Procrustes analysis"):
         model.doProcrustesAnalysis()
 
-    with util.Timer("> Building multi resolution active shape model: PCA"):
+    with util.Timer("Building multi resolution active shape model: PCA"):
         model.doPCA()
 
     return model
 
 
 if __name__ == '__main__':
-    resolutionLevels = 4
-    radiographNumbers = list(range(3))
+    resolutionLevels = 5
+    radiographNumbers = list(range(2, 14))
 
     with util.Timer("Loading images"):
         radiographs = Radiograph.getRadiographs(numbers=radiographNumbers, resolutionLevels=resolutionLevels)
 
-    with util.Timer("Building multi resolution active shape model"):
-        model = buildModel(radiographs, resolutionLevels=resolutionLevels)
+    model = buildModel(radiographs, resolutionLevels=resolutionLevels)
 
     # # Reconstruct some images which were not in the training set to check reconstruction performance
     # for r in Radiograph.getRadiographs([13, 14]):
@@ -69,9 +66,13 @@ if __name__ == '__main__':
 
     # Load other radiographs for GUI but do not load the ones above again
     with util.Timer("Loading remaining images (without landmarks)"):
-        for radiographNumber in range(4):
+        for radiographNumber in range(20):
             if radiographNumber not in radiographNumbers:
-                radiographs += Radiograph.getRadiographs([radiographNumber], extra=True)
+                radiographs += Radiograph.getRadiographs(
+                    numbers=[radiographNumber],
+                    resolutionLevels=resolutionLevels,
+                    extra=True
+                )
 
     gui = MultiResolutionGUI(radiographs, model)
     gui.open()
