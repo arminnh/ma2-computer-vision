@@ -3,7 +3,7 @@ import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-import models.active_shape_models as asm
+import models.active_shape_model as asm
 import util
 import Radiograph
 from GUI import GUI
