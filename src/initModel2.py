@@ -1,36 +1,79 @@
 import numpy as np
-import scipy.spatial.distance
+import scipy
 from scipy import linalg
 
 import procrustes_analysis
-from InitializationModel import InitializationModel
 from Landmark import Landmark
+class initModel:
 
-
-class ToothModel:
-    def __init__(self, name, landmarks, pcaComponents, sampleAmount, projectY=False):
+    def __init__(self, name, landmarks, rnge, pcaComponents, sampleAmount):
+        # Is a list of lists
+        # each inner list contains four incisors either from upper or lower jaw
+        # all must be from the same jaw though
         self.name = name
-        self.landmarks = landmarks
+        self.originalLandmarks = landmarks
+        self.crownLandmarks = self._getToothCrowns(landmarks, rnge)
+        self.sampleAmount = 20
         self.preprocessedLandmarks = []
         self.meanLandmark = None  # type: Landmark
         self.meanTheta = None
         self.meanScale = None
+        self.meanHeight = self._getMeanHeight(landmarks, rnge)
         self.pcaComponents = pcaComponents
         self.eigenvalues = np.array([])
         self.eigenvectors = np.array([])
         self.sampleAmount = sampleAmount
+        self.y_ij = {}
         self.meanProfilesForLandmarkPoints = {}
-        self.grayLevelModelCovarianceMatrices = {}
-        self.initializationModel = InitializationModel(landmarks, 28)  # TODO
-        self.projectYIntoTangentPlane = projectY
+        self.C_yj = {}
+
+    def _getToothCrowns(self, landmarksList,rnge):
+        newLandmarks = []
+        for lst in landmarksList:
+            crownPoints = []
+            toothNmbr = 0
+
+            for landmark in lst:
+                toothNmbr = landmark.toothNumber
+                crownPoints = crownPoints + list(landmark.getPointsAsTuples()[rnge].flatten())
+
+            if self.name == -1:
+                toothNmbr = -1
+
+            newLandmark = Landmark(crownPoints,toothNumber=toothNmbr)
+            newLandmark.radiograph = lst[0].radiograph
+            newLandmarks.append(newLandmark)
+
+        return newLandmarks
+
+    def plotLandmarks(self):
+        import matplotlib.pyplot as plt
+        plt.figure()
+
+        for landmark in self.crownLandmarks[:2]:
+            # PIL can't work with numpy arrays so convert to list of tuples
+            points = landmark.getPointsAsTuples()
+            X = points[:, 0]
+            Y = points[:, 1]
+            plt.plot(X, Y, 'x')
+            for i in range(len(points)):
+                plt.text(X[i] - 10, Y[i], i)
+
+        plt.legend()
+        ax = plt.gca()
+        ax.set_ylim(ax.get_ylim()[::-1])
+        plt.axis("equal")
+        plt.show()
 
     def doProcrustesAnalysis(self):
         # procrustes_analysis.drawLandmarks(self.landmarks, "before")
 
         self.preprocessedLandmarks, self.meanLandmark, self.meanScale, self.meanTheta \
-            = procrustes_analysis.performProcrustesAnalysis(self.landmarks)
+            = procrustes_analysis.performProcrustesAnalysis(self.crownLandmarks)
 
-        # procrustes_analysis.drawLandmarks(self.preprocessedLandmarks, "after")
+        self.meanLandmark.toothNumber = self.name
+        #procrustes_analysis.plotLandmarks([self.meanLandmark], "mean")
+        #procrustes_analysis.plotLandmarks(self.preprocessedLandmarks, "after")
         return self
 
     def getTranslatedMean(self, x, y):
@@ -39,11 +82,14 @@ class ToothModel:
 
     def getTranslatedAndInverseScaledMean(self, x, y):
         """ Returns the mean landmark rescaled back from unit variance (after procrustes) and translated to x and y. """
-        return self.meanLandmark.scale(self.meanScale*0.75).translate(x, y)
+        if self.name == 1:
+            return self.meanLandmark.scale(self.meanScale*0.8).translate(x, y)
+
+        return self.meanLandmark.scale(self.meanScale).translate(x, y)
 
     def doPCA(self):
         """ Perform PCA on the landmarks after procrustes analysis and store the eigenvalues and eigenvectors. """
-        data = [l.points for l in self.preprocessedLandmarks]
+        data = [l.getPointsAsList() for l in self.preprocessedLandmarks]
         data.append(data[0])
 
         S = np.cov(np.transpose(data))
@@ -69,15 +115,15 @@ class ToothModel:
         Build gray level models for each of the mean landmark points by averaging the gray level profiles for each
         point of each landmark.
         """
-        self.grayLevelModelCovarianceMatrices = {}
+        self.C_yj = {}
         self.meanProfilesForLandmarkPoints = {}
 
         # Build gray level model for each landmark
-        for i, landmark in enumerate(self.landmarks):
+        for i, landmark in enumerate(self.crownLandmarks):
             # Get the gray level profiles for each of the 40 landmark points
             normalizedGrayLevelProfiles = landmark.normalizedGrayLevelProfilesForLandmarkPoints(
                 img=landmark.getCorrectRadiographPart(),
-                grayLevelModelSize=self.sampleAmount
+                sampleAmount=self.sampleAmount
             )
 
             for j, normalizedProfile in normalizedGrayLevelProfiles.items():
@@ -88,7 +134,7 @@ class ToothModel:
 
         for pointIdx in range(len(self.meanProfilesForLandmarkPoints)):
             cov = np.cov(np.transpose(self.meanProfilesForLandmarkPoints[pointIdx]))
-            self.grayLevelModelCovarianceMatrices[pointIdx] = linalg.pinv(cov)
+            self.C_yj[pointIdx] = linalg.pinv(cov)
 
             # Replace each point's list of gray level profiles by their means
             self.meanProfilesForLandmarkPoints[pointIdx] = np.mean(self.meanProfilesForLandmarkPoints[pointIdx], axis=0)
@@ -100,7 +146,7 @@ class ToothModel:
         Returns the squared Mahalanobis distance of a new gray level profile from the built gray level model with index
         landmarkPointIndex.
         """
-        Sp = self.grayLevelModelCovarianceMatrices[landmarkPointIndex]
+        Sp = self.C_yj[landmarkPointIndex]
         pMinusMeanTrans = (normalizedGrayLevelProfile - self.meanProfilesForLandmarkPoints[landmarkPointIndex])
 
         return pMinusMeanTrans.T @ Sp @ pMinusMeanTrans
@@ -114,9 +160,9 @@ class ToothModel:
         # Examine a region of the image around each point X_i to find the best nearby match for the point X_i'
         # Get the gray level pointProfiles of points on normal lines of the landmark's points
         profilesForLandmarkPoints = landmark.getGrayLevelProfilesForNormalPoints(
-                img=img,
-                sampleAmount=self.sampleAmount,
-                derive=True
+            img=img,
+            sampleAmount=self.sampleAmount,
+            derive=True
         )
 
         bestPoints = []
@@ -179,25 +225,41 @@ class ToothModel:
             diff = scipy.spatial.distance.euclidean(b, newB)
             b = newB
 
-        return self.reconstructLandmarkForShapeParameters(b) \
+        newLandmark = self.reconstructLandmarkForShapeParameters(b) \
             .rotate(-theta).scale(scale).translate(-translateX, -translateY)
+        newLandmark.toothNumber = self.name
+        return newLandmark
 
-    def reconstruct(self, landmark):
+    def reconstruct(self):
         """
         Reconstructs a landmark.
         Be sure to create b for a preprocessed landmark. PCA is done on preprocessed landmarks.
         """
-        procrustes_analysis.plotLandmarks([self.meanLandmark], "self.meanLandmark")
+        landmark = self.preprocessedLandmarks[0]
+        b = self.getShapeParametersForLandmark(landmark)
 
-        superimposed, (translateX, translateY), scale, theta = landmark.superimpose(self.meanLandmark)
-        procrustes_analysis.plotLandmarks([superimposed], "superimposed landmark")
-
-        b = self.getShapeParametersForLandmark(superimposed)
         reconstructed = self.reconstructLandmarkForShapeParameters(b)
-        procrustes_analysis.plotLandmarks([reconstructed], "reconstructed landmark")
 
-        reconstructed = reconstructed.rotate(-theta).scale(scale).translate(-translateX, -translateY)
-        procrustes_analysis.plotLandmarks([landmark, reconstructed], "original + reconstructed and inverse transformed landmark")
-
-        print("shape b = {}, shape eigenvectors = {}".format(b.shape, self.eigenvectors.shape))
+        procrustes_analysis.plotLandmarks([landmark], "origin")
+        procrustes_analysis.plotLandmarks([reconstructed], "reconstructed")
         return reconstructed
+
+    def _getMeanHeight(self, landmarksList, rnge):
+        heights = []
+        for lst in landmarksList:
+
+            for landmark in lst:
+                rngedPoints = landmark.getPointsAsTuples()[rnge]
+                y = rngedPoints[:,1]
+                heights.append(np.max(y) - np.min(y))
+
+        return np.mean(heights)
+
+    def initLandmark(self, meanSplitline, x):
+
+        if self.name == 1:
+            y = meanSplitline - self.meanHeight / 2
+        else:
+            y = meanSplitline + self.meanHeight / 2
+        return self.getTranslatedAndInverseScaledMean(int(x)/2, y)
+

@@ -6,6 +6,7 @@ import time
 import numpy as np
 import scipy.interpolate
 
+
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "resources", "data")
 
 RADIOGRAPH_NUMBERS = list(range(1, 15))
@@ -152,3 +153,10 @@ def getNormalSlope(before, current, nextt):
     # m = slope of normal line
     m = -1 / tangentLineSlope if tangentLineSlope != 0 else 0
     return m
+
+def getCentersOfInitModel(landmark):
+    points = landmark.getPointsAsTuples()
+
+    splitted = [list(points[40*i:40*(i+1)]) for i in range(4)]
+    return np.mean(splitted,1)
+

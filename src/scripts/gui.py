@@ -17,16 +17,17 @@ if __name__ == '__main__':
         radiographNumbers = list(range(15))
         radiographs = Radiograph.getRadiographs(radiographNumbers)
 
+    initModels = active_shape_models.buildInitModels(radiographs)
     with util.Timer("Building active shape models"):
         models = active_shape_models.buildActiveShapeModels(radiographs, PCAComponents, sampleAmount)
 
     # Load other radiographs for GUI but do not load the ones above again
     with util.Timer("Loading remaining images (without landmarks)"):
-        for radiographNumber in range(15):
+        for radiographNumber in range(30):
             if radiographNumber not in radiographNumbers:
                 radiographs.append(Radiograph.getRadiographs([radiographNumber], extra=True)[0])
 
-    gui = GUI(radiographs, models)
+    gui = GUI(radiographs, models, initModels)
     gui.open()
 
     # print(models)

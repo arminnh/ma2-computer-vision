@@ -5,7 +5,7 @@ from preprocess_img import *
 
 class GUI:
 
-    def __init__(self, radiographs, models):
+    def __init__(self, radiographs, models, incisorModels):
         self.name = "Computer Vision KU Leuven"
         self.radiographs = radiographs
         self.currentRadiograph = None
@@ -14,7 +14,9 @@ class GUI:
         self.currentToothModel = None
         self.currentToothModelIndex = 0
         self.toothCenters = self.getAllToothCenters()
+        self.incisorModels = incisorModels
         self.img = None
+        self.currentInitLandmark = None
         self.preprocess = False
         self.currentLandmark = None
         self.showEdges = False
@@ -38,14 +40,14 @@ class GUI:
             cv2.line(img, (int(x / 2), 0), (int(x / 2), int(y)), 255, 2)
             cv2.line(img, (0, int(y / 2)), (x, int(y / 2)), 255, 2)
 
-            for model in self.toothModels:
-                if self.currentRadiographIndex < len(model.landmarks):
-                    landmark = model.landmarks[self.currentRadiographIndex]
-                    self.drawLandmark(landmark, color=180, thickness=3)
-
-                    points, profile = model.initializationModel.grayLevelProfileForImage[self.currentRadiographIndex]
-                    self.drawGreyLevelProfile(points, profile)
-                    self.drawToothCenters()
+            # for model in self.toothModels:
+            #     if self.currentRadiographIndex < len(model.landmarks):
+            #         landmark = model.landmarks[self.currentRadiographIndex]
+            #         self.drawLandmark(landmark, color=180, thickness=3)
+            #
+            #         points, profile = model.initializationModel.grayLevelProfileForImage[self.currentRadiographIndex]
+            #         self.drawGreyLevelProfile(points, profile)
+            #         self.drawToothCenters()
 
             cv2.imshow(self.name, img)
 
@@ -134,9 +136,17 @@ class GUI:
 
             elif pressed_key == ord("u"):
                 self.showUpperJaw()
+            elif pressed_key == ord("i"):
+                self.initIncisorModels()
 
             elif pressed_key == ord("l"):
                 self.showLowerJaw()
+
+            elif pressed_key == ord("s"):
+                self.setIncisorModel()
+
+            elif pressed_key == ord("a"):
+                self.autoFitToothModel()
 
             if cv2.getWindowProperty(self.name, cv2.WND_PROP_VISIBLE) < 1:
                 break
@@ -166,6 +176,8 @@ class GUI:
         for i, (x, y) in enumerate(jawSplitLine):
             if i > 0:
                 cv2.line(self.img, (jawSplitLine[i - 1][0], jawSplitLine[i - 1][1]), (x, y), 255, 2)
+        self.meanSplitLine = int(np.mean(jawSplitLine[:,1]))
+        cv2.line(self.img, (0,self.meanSplitLine), (self.img.shape[1],self.meanSplitLine), 200, 2)
 
     def setCurrentImage(self, idx):
         self.currentRadiographIndex = idx
@@ -173,6 +185,7 @@ class GUI:
         self.toothCenters = self.getAllToothCenters()
         self.refreshCurrentImage()
         self.refreshOverlay()
+
         return self
 
     def setCurrentModel(self, idx):
@@ -195,7 +208,6 @@ class GUI:
     def drawEdges(self, tmp_img):
         blur = cv2.bilateralFilter(tmp_img, 3, 75, 75)
         edges = cv2.Canny(blur, 20, 60)
-        edges = cv2.cvtColor(edges, cv2.COLOR_GRAY2RGB)
         # Overlap image and edges together
         tmp_img = np.bitwise_or(tmp_img, edges)
         # tmp_img = cv2.addWeighted(tmp_img, 1 - edges_val, edges, edges_val, 0)
@@ -211,6 +223,7 @@ class GUI:
         if self.currentRadiographIndex >= len(self.radiographs):
             self.currentRadiographIndex = len(self.radiographs) - 1
 
+        self.currentInitLandmark = None
         return self
 
     def increaseModelIndex(self, amount):
@@ -228,7 +241,6 @@ class GUI:
     def mouseListener(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
             self.currentLandmark = self.currentToothModel.getTranslatedAndInverseScaledMean(x, y)
-
             self.drawLandMarkWithNormals(self.currentLandmark, grayLevels=True)
 
     def drawLandmark(self, landmark, color, thickness=1):
@@ -253,7 +265,7 @@ class GUI:
                 cv2.line(self.img, (x2[j], y2[j]), (x2[j], y2[j]), 255, 1)
 
             start = points[i][0], points[i][1]
-            end = points[(i + 1) % points][0], points[(i + 1) % len(points)][1]
+            end = points[(i + 1) % len(points)][0], points[(i + 1) % len(points)][1]
 
             cv2.line(self.img, start, end, color, 3)
 
@@ -262,7 +274,8 @@ class GUI:
                 img = self.currentRadiograph.imgLowerJaw
             else:
                 img = self.currentRadiograph.imgUpperJaw
-
+            if self.currentToothModel.name == -1:
+                img = self.currentRadiograph.img
             profilesForLandmarkPoints = landmark.getGrayLevelProfilesForNormalPoints(
                 img=img,
                 sampleAmount=self.currentToothModel.sampleAmount,
@@ -301,7 +314,10 @@ class GUI:
         else:
             jawImg = self.currentRadiograph.imgLowerJaw
 
-        while d > 1 and i < 1:
+        if self.currentToothModel.name == -1:
+            jawImg = self.currentRadiograph.img
+
+        while i < 10:
             newTargetPoints = self.currentToothModel.findBetterFittingLandmark(jawImg, previousLandmark)
             improvedLandmark = self.currentToothModel.matchModelPointsToTargetPoints(newTargetPoints)
 
@@ -320,6 +336,9 @@ class GUI:
 
     def showUpperJaw(self):
         self.img = self.currentRadiograph.imgUpperJaw.copy()
+
+    def setIncisorModel(self):
+        self.currentToothModel = self.incisorModels[1]
 
     def getAllToothCenters(self):
         c = {}
@@ -361,3 +380,63 @@ class GUI:
         print("centers converged")
 
         self.refreshCurrentImage()
+
+    def initIncisorModels(self, modelNr=0):
+        _,x = self.img.shape
+        self.currentToothModel = self.incisorModels[modelNr]
+
+        self.currentLandmark = self.incisorModels[modelNr].initLandmark(self.meanSplitLine, x)
+        self.drawLandMarkWithNormals(self.currentLandmark, grayLevels=True)
+        #centers = self.incisorModels[model].getCentersOfInitModel(self.currentLandmark)
+
+        #for c in centers:
+        #    orig = (int(c[0]), int(c[1]))
+        #    cv2.circle(self.img, orig, 20, 255, 3)
+
+    def autoFitToothModel(self):
+        currentToothModel = self.currentToothModel
+
+        optim = False
+        # Check if we can optimize
+        if self.currentInitLandmark:
+            if (self.currentInitLandmark.toothNumber == 1 and currentToothModel.name <= 4) or \
+                    (self.currentInitLandmark.toothNumber == 5 and currentToothModel.name > 4):
+                # Ok optimize!
+                optim = True
+
+        if not optim:
+            # First set correct initialisation model
+            if currentToothModel.name <= 4:
+                # Upper jaw
+                self.initIncisorModels(0)
+            else:
+                # lower jaw
+                self.initIncisorModels(1)
+
+            # Now we fit it
+            self.findBetterLandmark()
+
+            self.currentInitLandmark = self.currentLandmark
+
+            # Once this is done, we get the origins
+            origins = util.getCentersOfInitModel(self.currentLandmark)
+
+        else:
+            # Optimize by just getting the centers of the saved init model
+            origins = util.getCentersOfInitModel(self.currentInitLandmark)
+
+        # Now we reset the correct tooth model
+        self.currentToothModel = currentToothModel
+
+        # Get the starting pos of the tooth
+        (x,y) = origins[(currentToothModel.name-1)%len(origins)]
+
+        # init tooth at that position
+        self.currentLandmark = self.currentToothModel.getTranslatedAndInverseScaledMean(x, y)
+
+        # Iterate with the tooth
+        self.findBetterLandmark()
+
+        # Show the result
+        self.drawLandmark(self.currentLandmark, 255)
+

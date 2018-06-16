@@ -33,7 +33,7 @@ class InitializationModel:
 
             points = self.sampleInitProfilePoints(center)
 
-            rawProfile, normalizedProfile = images.getPixelProfile(landmark.radiograph.img, points, derive=True)
+            rawProfile, normalizedProfile = images.getPixelProfile(landmark.getCorrectRadiographPart(), points, derive=True)
             normalized.append(normalizedProfile)
 
             self.grayLevelProfileForImage[i] = (points, rawProfile)

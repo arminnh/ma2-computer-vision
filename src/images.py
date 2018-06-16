@@ -146,7 +146,7 @@ def loadRadiographImage(radiographFilename):
 
     for x in range(xMax):
         y = int(interpF(x))
-        imgUpperJaw[y + 1:-1, x] = 255
-        imgLowerJaw[0:y, x] = 255
+        imgUpperJaw[y + 1:-1, x] = 0
+        imgLowerJaw[0:y, x] = 0
 
     return img, imgUpperJaw, imgLowerJaw, jawSplitLine, XOffset, YOffset
