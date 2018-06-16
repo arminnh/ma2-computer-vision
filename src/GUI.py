@@ -471,7 +471,7 @@ class GUI:
 
             masked_image = cv2.bitwise_and(self.currentRadiograph.origImg, mask)
 
-            cv2.imwrite('image_masked_{}.png'.format(i), masked_image)
+            cv2.imwrite('predicted_{}-{}.png'.format(self.currentRadiograph.number, i), masked_image)
 
         self.currentToothModel = oldModel
 

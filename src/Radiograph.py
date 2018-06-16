@@ -13,7 +13,8 @@ import util
 
 class Radiograph:
 
-    def __init__(self, filename, img, imgUpperJaw, imgLowerJaw, jawSplitLine, landmarks, segments, originalSize, offsets,origImg, mirrored=False):
+    def __init__(self, filename, img, imgUpperJaw, imgLowerJaw, jawSplitLine,
+                 landmarks, segments, originalSize, offsets,origImg, number, mirrored=False):
         """
         :param filename: the filename/id of the Radiograph
         """
@@ -28,6 +29,7 @@ class Radiograph:
         self.originalSize = originalSize
         self.offsets = offsets
         self.origImg = origImg
+        self.number = number
         for landmark in self.landmarks.values():
             landmark.radiograph = self
 
@@ -122,7 +124,8 @@ def getRadiographs(numbers=None, extra=False):
                 segments=segments,
                 originalSize=origSize,
                 offsets=(XOffset, YOffset),
-                origImg=origImg
+                origImg=origImg,
+                number=n
             ))
 
             # TODO: do image mirroring in radiograph
