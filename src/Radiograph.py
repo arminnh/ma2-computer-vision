@@ -13,7 +13,7 @@ import util
 
 class Radiograph:
 
-    def __init__(self, filename, img, imgUpperJaw, imgLowerJaw, jawSplitLine, landmarks, segments, mirrored=False):
+    def __init__(self, filename, img, imgUpperJaw, imgLowerJaw, jawSplitLine, landmarks, segments, originalSize, offsets,origImg, mirrored=False):
         """
         :param filename: the filename/id of the Radiograph
         """
@@ -25,6 +25,9 @@ class Radiograph:
         self.landmarks = landmarks  # type: Dict[int, Landmark.Landmark]
         self.segments = segments  # type: Dict[int, Segment.Segment]
         self.mirrored = mirrored
+        self.originalSize = originalSize
+        self.offsets = offsets
+        self.origImg = origImg
         for landmark in self.landmarks.values():
             landmark.radiograph = self
 
@@ -107,7 +110,7 @@ def getRadiographs(numbers=None, extra=False):
             print("Loading radiograph {}, {}".format(n, filepath))
 
             # Load the radiograph in as is
-            img, imgUpperJaw, imgLowerJaw, jawSplitLine, XOffset, YOffset = images.loadRadiographImage(filename)
+            img, imgUpperJaw, imgLowerJaw, jawSplitLine, XOffset, YOffset, origSize, origImg = images.loadRadiographImage(filename)
             segments = Segment.loadAllForRadiograph(filename)
             radiographs.append(Radiograph(
                 filename=filename,
@@ -116,7 +119,10 @@ def getRadiographs(numbers=None, extra=False):
                 imgLowerJaw=imgLowerJaw,
                 jawSplitLine=jawSplitLine,
                 landmarks=Landmark.loadAllForRadiograph(filename, XOffset, YOffset),
-                segments=segments
+                segments=segments,
+                originalSize=origSize,
+                offsets=(XOffset, YOffset),
+                origImg=origImg
             ))
 
             # TODO: do image mirroring in radiograph

@@ -148,6 +148,9 @@ class GUI:
             elif pressed_key == ord("a"):
                 self.autoFitToothModel()
 
+            elif pressed_key == ord("m"):
+                self.getMaskForRadiograph()
+
             if cv2.getWindowProperty(self.name, cv2.WND_PROP_VISIBLE) < 1:
                 break
 
@@ -440,4 +443,36 @@ class GUI:
 
         # Show the result
         self.drawLandmark(self.currentLandmark, 255)
+
+    def getMaskForRadiograph(self):
+        # get offsets
+        (offsetX, offsetY) = self.currentRadiograph.offsets
+
+        # Save current model
+        oldModel = self.currentToothModel
+
+        # For each model we will get a landmark
+        for i,model in enumerate(self.toothModels):
+            # Create empty mask
+            mask = np.zeros_like(self.currentRadiograph.origImg)
+
+            # Set currentToothModel
+            self.currentToothModel = model
+
+            # Create a landmark for this model
+            self.autoFitToothModel()
+
+            # Get the current landmark
+            landmark = self.currentLandmark
+
+            points = np.asarray([(-offsetX+int(p[0]),-offsetY+int(p[1])) for p in landmark.getPointsAsTuples()])
+
+            cv2.fillPoly(mask, [points], 255)
+
+            masked_image = cv2.bitwise_and(self.currentRadiograph.origImg, mask)
+
+            cv2.imwrite('image_masked_{}.png'.format(i), masked_image)
+
+        self.currentToothModel = oldModel
+
 
