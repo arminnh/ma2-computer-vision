@@ -143,7 +143,7 @@ class MaskGenerator:
 
         tmpGroundTruth = np.zeros_like(self.currentRadiograph.origImg)
         originalSegments = glob.glob(truthSegmentationDir + "{}-*.png".format(self.currentRadiograph.number))
-        for original in enumerate(originalSegments):
+        for original in originalSegments:
             groundTruth = cv2.imread(original, cv2.IMREAD_GRAYSCALE)
 
             tmpGroundTruth += groundTruth
@@ -195,13 +195,6 @@ if __name__ == '__main__':
     with util.Timer("Building active shape models"):
         models = asm.buildActiveShapeModels(radiographs, PCAComponents, sampleAmount)
 
-    # Load other radiographs for GUI but do not load the ones above again
-    with util.Timer("Loading remaining images (without landmarks)"):
-        for radiographNumber in range(30):
-            if radiographNumber not in radiographNumbers:
-                radiographs.append(Radiograph.getRadiographs([radiographNumber], extra=True)[0])
-
-
     for r in radiographs:
         gen = MaskGenerator(r, models, initModels)
 
@@ -210,6 +203,6 @@ if __name__ == '__main__':
 
         # Generate 1 mask that consists of our predicted teeth and the ground truth
         # and
-        #gen.compareSegmentations()
+        gen.compareSegmentations()
 
     # print(models)
