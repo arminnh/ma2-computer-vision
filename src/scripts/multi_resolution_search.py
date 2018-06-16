@@ -1,15 +1,19 @@
+import os
+import sys
+
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+
 import numpy as np
 
 import Radiograph
 import util
 from MultiResolutionGUI import MultiResolutionGUI
 from Landmark import Landmark
-from TeethActiveShapeModel import TeethActiveShapeModel
+from models.TeethActiveShapeModel import TeethActiveShapeModel
 
 
 def buildModel(radiographs, maxResolutionLevel=3, maxLevelIterations=5, grayLevelModelSize=6, sampleAmount=5,
                pClose=0.9, pcaComponents=20):
-
     # dict of toothnumber -> landmarks for tooth
     individualLandmarks = {}
     # list of landmarks that contain all 8 teeth
@@ -66,4 +70,3 @@ if __name__ == '__main__':
 
     gui = MultiResolutionGUI(radiographs, model)
     gui.open()
-

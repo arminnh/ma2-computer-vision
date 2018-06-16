@@ -1,7 +1,7 @@
 import Radiograph
 import util
-from ToothModel import ToothModel
-from initModel2 import initModel
+from models.ToothModel import ToothModel
+from models.initModel2 import initModel
 
 
 def buildActiveShapeModels(radiographs, PCAComponents, sampleAmount):

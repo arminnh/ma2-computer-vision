@@ -18,7 +18,7 @@ class InitializationModel:
         self.sampleOriginGrayLevels()
 
     def sampleInitProfilePoints(self, center):
-        verticalPoints = util.sampleLine(1000, center, self.sampleAmount*2)
+        verticalPoints = util.sampleLine(1000, center, self.sampleAmount * 2)
         diagonalPoints1 = util.sampleLine(0.1, center, self.sampleAmount)
         horizontalPoints = util.sampleLine(0, center, self.sampleAmount)
         diagonalPoints2 = util.sampleLine(-0.1, center, self.sampleAmount)
@@ -33,7 +33,8 @@ class InitializationModel:
 
             points = self.sampleInitProfilePoints(center)
 
-            rawProfile, normalizedProfile = images.getPixelProfile(landmark.getCorrectRadiographPart(), points, derive=True)
+            rawProfile, normalizedProfile = images.getPixelProfile(landmark.getCorrectRadiographPart(), points,
+                                                                   derive=True)
             normalized.append(normalizedProfile)
 
             self.grayLevelProfileForImage[i] = (points, rawProfile)

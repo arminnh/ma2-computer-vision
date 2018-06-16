@@ -3,65 +3,77 @@ import scipy.spatial.distance
 from scipy import linalg
 
 import procrustes_analysis
-from InitializationModel import InitializationModel
 from Landmark import Landmark
 
 
-class ToothModel:
-    def __init__(self, name, landmarks, pcaComponents, sampleAmount, projectY=False):
-        self.name = name
-        self.landmarks = landmarks
-        self.preprocessedLandmarks = []
-        self.meanLandmark = None  # type: Landmark
-        self.meanTheta = None
-        self.meanScale = None
-        self.pcaComponents = pcaComponents
-        self.eigenvalues = np.array([])
-        self.eigenvectors = np.array([])
+class TeethActiveShapeModel:
+    """ Data structure for Multi-resolution Active Shape Model search """
+
+    def __init__(self, individualLandmarks, setLandmarks, maxResolutionLevel, maxLevelIterations, grayLevelModelSize,
+                 sampleAmount, pClose, pcaComponents):
+        # dict of toothnumber -> list landmarks for tooth
+        self.toothLandmarks = individualLandmarks
+        # list of landmarks that contain all 8 teeth
+        self.mouthLandmarks = setLandmarks
+        self.preprocessedLandmarks = {}
+        self.meanLandmarks = {}
+        self.meanThetas = {}
+        self.meanScales = {}
+        self.meanMouthLandmark = None
+        self.meanMouthTheta = 0
+        self.meanMouthScale = 1
+        self.maxResolutionLevel = maxResolutionLevel
+        self.maxLevelIterations = maxLevelIterations
+        self.grayLevelModelSize = grayLevelModelSize
         self.sampleAmount = sampleAmount
+        self.pClose = pClose
+        self.pcaComponents = pcaComponents
+        self.eigenvalues = {}
+        self.eigenvectors = {}
         self.meanProfilesForLandmarkPoints = {}
         self.grayLevelModelCovarianceMatrices = {}
-        self.initializationModel = InitializationModel(landmarks, 28)  # TODO
-        self.projectYIntoTangentPlane = projectY
 
     def doProcrustesAnalysis(self):
-        # procrustes_analysis.drawLandmarks(self.landmarks, "before")
+        for toothNumber, landmarks in self.toothLandmarks.items():
+            preprocessedLandmarks, meanLandmark, meanScale, meanTheta \
+                = procrustes_analysis.performProcrustesAnalysis(landmarks)
 
-        self.preprocessedLandmarks, self.meanLandmark, self.meanScale, self.meanTheta \
-            = procrustes_analysis.performProcrustesAnalysis(self.landmarks)
+            self.preprocessedLandmarks[toothNumber] = preprocessedLandmarks
+            self.meanLandmarks[toothNumber] = meanLandmark
+            self.meanScales[toothNumber] = meanScale
+            self.meanThetas[toothNumber] = meanTheta
 
-        # procrustes_analysis.drawLandmarks(self.preprocessedLandmarks, "after")
+        _, self.meanMouthLandmark, self.meanMouthScale, self.meanMouthTheta \
+            = procrustes_analysis.performProcrustesAnalysis(self.mouthLandmarks)
+
         return self
 
-    def getTranslatedMean(self, x, y):
-        """ Returns the mean landmark translated to x and y. """
-        return self.meanLandmark.translate(x, y)
-
-    def getTranslatedAndInverseScaledMean(self, x, y):
+    def getTranslatedAndInverseScaledMeanMouth(self, x, y):
         """ Returns the mean landmark rescaled back from unit variance (after procrustes) and translated to x and y. """
-        return self.meanLandmark.scale(self.meanScale*0.75).translate(x, y)
+        return self.meanMouthLandmark.scale(self.meanMouthScale).translate(x, y)
 
     def doPCA(self):
         """ Perform PCA on the landmarks after procrustes analysis and store the eigenvalues and eigenvectors. """
-        data = [l.points for l in self.preprocessedLandmarks]
-        data.append(data[0])
+        for toothNumber, landmarks in self.preprocessedLandmarks.items():
+            data = [l.points for l in landmarks]
+            data.append(data[0])
 
-        S = np.cov(np.transpose(data))
+            S = np.cov(np.transpose(data))
 
-        eigenvalues, eigenvectors = np.linalg.eig(S)
-        sorted_values = np.flip(eigenvalues.argsort(), 0)[:self.pcaComponents]
+            eigenvalues, eigenvectors = np.linalg.eig(S)
+            sorted_values = np.flip(eigenvalues.argsort(), 0)[:self.pcaComponents]
 
-        self.eigenvalues = eigenvalues[sorted_values]
-        self.eigenvectors = eigenvectors[:, sorted_values]
-        # print(self.eigenvalues)
+            self.eigenvalues[toothNumber] = eigenvalues[sorted_values]
+            self.eigenvectors[toothNumber] = eigenvectors[:, sorted_values]
+
         return self
 
-    def getShapeParametersForLandmark(self, landmark):
-        b = self.eigenvectors.T @ (landmark.points - self.meanLandmark.points)
+    def getShapeParametersForLandmark(self, toothNumber, landmark):
+        b = self.eigenvectors[toothNumber].T @ (landmark.points - self.meanLandmarks[toothNumber].points)
         return b.reshape((self.pcaComponents, -1))
 
-    def reconstructLandmarkForShapeParameters(self, b):
-        return Landmark(self.meanLandmark.points + (self.eigenvectors @ b).flatten())
+    def reconstructLandmarkForShapeParameters(self, toothNumber, b):
+        return Landmark(self.meanLandmarks[toothNumber].points + (self.eigenvectors[toothNumber] @ b).flatten())
 
     def buildGrayLevelModels(self):
         """
@@ -73,11 +85,11 @@ class ToothModel:
         self.meanProfilesForLandmarkPoints = {}
 
         # Build gray level model for each landmark
-        for i, landmark in enumerate(self.landmarks):
+        for i, landmark in enumerate(self.mouthLandmarks):
             # Get the gray level profiles for each of the 40 landmark points
             normalizedGrayLevelProfiles = landmark.normalizedGrayLevelProfilesForLandmarkPoints(
-                img=landmark.getCorrectRadiographPart(),
-                grayLevelModelSize=self.sampleAmount
+                img=landmark.radiograph.img,
+                grayLevelModelSize=self.grayLevelModelSize
             )
 
             for j, normalizedProfile in normalizedGrayLevelProfiles.items():
@@ -115,8 +127,8 @@ class ToothModel:
         # Get the gray level pointProfiles of points on normal lines of the landmark's points
         profilesForLandmarkPoints = landmark.getGrayLevelProfilesForNormalPoints(
             img=img,
-            grayLevelModelSize=self.sampleAmount,
             sampleAmount=self.sampleAmount,
+            grayLevelModelSize=self.grayLevelModelSize,
             derive=True
         )
 
@@ -136,12 +148,12 @@ class ToothModel:
                 distances.append((abs(d), normalPoint))
                 print("Mahalanobis dist: {:.2f}, p: {}".format(abs(d), normalPoint))
 
-            bestPoints.append(min(reversed(distances), key=lambda x: x[0])[1])
+            bestPoints.append(min(distances, key=lambda x: x[0])[1])
 
         landmark = landmark.copy(np.asarray(bestPoints).flatten())
 
         # Find the pose parameters that best fit the new found points X
-        landmark, (translateX, translateY), scale, theta = landmark.superimpose(self.meanLandmark)
+        landmark, (translateX, translateY), scale, theta = landmark.superimpose(self.meanLandmarks)
 
         # Apply constraints to the parameters b to ensure plausible shapes
         b = self.getShapeParametersForLandmark(landmark)
@@ -183,22 +195,26 @@ class ToothModel:
         return self.reconstructLandmarkForShapeParameters(b) \
             .rotate(-theta).scale(scale).translate(-translateX, -translateY)
 
-    def reconstruct(self, landmark):
+    def reconstruct(self, landmarks):
         """
         Reconstructs a landmark.
         Be sure to create b for a preprocessed landmark. PCA is done on preprocessed landmarks.
         """
-        procrustes_analysis.plotLandmarks([self.meanLandmark], "self.meanLandmark")
+        procrustes_analysis.plotLandmarks(landmarks.values(), "input landmarks")
 
-        superimposed, (translateX, translateY), scale, theta = landmark.superimpose(self.meanLandmark)
-        procrustes_analysis.plotLandmarks([superimposed], "superimposed landmark")
+        reconstructions = []
 
-        b = self.getShapeParametersForLandmark(superimposed)
-        reconstructed = self.reconstructLandmarkForShapeParameters(b)
-        procrustes_analysis.plotLandmarks([reconstructed], "reconstructed landmark")
+        for toothNumber, landmark in landmarks.items():
+            superimposed, (translateX, translateY), scale, theta = landmark.superimpose(self.meanLandmarks[toothNumber])
 
-        reconstructed = reconstructed.rotate(-theta).scale(scale).translate(-translateX, -translateY)
-        procrustes_analysis.plotLandmarks([landmark, reconstructed], "original + reconstructed and inverse transformed landmark")
+            b = self.getShapeParametersForLandmark(toothNumber, superimposed)
+            reconstructed = self.reconstructLandmarkForShapeParameters(toothNumber, b)
+            print("shape b = {}, shape eigenvectors = {}".format(b.shape, self.eigenvectors[toothNumber].shape))
 
-        print("shape b = {}, shape eigenvectors = {}".format(b.shape, self.eigenvectors.shape))
-        return reconstructed
+            reconstructions.append(reconstructed.rotate(-theta).scale(scale).translate(-translateX, -translateY))
+
+        procrustes_analysis.plotLandmarks(
+            reconstructions,
+            "reconstructed landmarks, PCA components = {}".format(self.pcaComponents)
+        )
+        return reconstructions

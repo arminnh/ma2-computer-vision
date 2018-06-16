@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-import TeethActiveShapeModel
+import models.TeethActiveShapeModel
 import util
 
 

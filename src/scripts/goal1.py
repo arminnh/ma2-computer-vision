@@ -3,7 +3,7 @@ import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-import active_shape_models
+import models.active_shape_model as asm
 import util
 import Radiograph
 
@@ -14,4 +14,4 @@ if __name__ == '__main__':
 
     radiographs = Radiograph.getRadiographs(radiographNumbers)
 
-    active_shape_models.buildActiveShapeModels(radiographs, PCAComponents, sampleAmount)
+    asm.buildActiveShapeModels(radiographs, PCAComponents, sampleAmount)

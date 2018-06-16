@@ -3,7 +3,7 @@ import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-import active_shape_models
+import models.active_shape_models as asm
 import util
 import Radiograph
 from GUI import GUI
@@ -17,9 +17,9 @@ if __name__ == '__main__':
         radiographNumbers = list(range(15))
         radiographs = Radiograph.getRadiographs(radiographNumbers)
 
-    initModels = active_shape_models.buildInitModels(radiographs)
+    initModels = asm.buildInitModels(radiographs)
     with util.Timer("Building active shape models"):
-        models = active_shape_models.buildActiveShapeModels(radiographs, PCAComponents, sampleAmount)
+        models = asm.buildActiveShapeModels(radiographs, PCAComponents, sampleAmount)
 
     # Load other radiographs for GUI but do not load the ones above again
     with util.Timer("Loading remaining images (without landmarks)"):

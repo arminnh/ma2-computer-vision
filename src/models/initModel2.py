@@ -4,6 +4,8 @@ from scipy import linalg
 
 import procrustes_analysis
 from Landmark import Landmark
+
+
 class initModel:
 
     def __init__(self, name, landmarks, rnge, pcaComponents, sampleAmount):
@@ -27,7 +29,7 @@ class initModel:
         self.meanProfilesForLandmarkPoints = {}
         self.C_yj = {}
 
-    def _getToothCrowns(self, landmarksList,rnge):
+    def _getToothCrowns(self, landmarksList, rnge):
         newLandmarks = []
         for lst in landmarksList:
             crownPoints = []
@@ -40,7 +42,7 @@ class initModel:
             if self.name == -1:
                 toothNmbr = -1
 
-            newLandmark = Landmark(crownPoints,toothNumber=toothNmbr)
+            newLandmark = Landmark(crownPoints, toothNumber=toothNmbr)
             newLandmark.radiograph = lst[0].radiograph
             newLandmarks.append(newLandmark)
 
@@ -72,8 +74,8 @@ class initModel:
             = procrustes_analysis.performProcrustesAnalysis(self.crownLandmarks)
 
         self.meanLandmark.toothNumber = self.name
-        #procrustes_analysis.plotLandmarks([self.meanLandmark], "mean")
-        #procrustes_analysis.plotLandmarks(self.preprocessedLandmarks, "after")
+        # procrustes_analysis.plotLandmarks([self.meanLandmark], "mean")
+        # procrustes_analysis.plotLandmarks(self.preprocessedLandmarks, "after")
         return self
 
     def getTranslatedMean(self, x, y):
@@ -83,7 +85,7 @@ class initModel:
     def getTranslatedAndInverseScaledMean(self, x, y):
         """ Returns the mean landmark rescaled back from unit variance (after procrustes) and translated to x and y. """
         if self.name == 1:
-            return self.meanLandmark.scale(self.meanScale*0.8).translate(x, y)
+            return self.meanLandmark.scale(self.meanScale * 0.8).translate(x, y)
 
         return self.meanLandmark.scale(self.meanScale).translate(x, y)
 
@@ -251,7 +253,7 @@ class initModel:
 
             for landmark in lst:
                 rngedPoints = landmark.getPointsAsTuples()[rnge]
-                y = rngedPoints[:,1]
+                y = rngedPoints[:, 1]
                 heights.append(np.max(y) - np.min(y))
 
         return np.mean(heights)
@@ -262,5 +264,4 @@ class initModel:
             y = meanSplitline - self.meanHeight / 2
         else:
             y = meanSplitline + self.meanHeight / 2
-        return self.getTranslatedAndInverseScaledMean(int(x)/2, y)
-
+        return self.getTranslatedAndInverseScaledMean(int(x) / 2, y)
