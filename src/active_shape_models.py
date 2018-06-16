@@ -1,6 +1,7 @@
 import Radiograph
 import util
 from ToothModel import ToothModel
+from initModel2 import initModel
 
 
 def buildActiveShapeModels(radiographs, PCAComponents, sampleAmount):
@@ -28,3 +29,45 @@ def buildActiveShapeModels(radiographs, PCAComponents, sampleAmount):
 
     # Build gray level model for each point of the mean landmarks of the models
     return models
+
+
+
+def buildInitModels(radiographs):
+
+    upper = []
+    lower = []
+    all = []
+    for r in radiographs:
+        u = []
+        l = []
+        a = []
+        for i in range(len(r.landmarks)):
+            landmark = r.landmarks[i+1]
+            if landmark.toothNumber <= 4:
+                u.append(landmark.copy())
+            else:
+                l.append(landmark.copy())
+
+            a.append(landmark.copy())
+        upper.append(u)
+        lower.append(l)
+        all.append(a)
+
+    #upperModel = initModel(1,upper, range(9,28), util.PCA_COMPONENTS, util.SAMPLE_AMOUNT)
+    upperModel = initModel(1,upper, range(0,40), util.PCA_COMPONENTS, util.SAMPLE_AMOUNT)
+
+    #upperModel.plotLandmarks()
+    upperModel = upperModel.buildGrayLevelModels().doProcrustesAnalysis()
+    upperModel.doPCA()
+    lowerModel = initModel(5,lower, range(0,40), util.PCA_COMPONENTS, util.SAMPLE_AMOUNT)
+
+    #lowerModel = initModel(5,lower, list(range(0,10)) + list(range(30, 40)), util.PCA_COMPONENTS, util.SAMPLE_AMOUNT)
+    #lowerModel.plotLandmarks()
+    lowerModel = lowerModel.buildGrayLevelModels().doProcrustesAnalysis()
+    lowerModel.doPCA()
+
+    allModel = initModel(-1 , all, range(0,40), util.PCA_COMPONENTS, util.SAMPLE_AMOUNT)
+    allModel = allModel.buildGrayLevelModels().doProcrustesAnalysis()
+    allModel.doPCA()
+
+    return [upperModel, lowerModel, allModel]

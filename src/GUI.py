@@ -135,6 +135,8 @@ class GUI:
 
             elif pressed_key == ord("u"):
                 self.showUpperJaw()
+            elif pressed_key == ord("i"):
+                self.initIncisorModels()
 
             elif pressed_key == ord("l"):
                 self.showLowerJaw()
@@ -238,7 +240,6 @@ class GUI:
     def mouseListener(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:
             self.currentLandmark = self.currentToothModel.getTranslatedAndInverseScaledMean(x, y)
-
             self.drawLandMarkWithNormals(self.currentLandmark, grayLevels=True)
 
     def drawLandmark(self, landmark, color, thickness=1):
@@ -263,7 +264,7 @@ class GUI:
                 cv2.line(self.img, (x2[j], y2[j]), (x2[j], y2[j]), 255, 1)
 
             start = points[i][0], points[i][1]
-            end = points[(i + 1) % points][0], points[(i + 1) % len(points)][1]
+            end = points[(i + 1) % len(points)][0], points[(i + 1) % len(points)][1]
 
             cv2.line(self.img, start, end, color, 3)
 
@@ -313,7 +314,7 @@ class GUI:
             jawImg = self.currentRadiograph.imgLowerJaw
 
         if self.currentToothModel.name == -1:
-            correctHalf = self.currentRadiograph.img
+            jawImg = self.currentRadiograph.img
 
         while d > 1 and i < 1:
             newTargetPoints = self.currentToothModel.findBetterFittingLandmark(jawImg, previousLandmark)
@@ -340,10 +341,7 @@ class GUI:
         midX = int(x/2)
 
     def setIncisorModel(self):
-        self.currentToothModel = self.incisorModels[2]
-
-
-
+        self.currentToothModel = self.incisorModels[1]
 
     def getAllToothCenters(self):
         c = {}
@@ -385,3 +383,11 @@ class GUI:
         print("centers converged")
 
         self.refreshCurrentImage()
+
+    def initIncisorModels(self):
+        _,x = self.img.shape
+        model = 0
+        self.currentToothModel = self.incisorModels[model]
+
+        self.currentLandmark = self.incisorModels[model].initLandmark(self.meanSplitLine, x)
+        self.drawLandMarkWithNormals(self.currentLandmark, grayLevels=True)

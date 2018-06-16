@@ -18,6 +18,7 @@ class initModel:
         self.meanLandmark = None  # type: Landmark
         self.meanTheta = None
         self.meanScale = None
+        self.meanHeight = self._getMeanHeight(landmarks, rnge)
         self.pcaComponents = pcaComponents
         self.eigenvalues = np.array([])
         self.eigenvectors = np.array([])
@@ -80,7 +81,10 @@ class initModel:
 
     def getTranslatedAndInverseScaledMean(self, x, y):
         """ Returns the mean landmark rescaled back from unit variance (after procrustes) and translated to x and y. """
-        return self.meanLandmark.scale(self.meanScale * 0.75).translate(x, y)
+        if self.name == 1:
+            return self.meanLandmark.scale(self.meanScale*0.8).translate(x, y)
+
+        return self.meanLandmark.scale(self.meanScale).translate(x, y)
 
     def doPCA(self):
         """ Perform PCA on the landmarks after procrustes analysis and store the eigenvalues and eigenvectors. """
@@ -146,7 +150,7 @@ class initModel:
 
         return pMinusMeanTrans.T @ Sp @ pMinusMeanTrans
 
-    def findBetterFittingLandmark(self, landmark, img):
+    def findBetterFittingLandmark(self, img, landmark):
         """
         Active Shape Model Algorithm: An iterative approach to improving the fit of an instance X.
         Returns a landmark that is a better fit on the image than the given according to the gray level pointProfiles of
@@ -176,7 +180,7 @@ class initModel:
                 distances.append((abs(d), normalPoint))
                 print("Mahalanobis dist: {:.2f}, p: {}".format(abs(d), normalPoint))
 
-            bestPoints.append(min(distances, key=lambda x: x[0])[1])
+            bestPoints.append(min(reversed(distances), key=lambda x: x[0])[1])
 
         landmark = landmark.copy(np.asarray(bestPoints).flatten())
 
@@ -236,3 +240,23 @@ class initModel:
         procrustes_analysis.plotLandmarks([landmark], "origin")
         procrustes_analysis.plotLandmarks([reconstructed], "reconstructed")
         return reconstructed
+
+    def _getMeanHeight(self, landmarksList, rnge):
+        heights = []
+        for lst in landmarksList:
+
+            for landmark in lst:
+                rngedPoints = landmark.getPointsAsTuples()[rnge]
+                y = rngedPoints[:,1]
+                heights.append(np.max(y) - np.min(y))
+
+        return np.mean(heights)
+
+    def initLandmark(self, meanSplitline, x):
+
+        if self.name == 1:
+            y = meanSplitline - self.meanHeight / 2
+        else:
+            y = meanSplitline + self.meanHeight / 2
+        return self.getTranslatedAndInverseScaledMean(int(x)/2, y)
+

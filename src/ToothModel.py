@@ -135,7 +135,7 @@ class ToothModel:
                 distances.append((abs(d), normalPoint))
                 print("Mahalanobis dist: {:.2f}, p: {}".format(abs(d), normalPoint))
 
-            bestPoints.append(min(distances, key=lambda x: x[0])[1])
+            bestPoints.append(min(reversed(distances), key=lambda x: x[0])[1])
 
         landmark = landmark.copy(np.asarray(bestPoints).flatten())
 

@@ -6,6 +6,7 @@ import time
 import numpy as np
 import scipy.interpolate
 
+
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "resources", "data")
 
 RADIOGRAPH_NUMBERS = list(range(1, 15))
