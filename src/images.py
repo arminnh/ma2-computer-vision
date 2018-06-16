@@ -11,7 +11,8 @@ from util import DATA_DIR
 
 def getPixelProfile(img, points, derive):
     # Get pixel values on the given points
-    pixels = np.asarray([img[y, x] for (x, y) in points], dtype=int)
+    yMax, xMax = img.shape
+    pixels = np.asarray([img[y, x] if (x < xMax and y < yMax) else 0 for (x, y) in points], dtype=int)
 
     rawPixelProfile = pixels.copy()
     if not derive:

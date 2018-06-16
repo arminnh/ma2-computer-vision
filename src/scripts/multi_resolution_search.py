@@ -12,7 +12,7 @@ from Landmark import Landmark
 from models.TeethActiveShapeModel import TeethActiveShapeModel
 
 
-def buildModel(radiographs, resolutionLevels=4, maxLevelIterations=5, grayLevelModelSize=6, sampleAmount=5,
+def buildModel(radiographs, resolutionLevels=5, maxLevelIterations=5, grayLevelModelSize=7, sampleAmount=5,
                pClose=0.9, pcaComponents=20):
     # dict of toothnumber -> landmarks for tooth
     individualLandmarks = {}
@@ -52,7 +52,7 @@ def buildModel(radiographs, resolutionLevels=4, maxLevelIterations=5, grayLevelM
 
 if __name__ == '__main__':
     resolutionLevels = 4
-    radiographNumbers = list(range(4))
+    radiographNumbers = list(range(30))
 
     with util.Timer("Loading images"):
         radiographs = Radiograph.getRadiographs(numbers=radiographNumbers, resolutionLevels=resolutionLevels)

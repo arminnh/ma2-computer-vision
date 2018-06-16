@@ -47,9 +47,9 @@ class TeethActiveShapeModel:
 
         return self
 
-    def getTranslatedAndInverseScaledMeanMouth(self, x, y):
+    def getTranslatedAndInverseScaledMeanMouth(self, resolutionLevel, x, y):
         """ Returns the mean landmark rescaled back from unit variance (after procrustes) and translated to x and y. """
-        return self.meanMouthLandmark.scale(self.meanMouthScale).translate(x, y)
+        return self.meanMouthLandmark.scale(self.meanMouthScale*0.85).scale(0.5 ** resolutionLevel).translate(x, y)
 
     def doPCA(self):
         """ Perform PCA on the landmarks after procrustes analysis and store the eigenvalues and eigenvectors. """
@@ -67,11 +67,11 @@ class TeethActiveShapeModel:
 
         return self
 
-    def getShapeParametersForLandmark(self, toothNumber, landmark):
+    def getShapeParametersForToothLandmark(self, toothNumber, landmark):
         b = self.eigenvectors[toothNumber].T @ (landmark.points - self.meanLandmarks[toothNumber].points)
         return b.reshape((self.pcaComponents, -1))
 
-    def reconstructLandmarkForShapeParameters(self, toothNumber, b):
+    def reconstructToothLandmarkForShapeParameters(self, toothNumber, b):
         return Landmark(self.meanLandmarks[toothNumber].points + (self.eigenvectors[toothNumber] @ b).flatten())
 
     def buildGrayLevelModels(self):
@@ -83,18 +83,19 @@ class TeethActiveShapeModel:
         self.grayLevelModelPyramid = {}
 
         # Build a gray level model for each resolution level
-        for level in range(self.resolutionLevels):
+        for resolutionLevel in range(self.resolutionLevels):
             profilesForLandmarkPoints = {}
+            meanProfilesForLandmarkPoints = {}
             covarianceForLandmarkPoints = {}
 
             # Scale the landmarks down so that their coordinates fit in the image at this resolution level
-            scaledLandmarks = [l.scale(0.5**level) for l in self.mouthLandmarks]
+            scaledLandmarks = [l.scale(0.5 ** resolutionLevel) for l in self.mouthLandmarks]
 
             # Build gray level model for each landmark
             for i, landmark in enumerate(scaledLandmarks):
                 # Get the gray level profiles for each of the 40 landmark points
                 normalizedGrayLevelProfiles = landmark.normalizedGrayLevelProfilesForLandmarkPoints(
-                    img=landmark.radiograph.imgPyramid[level],
+                    img=landmark.radiograph.imgPyramid[resolutionLevel],
                     grayLevelModelSize=self.grayLevelModelSize
                 )
 
@@ -104,31 +105,33 @@ class TeethActiveShapeModel:
 
                     profilesForLandmarkPoints[j].append(normalizedProfile)
 
+            # Store the mean and covariance matrix of each landmark point's gray level profiles
             for pointIdx in range(len(profilesForLandmarkPoints)):
+                meanProfilesForLandmarkPoints[pointIdx] = np.mean(profilesForLandmarkPoints[pointIdx], axis=0)
+
                 cov = np.cov(np.transpose(profilesForLandmarkPoints[pointIdx]))
                 covarianceForLandmarkPoints[pointIdx] = linalg.pinv(cov)
 
-                # Replace each point's list of gray level profiles by their means
-                profilesForLandmarkPoints[pointIdx] = np.mean(profilesForLandmarkPoints[pointIdx], axis=0)
-
-            self.grayLevelModelPyramid[level] = {
-                "profilesForLandmarkPoints": profilesForLandmarkPoints,
+            self.grayLevelModelPyramid[resolutionLevel] = {
+                "meanProfilesForLandmarkPoints": meanProfilesForLandmarkPoints,
                 "covarianceForLandmarkPoints": covarianceForLandmarkPoints
             }
 
         return self
 
-    def mahalanobisDistance(self, normalizedGrayLevelProfile, landmarkPointIndex):
+    def mahalanobisDistance(self, resolutionLevel, landmarkPointIndex, normalizedGrayLevelProfile):
         """
         Returns the squared Mahalanobis distance of a new gray level profile from the built gray level model with index
         landmarkPointIndex.
         """
-        Sp = self.grayLevelModelCovarianceMatrices[landmarkPointIndex]
-        pMinusMeanTrans = (normalizedGrayLevelProfile - self.meanProfilesForLandmarkPoints[landmarkPointIndex])
+        Sp = self.grayLevelModelPyramid[resolutionLevel]["covarianceForLandmarkPoints"][landmarkPointIndex]
+        meanProfile = self.grayLevelModelPyramid[resolutionLevel]["meanProfilesForLandmarkPoints"][landmarkPointIndex]
+
+        pMinusMeanTrans = (normalizedGrayLevelProfile - meanProfile)
 
         return pMinusMeanTrans.T @ Sp @ pMinusMeanTrans
 
-    def findBetterFittingLandmark(self, img, landmark):
+    def findBetterFittingLandmark(self, resolutionLevel, img, landmark):
         """
         Active Shape Model Algorithm: An iterative approach to improving the fit of an instance X.
         Returns a landmark that is a better fit on the image than the given according to the gray level pointProfiles of
@@ -147,7 +150,7 @@ class TeethActiveShapeModel:
 
         # landmarkPointIdx = the points 0 to 39 on the landmark
         for landmarkPointIdx in range(len(profilesForLandmarkPoints)):
-            # landmarkPointProfiles = list of {grayLevelProfile, normalPoint, grayLevelProfilePoints}
+            # landmarkPointProfiles = list of {normalPoint, grayLevelProfile, grayLevelProfilePoints}
             landmarkPointProfiles = profilesForLandmarkPoints[landmarkPointIdx]
             distances = []
 
@@ -155,56 +158,55 @@ class TeethActiveShapeModel:
                 grayLevelProfile = profileContainer["grayLevelProfile"]
                 normalPoint = profileContainer["normalPoint"]
 
-                d = self.mahalanobisDistance(grayLevelProfile, landmarkPointIdx)
+                d = self.mahalanobisDistance(resolutionLevel, landmarkPointIdx, grayLevelProfile)
                 distances.append((abs(d), normalPoint))
-                print("Mahalanobis dist: {:.2f}, p: {}".format(abs(d), normalPoint))
 
             bestPoints.append(min(distances, key=lambda x: x[0])[1])
 
-        landmark = landmark.copy(np.asarray(bestPoints).flatten())
+        return landmark.copy(np.asarray(bestPoints).flatten())
 
-        # Find the pose parameters that best fit the new found points X
-        landmark, (translateX, translateY), scale, theta = landmark.superimpose(self.meanLandmarks)
-
-        # Apply constraints to the parameters b to ensure plausible shapes
-        b = self.getShapeParametersForLandmark(landmark)
-
-        # Constrain the shape parameters to lie within certain limits
-        for i in range(len(b)):
-            limit = 2 * np.sqrt(abs(self.eigenvalues[i]))
-            b[i] = np.clip(b[i], -limit, limit)
-
-        return self.reconstructLandmarkForShapeParameters(b) \
-            .rotate(-theta).scale(scale).translate(-translateX, -translateY)
-
-    def matchModelPointsToTargetPoints(self, landmarkY):
+    def matchModelPointsToTargetPoints(self, mouthLandmarkY):
         """
         A simple iterative approach towards finding the best pose and shape parameters to match a model instance X to a
         new set of image points Y.
         """
-        b = np.zeros((self.pcaComponents, 1))
-        diff = float("inf")
-        translateX = 0
-        translateY = 0
-        theta = 0
-        scale = 0
+        mouthLandmark = Landmark(points=np.asarray([]))
 
-        while diff > 1e-9:
-            # Generate model points using x = x' + Pb
-            x = self.reconstructLandmarkForShapeParameters(b)
+        for toothNumber in range(1, 9):
+            toothLandmarkY = Landmark(points=mouthLandmarkY.points[(toothNumber - 1) * 80:toothNumber * 80])
 
-            # Project Y into the model coordinate frame by superimposition
-            # and get the parameters of the transformation
-            y, (translateX, translateY), scale, theta = landmarkY.superimpose(x)
+            b = np.zeros((self.pcaComponents, 1))
+            diff = float("inf")
+            translateX = 0
+            translateY = 0
+            theta = 0
+            scale = 0
 
-            # Update the model parameters b
-            newB = self.getShapeParametersForLandmark(y)
+            while diff > 1e-9:
+                # Generate model points using x = x' + Pb
+                x = self.reconstructToothLandmarkForShapeParameters(toothNumber, b)
 
-            diff = scipy.spatial.distance.euclidean(b, newB)
-            b = newB
+                # Project Y into the model coordinate frame by superimposition and fetch the pose parameters
+                y, (translateX, translateY), scale, theta = toothLandmarkY.superimpose(x)
 
-        return self.reconstructLandmarkForShapeParameters(b) \
-            .rotate(-theta).scale(scale).translate(-translateX, -translateY)
+                # Update the shape parameters b
+                newB = self.getShapeParametersForToothLandmark(toothNumber, y)
+
+                # Apply constraints to the shape parameters b to ensure plausible shapes
+                toothEigenvalues = self.eigenvalues[toothNumber]
+                for i in range(len(newB)):
+                    limit = 3 * np.sqrt(abs(toothEigenvalues[i]))
+                    newB[i] = np.clip(newB[i], -limit, limit)
+
+                diff = scipy.spatial.distance.euclidean(b, newB)
+                b = newB
+
+            reconstructedTooth = self.reconstructToothLandmarkForShapeParameters(toothNumber, b) \
+                .rotate(-theta).scale(scale).translate(-translateX, -translateY)
+
+            mouthLandmark.points = np.concatenate((mouthLandmark.points, reconstructedTooth.points))
+
+        return mouthLandmark
 
     def reconstruct(self, landmarks):
         """
@@ -218,8 +220,8 @@ class TeethActiveShapeModel:
         for toothNumber, landmark in landmarks.items():
             superimposed, (translateX, translateY), scale, theta = landmark.superimpose(self.meanLandmarks[toothNumber])
 
-            b = self.getShapeParametersForLandmark(toothNumber, superimposed)
-            reconstructed = self.reconstructLandmarkForShapeParameters(toothNumber, b)
+            b = self.getShapeParametersForToothLandmark(toothNumber, superimposed)
+            reconstructed = self.reconstructToothLandmarkForShapeParameters(toothNumber, b)
             print("shape b = {}, shape eigenvectors = {}".format(b.shape, self.eigenvectors[toothNumber].shape))
 
             reconstructions.append(reconstructed.rotate(-theta).scale(scale).translate(-translateX, -translateY))

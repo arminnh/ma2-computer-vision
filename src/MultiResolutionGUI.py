@@ -33,7 +33,7 @@ class MultiResolutionGUI:
             if self.currentRadiographIndex < len(self.model.mouthLandmarks):
                 landmark = self.model.mouthLandmarks[self.currentRadiographIndex]
                 landmark = landmark.scale(0.5 ** self.currentResolutionLevel)
-                self.drawLandmark(landmark, color=180, thickness=1)
+                self.drawLandmark(landmark, color=130)
 
             cv2.imshow(self.name, img)
 
@@ -49,7 +49,10 @@ class MultiResolutionGUI:
                     cv2.setTrackbarPos("radiograph", self.name, self.currentRadiographIndex)
 
             elif pressed_key == ord("n"):
-                self.findBetterLandmark()
+                if self.currentLandmark is None:
+                    cv2.displayOverlay(self.name, "No landmark set yet!", 1000)
+                else:
+                    self.findBetterLandmark()
 
             elif pressed_key == ord("u"):
                 cv2.setTrackbarPos("resolution level", self.name, self.currentResolutionLevel + 1)
@@ -67,6 +70,13 @@ class MultiResolutionGUI:
         cv2.resizeWindow(self.name, 1000, 700)
         cv2.setMouseCallback(self.name, self.mouseListener)
         return self
+
+    # mouse callback function
+    def mouseListener(self, event, x, y, flags, param):
+        if event == cv2.EVENT_LBUTTONDOWN:
+            self.currentLandmark = self.model.getTranslatedAndInverseScaledMeanMouth(self.currentResolutionLevel, x, y)
+
+            self.drawLandMarkWithNormals(self.currentLandmark, withNormalLines=True, withGrayLevels=True)
 
     def refreshOverlay(self):
         cv2.displayOverlay(self.name, "Showing image {}".format(self.currentRadiographIndex), 1000)
@@ -124,43 +134,31 @@ class MultiResolutionGUI:
 
         return self
 
-    # mouse callback function
-    def mouseListener(self, event, x, y, flags, param):
-        if event == cv2.EVENT_LBUTTONDOWN:
-            self.currentLandmark = self.model.getTranslatedAndInverseScaledMeanMouth(x, y)
-
-            self.drawLandMarkWithNormals(self.currentLandmark, withGrayLevels=True)
-
-    def drawLandmark(self, landmark, color, thickness=1):
+    def drawLandmark(self, landmark, color):
         points = landmark.getPointsAsTuples().round().astype(int)
 
-        for i in range(int(len(points) / 40)):
-            subpoints = list(points[i * 40:(i + 1) * 40])
-            subpoints.append(subpoints[0])
-            subpoints = np.asarray(subpoints)
-
-            for j, (x, y) in enumerate(subpoints):
-                (x2, y2) = subpoints[(j + 1) % 40]
-
-                cv2.line(self.img, (x, y), (x2, y2), color, thickness)
-
-    def drawLandMarkWithNormals(self, landmark, color=255, withGrayLevels=False):
-        points = landmark.getPointsAsTuples().round().astype(int)
-
-        self.drawLandmark(landmark, color, thickness=3)
-
-        # draw normal lines
         for i in range(int(len(points) / 40)):
             subpoints = points[i * 40:(i + 1) * 40]
-            # subpoints.append(subpoints[0])
-            # subpoints = np.asarray(subpoints)
 
-            for j in range(len(subpoints)):
-                m = util.getNormalSlope(subpoints[j - 1], subpoints[j], subpoints[(j + 1) % len(subpoints)])
-                normalPoints = np.asarray(util.sampleLine(m, subpoints[j], self.model.sampleAmount))
+            for j, (x, y) in enumerate(subpoints):
+                (x2, y2) = subpoints[(j + 1) % len(subpoints)]
 
-                for x, y in normalPoints:
-                    cv2.circle(self.img, (x, y), 1, 255, 1)
+                cv2.line(self.img, (x, y), (x2, y2), color, 1)
+
+    def drawLandMarkWithNormals(self, landmark, color=255, withNormalLines=False, withGrayLevels=False):
+        points = landmark.getPointsAsTuples().round().astype(int)
+
+        # draw normal lines
+        if withNormalLines:
+            for i in range(int(len(points) / 40)):
+                subpoints = points[i * 40:(i + 1) * 40]
+
+                for j in range(len(subpoints)):
+                    m = util.getNormalSlope(subpoints[j - 1], subpoints[j], subpoints[(j + 1) % len(subpoints)])
+                    normalPoints = np.asarray(util.sampleLine(m, subpoints[j], self.model.sampleAmount))
+
+                    for x, y in normalPoints:
+                        cv2.line(self.img, (x, y), (x, y), 255, 1)
 
         # draw gray level profiles
         if withGrayLevels:
@@ -177,6 +175,8 @@ class MultiResolutionGUI:
                     grayLevelProfilePoints = profileContainer["grayLevelProfilePoints"]
                     self.drawGrayLevelProfile(grayLevelProfilePoints, grayLevelProfile)
 
+        self.drawLandmark(landmark, color)
+
     def findBetterLandmark(self):
         """
         Execute an iteration of "matching model points to target points"
@@ -187,11 +187,16 @@ class MultiResolutionGUI:
         i = 0
 
         while d > 1 and i < 1:
-            newTargetPoints = self.model.findBetterFittingLandmark(
-                self.currentRadiograph.imgPyramid[self.currentResolutionLevel].copy(), previousLandmark)
-            improvedLandmark = self.model.matchModelPointsToTargetPoints(newTargetPoints)
+            newTargetLandmark = self.model.findBetterFittingLandmark(
+                resolutionLevel=self.currentResolutionLevel,
+                img=self.currentRadiograph.imgPyramid[self.currentResolutionLevel].copy(),
+                landmark=previousLandmark
+            )
 
-            d = improvedLandmark.shapeDistance(previousLandmark)
+            improvedLandmark = self.model.matchModelPointsToTargetPoints(newTargetLandmark)
+            # improvedLandmark = newTargetLandmark
+
+            # d = improvedLandmark.shapeDistance(previousLandmark)
             previousLandmark = improvedLandmark
 
             i += 1
@@ -203,4 +208,4 @@ class MultiResolutionGUI:
 
     def drawGrayLevelProfile(self, points, profile):
         for i, point in enumerate(points):
-            cv2.circle(self.img, point, 1, int(profile[i]), 2)
+            cv2.line(self.img, point, point, int(profile[i]), 1)
