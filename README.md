@@ -26,5 +26,7 @@ Then the user can use this converged model as initial placement by clicking on t
 This will draw the model for a separate tooth at that location. The user can then click on the key 'n' to converge this model.
 
 If the user wants to automatically segment a tooth press on the key 'a' and wait until the process is done.
+This will automatically put the initialization model, perform ASM with it, then initialize the tooth model on the correct
+location in this converged initialization model.
 
 # User guide for 'gui_multi_resolution_search'
