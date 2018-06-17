@@ -130,6 +130,10 @@ def loadRadiographImage(radiographFilename, pyramidLevels):
     # Open the radiograph image in grayscale.
     img = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
 
+    origImg = img.copy()
+    # Save original size
+    (origY, origX) = img.shape
+
     # Select a region of interest
     img, XOffset, YOffset = cropRegionOfInterest(img)
 
@@ -155,4 +159,4 @@ def loadRadiographImage(radiographFilename, pyramidLevels):
         imgUpperJaw[y + 1:-1, x] = 0
         imgLowerJaw[0:y, x] = 0
 
-    return imgPyramid, imgUpperJaw, imgLowerJaw, jawSplitLine, XOffset, YOffset
+    return imgPyramid, imgUpperJaw, imgLowerJaw, jawSplitLine, XOffset, YOffset, (origX, origY), origImg

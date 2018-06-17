@@ -129,7 +129,7 @@ def sampleLine(m, current, pixelsToSample):
     pEnd = (x + xOffset)
 
     # 2 * pixelsToSample + 1 => as in "we have 2k+1 samples which can be put into a vector
-    X = np.linspace(pStart, pEnd, 2 * pixelsToSample + 1)
+    X = np.linspace(pStart, pEnd, pixelsToSample+1)
     Y = m * (X - current[0]) + b
 
     X = X.round().astype(int)

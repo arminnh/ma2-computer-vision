@@ -51,7 +51,12 @@ if __name__ == '__main__':
     radiographNumbers = list(range(0, 20))
 
     with util.Timer("Loading images"):
-        radiographs = Radiograph.getRadiographs(numbers=radiographNumbers, resolutionLevels=resolutionLevels)
+        radiographs = Radiograph.getRadiographs(
+            numbers=radiographNumbers,
+            extra=False,
+            resolutionLevels=resolutionLevels,
+            withMirrored=True
+        )
 
     model = buildModel(radiographs, resolutionLevels=resolutionLevels)
 
@@ -70,8 +75,9 @@ if __name__ == '__main__':
             if radiographNumber not in radiographNumbers:
                 radiographs += Radiograph.getRadiographs(
                     numbers=[radiographNumber],
+                    extra=True,
                     resolutionLevels=resolutionLevels,
-                    extra=True
+                    withMirrored=True,
                 )
 
     gui = MultiResolutionGUI(radiographs, model)
