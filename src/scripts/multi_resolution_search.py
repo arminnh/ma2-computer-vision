@@ -48,7 +48,7 @@ def buildModel(radiographs, resolutionLevels=5, maxLevelIterations=20, grayLevel
 
 if __name__ == '__main__':
     resolutionLevels = 5
-    radiographNumbers = list(range(2, 14))
+    radiographNumbers = list(range(0, 20))
 
     with util.Timer("Loading images"):
         radiographs = Radiograph.getRadiographs(numbers=radiographNumbers, resolutionLevels=resolutionLevels)
@@ -66,7 +66,7 @@ if __name__ == '__main__':
 
     # Load other radiographs for GUI but do not load the ones above again
     with util.Timer("Loading remaining images (without landmarks)"):
-        for radiographNumber in range(20):
+        for radiographNumber in range(25):
             if radiographNumber not in radiographNumbers:
                 radiographs += Radiograph.getRadiographs(
                     numbers=[radiographNumber],

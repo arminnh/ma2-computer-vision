@@ -12,14 +12,14 @@ def listToTuples(p):
 
 
 def plotLandmarks(landmarks: List[Landmark], title):
+    plt.figure()
     plt.title(title)
+    ax = plt.gca()
+
     for l in landmarks:
         points = l.getPointsAsTuples()
-        for i in range(int(len(points))):
-            plt.plot(points[:, 0], points[:, 1])
+        plt.plot(points[:, 0], points[:, 1])
 
-    # plt.plot(x1, y1, x2, y2, marker='o')
-    ax = plt.gca()
     ax.set_ylim(ax.get_ylim()[::-1])
     plt.axis("equal")
     plt.show()

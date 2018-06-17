@@ -27,14 +27,14 @@ class MultiResolutionGUI:
             # clone the img
             img = self.img.copy()
 
-            yMax, xMax = img.shape
-            cv2.line(img, (int(xMax / 2), 0), (int(xMax / 2), int(yMax)), 255, 1)
-            cv2.line(img, (0, int(yMax / 2)), (xMax, int(yMax / 2)), 255, 1)
+            # yMax, xMax = img.shape
+            # cv2.line(img, (int(xMax / 2), 0), (int(xMax / 2), int(yMax)), 255, 1)
+            # cv2.line(img, (0, int(yMax / 2)), (xMax, int(yMax / 2)), 255, 1)
 
-            if self.currentRadiographIndex < len(self.model.mouthLandmarks):
-                landmark = self.model.mouthLandmarks[self.currentRadiographIndex]
-                landmark = landmark.scale(0.5 ** self.currentResolutionLevel)
-                self.drawLandmark(landmark, color=130)
+            # if self.currentRadiographIndex < len(self.model.mouthLandmarks):
+            #     landmark = self.model.mouthLandmarks[self.currentRadiographIndex]
+            #     landmark = landmark.scale(0.5 ** self.currentResolutionLevel)
+            #     self.drawLandmark(landmark, color=130)
 
             cv2.imshow(self.name, img)
 
@@ -99,7 +99,7 @@ class MultiResolutionGUI:
         meanSplitLine = self.currentRadiograph.jawSplitLine[:, 1].mean() * 0.5 ** self.currentResolutionLevel
         self.mouthMiddle = int(round(meanSplitLine))
 
-        cv2.line(self.img, (0, self.mouthMiddle), (xMax, self.mouthMiddle), 180, 1)
+        # cv2.line(self.img, (0, self.mouthMiddle), (xMax, self.mouthMiddle), 180, 1)
 
     def setCurrentImage(self, idx):
         self.currentRadiographIndex = idx
