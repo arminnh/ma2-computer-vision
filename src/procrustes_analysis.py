@@ -36,7 +36,7 @@ def performProcrustesAnalysis(landmarks: List[Landmark]):
 
     mean_theta = 0
     mean_scale = reference.getScale()
-    reference.normalize()
+    reference = reference.normalize()
 
     d = 10000
     iteration = 1

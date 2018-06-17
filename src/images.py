@@ -34,10 +34,10 @@ def getPixelProfile(img, points, derive):
 def preprocessRadiographImage(image, transformations=None):
     if transformations is None:
         transformations = [
-            bilateralFilter,
             applyCLAHE,
             bilateralFilter,
             applyCLAHE,
+            bilateralFilter,
         ]
 
     for transform in transformations:

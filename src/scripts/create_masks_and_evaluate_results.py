@@ -144,7 +144,7 @@ class MaskGenerator:
             tmpGroundTruth += groundTruth
 
         # Our colored pixels
-        ourIx = np.where(tmpGroundTruth > 0)
+        ourIx = np.where(tmpPrediction > 0)
         ourPixelsIx = set(zip(ourIx[0], ourIx[1]))
 
         # Our black pixels
@@ -152,7 +152,7 @@ class MaskGenerator:
         ourBlackPixels = set(zip(ourBlackPixels[0], ourBlackPixels[1]))
 
         # Ground truth colored pixels
-        grdTr = np.where(tmpPrediction > 0)
+        grdTr = np.where(tmpGroundTruth > 0)
         groundTruthPixelsIx = set(zip(grdTr[0], grdTr[1]))
 
         # Ground truth black pixels
