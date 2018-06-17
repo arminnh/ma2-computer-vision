@@ -134,7 +134,7 @@ class ToothModel:
 
                 d = self.mahalanobisDistance(grayLevelProfile, landmarkPointIdx)
                 distances.append((abs(d), normalPoint))
-                print("Mahalanobis dist: {:.2f}, p: {}".format(abs(d), normalPoint))
+                # print("Mahalanobis dist: {:.2f}, p: {}".format(abs(d), normalPoint))
 
             bestPoints.append(min(reversed(distances), key=lambda x: x[0])[1])
 
