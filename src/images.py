@@ -142,8 +142,9 @@ def loadRadiographImage(radiographFilename, pyramidLevels):
 
     # create gaussian image pyramid. level 0 = original image. each level higher is subsampled and blurred
     imgPyramid = [img]
-    for i in range(pyramidLevels - 1):
-        imgPyramid.append(cv2.pyrDown(imgPyramid[-1]))
+    if pyramidLevels > 0:
+        for i in range(pyramidLevels - 1):
+            imgPyramid.append(cv2.pyrDown(imgPyramid[-1]))
 
     # Split image in two: upper and lower jaw
     # Find line to split jaws into two images. Only search in a certain y range.

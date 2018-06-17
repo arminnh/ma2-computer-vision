@@ -3,7 +3,7 @@ import util
 from preprocess_img import *
 
 
-class GUI:
+class GUISingleResolution:
 
     def __init__(self, radiographs, models, incisorModels):
         self.name = "Computer Vision KU Leuven"
@@ -78,11 +78,11 @@ class GUI:
             elif pressed_key == ord("e"):
                 if self.showEdges:
                     self.showEdges = False
-                    cv2.displayOverlay(self.name, "Edges turned OFF!", 100)
+                    cv2.displayOverlay(self.name, "Edges turned OFF!", 1000)
 
                 else:
                     self.showEdges = True
-                    cv2.displayOverlay(self.name, "Edges turned ON!", 100)
+                    cv2.displayOverlay(self.name, "Edges turned ON!", 1000)
 
             elif pressed_key == ord("p"):
                 self.preprocessCurrentRadiograph()
@@ -91,7 +91,10 @@ class GUI:
                 self.findBetterToothCenters()
 
             elif pressed_key == ord("n"):
-                self.findBetterLandmark()
+                if self.currentLandmark is None:
+                    cv2.displayOverlay(self.name, "No landmark set yet!", 1000)
+                else:
+                    self.findBetterLandmark()
 
             elif pressed_key == ord("u"):
                 self.showUpperJaw()
@@ -133,7 +136,7 @@ class GUI:
         return self
 
     def refreshCurrentImage(self):
-        self.img = self.currentRadiograph.img.copy()
+        self.img = self.currentRadiograph.imgPyramid[0].copy()
 
         jawSplitLine = self.currentRadiograph.jawSplitLine
         for i, (x, y) in enumerate(jawSplitLine):
@@ -238,7 +241,7 @@ class GUI:
             else:
                 img = self.currentRadiograph.imgUpperJaw
             if self.currentToothModel.name == -1:
-                img = self.currentRadiograph.img
+                img = self.currentRadiograph.imgPyramid[0]
             profilesForLandmarkPoints = landmark.getGrayLevelProfilesForNormalPoints(
                 img=img,
                 sampleAmount=self.currentToothModel.sampleAmount,
@@ -279,7 +282,7 @@ class GUI:
             jawImg = self.currentRadiograph.imgLowerJaw
 
         if self.currentToothModel.name == -1:
-            jawImg = self.currentRadiograph.img
+            jawImg = self.currentRadiograph.imgPyramid[0]
 
         while i < 10:
             newTargetPoints = self.currentToothModel.findBetterFittingLandmark(jawImg, previousLandmark)
@@ -332,7 +335,7 @@ class GUI:
             for i, m in enumerate(self.toothModels):
                 currentCenterForModel = oldCenters[i]
                 distance, newCenter = m.initializationModel.getBetterCenter(
-                    img=self.currentRadiograph.img,
+                    img=self.currentRadiograph.imgPyramid[0],
                     currentCenter=currentCenterForModel
                 )
                 self.toothCenters[i] = newCenter

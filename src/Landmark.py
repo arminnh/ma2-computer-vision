@@ -24,7 +24,7 @@ class Landmark:
 
     def getCorrectRadiographPart(self):
         if self.toothNumber == -1:
-            return self.radiograph.img
+            return self.radiograph.imgPyramid[0]
 
         if self.toothNumber > 4:
             return self.radiograph.imgLowerJaw

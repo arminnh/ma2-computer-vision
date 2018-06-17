@@ -102,7 +102,7 @@ class Radiograph:
         #     segment.imgshow()
 
 
-def getRadiographs(numbers=None, extra=False, resolutionLevels=5, withMirrored=False):
+def getRadiographs(numbers=None, extra=False, resolutionLevels=0, withMirrored=False):
     numbers = ["%02d" % n for n in numbers] if numbers is not None else []
     radiographs = []
 

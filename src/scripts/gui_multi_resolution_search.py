@@ -7,7 +7,7 @@ import numpy as np
 
 import Radiograph
 import util
-from MultiResolutionGUI import MultiResolutionGUI
+from GUIMultiResolution import MultiResolutionGUI
 from Landmark import Landmark
 from models import MultiResolutionASM
 
