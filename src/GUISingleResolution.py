@@ -273,7 +273,7 @@ class GUISingleResolution:
         model points are defined by the model, target points by the 'bestLandmark'
         """
         previousLandmark = self.currentLandmark
-        d = 2
+        d = float("inf")
         i = 0
 
         if self.currentToothModel.name <= 4:
@@ -284,7 +284,7 @@ class GUISingleResolution:
         if self.currentToothModel.name == -1:
             jawImg = self.currentRadiograph.imgPyramid[0]
 
-        while i < 10:
+        while i < 10 and d > 10:
             newTargetPoints = self.currentToothModel.findBetterFittingLandmark(jawImg, previousLandmark)
             improvedLandmark = self.currentToothModel.matchModelPointsToTargetPoints(newTargetPoints)
 
