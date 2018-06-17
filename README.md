@@ -1,7 +1,8 @@
 # ma2-computer-vision
 
-As stated in our report we have implemented two different ways to initialize the active shape models.
-Therefore we have created two different GUI's such that the user can test both of these initialization methods.
+All the segmented overlays can be found in the folder 'overlays'.
+In this folder we have two different folders, one for each of the two initialization models described in the paper.
+For these initialization models we have created two different GUI's such that the user can test both of them.
 Both scripts to run these GUI's can be found in src/scripts under the name 'gui_initalization_model_search' and
 'gui_multi_resolution_search'.
 To run one of these two scripts just run the following command:
