@@ -3,11 +3,10 @@ import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
-import models.ToothModel
-import models.InitializationModel
 import util
 import Radiograph
 from GUI import GUI
+from models import ToothModel, InitializationModel
 
 if __name__ == '__main__':
     radiographNumbers = util.RADIOGRAPH_NUMBERS
@@ -18,9 +17,9 @@ if __name__ == '__main__':
         radiographNumbers = list(range(15))
         radiographs = Radiograph.getRadiographs(radiographNumbers)
 
-    initModels = models.InitializationModel.buildModels(radiographs)
+    initModels = InitializationModel.buildModels(radiographs)
     with util.Timer("Building active shape models"):
-        models = models.ToothModel.buildModels(radiographs, PCAComponents, sampleAmount)
+        models = ToothModel.buildModels(radiographs, PCAComponents, sampleAmount)
 
     # Load other radiographs for GUI but do not load the ones above again
     with util.Timer("Loading remaining images (without landmarks)"):

@@ -1,19 +1,24 @@
-import glob
 import os
+import sys
+
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+
+import glob
 
 import cv2
 import numpy as np
 
 import Radiograph
 import util
-import models.active_shape_model as asm
+from models import ToothModel, InitializationModel
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "../../", "resources", "data")
+
 
 class MaskGenerator:
 
     def __init__(self, radiograph, models, incisorModels):
-        self.meanSplitLine = int(np.mean(radiograph.jawSplitLine[:,1]))
+        self.meanSplitLine = int(np.mean(radiograph.jawSplitLine[:, 1]))
         self.currentRadiograph = radiograph
         self.currentToothModel = None
         self.incisorModels = incisorModels
@@ -23,13 +28,13 @@ class MaskGenerator:
         self.currentLandmark = None
 
     def initIncisorModels(self, modelNr=0):
-        _,x = self.img.shape
+        _, x = self.img.shape
         self.currentToothModel = self.incisorModels[modelNr]
 
         self.currentLandmark = self.incisorModels[modelNr].initLandmark(self.meanSplitLine, x)
-        #centers = self.incisorModels[model].getCentersOfInitModel(self.currentLandmark)
+        # centers = self.incisorModels[model].getCentersOfInitModel(self.currentLandmark)
 
-        #for c in centers:
+        # for c in centers:
         #    orig = (int(c[0]), int(c[1]))
         #    cv2.circle(self.img, orig, 20, 255, 3)
 
@@ -191,15 +196,15 @@ if __name__ == '__main__':
         radiographNumbers = list(range(15))
         radiographs = Radiograph.getRadiographs(radiographNumbers)
 
-    initModels = asm.buildInitModels(radiographs)
+    initModels = InitializationModel.buildModels(radiographs)
     with util.Timer("Building active shape models"):
-        models = asm.buildActiveShapeModels(radiographs, PCAComponents, sampleAmount)
+        models = ToothModel.buildModels(radiographs, PCAComponents, sampleAmount)
 
     for r in radiographs:
         gen = MaskGenerator(r, models, initModels)
 
         # Generate 8 different masks
-        #gen.generateMaskForAllTeeth()
+        # gen.generateMaskForAllTeeth()
 
         # Generate 1 mask that consists of our predicted teeth and the ground truth
         # and
