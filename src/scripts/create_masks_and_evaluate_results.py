@@ -22,7 +22,7 @@ class MaskGenerator:
         self.currentRadiograph = radiograph
         self.currentToothModel = None
         self.incisorModels = incisorModels
-        self.img = radiograph.img
+        self.img = radiograph.imgPyramid[0]
         self.toothModels = models
         self.currentInitLandmark = None
         self.currentLandmark = None
@@ -189,7 +189,7 @@ class MaskGenerator:
 
 if __name__ == '__main__':
     # radiographNumbers = util.RADIOGRAPH_NUMBERS
-    radiographNumbers = list(range(15))
+    radiographNumbers = list(range(4))
     PCAComponents = util.PCA_COMPONENTS
     sampleAmount = util.SAMPLE_AMOUNT
 
