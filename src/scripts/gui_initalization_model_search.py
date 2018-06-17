@@ -23,7 +23,7 @@ if __name__ == '__main__':
 
     # Load other radiographs for GUI but do not load the ones above again
     with util.Timer("Loading remaining images (without landmarks)"):
-        for radiographNumber in range(4):
+        for radiographNumber in range(30):
             if radiographNumber not in radiographNumbers:
                 radiographs.append(Radiograph.getRadiographs(numbers=[radiographNumber], extra=True)[0])
 
