@@ -9,41 +9,7 @@ import Radiograph
 import util
 from MultiResolutionGUI import MultiResolutionGUI
 from Landmark import Landmark
-from models.TeethActiveShapeModel import TeethActiveShapeModel
-
-
-def buildModel(radiographs, resolutionLevels=5, maxLevelIterations=20, grayLevelModelSize=7, sampleAmount=3,
-               pcaComponents=25):
-    mouthLandmarks = []  # list of landmarks that contain all 8 teeth
-
-    for rad in radiographs:
-        mouthLandmark = Landmark(np.asarray([]), radiographFilename=None, toothNumber=-1)
-        mouthLandmark.radiograph = rad
-
-        for toothNumber, landmark in sorted(rad.landmarks.items(), key=lambda i: i[0]):
-            mouthLandmark.points = np.concatenate((mouthLandmark.points, landmark.points))
-
-        mouthLandmarks.append(mouthLandmark)
-
-    model = TeethActiveShapeModel(
-        mouthLandmarks=mouthLandmarks,
-        resolutionLevels=resolutionLevels,
-        maxLevelIterations=maxLevelIterations,
-        grayLevelModelSize=grayLevelModelSize,
-        sampleAmount=sampleAmount,
-        pcaComponents=pcaComponents
-    )
-
-    with util.Timer("Building multi resolution active shape model: Gray level models"):
-        model.buildGrayLevelModels()
-
-    with util.Timer("Building multi resolution active shape model: Procrustes analysis"):
-        model.doProcrustesAnalysis()
-
-    with util.Timer("Building multi resolution active shape model: PCA"):
-        model.doPCA()
-
-    return model
+from models.MultiResolutionASM import TeethActiveShapeModel
 
 
 if __name__ == '__main__':

@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 import util
-from models import TeethActiveShapeModel
+from models import MultiResolutionASM
 
 
 class MultiResolutionGUI:
@@ -12,7 +12,7 @@ class MultiResolutionGUI:
         self.radiographs = radiographs
         self.currentRadiograph = None
         self.currentRadiographIndex = 0
-        self.model = teethActiveShapeModel  # type: TeethActiveShapeModel
+        self.model = teethActiveShapeModel  # type: MultiResolutionASM
         self.currentResolutionLevel = self.model.resolutionLevels - 1
         self.mouthMiddle = 0
         self.img = None

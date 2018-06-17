@@ -3,12 +3,13 @@ import scipy.spatial.distance
 from scipy import linalg
 
 import procrustes_analysis
+import util
 from Landmark import Landmark
-from models.InitializationModel import InitializationModel
+from models.CenterInitializationModel import CenterInitializationModel
 
 
 class ToothModel:
-    def __init__(self, name, landmarks, pcaComponents, sampleAmount, projectY=False):
+    def __init__(self, name, landmarks, pcaComponents, sampleAmount):
         self.name = name
         self.landmarks = landmarks
         self.preprocessedLandmarks = []
@@ -21,8 +22,7 @@ class ToothModel:
         self.sampleAmount = sampleAmount
         self.meanProfilesForLandmarkPoints = {}
         self.grayLevelModelCovarianceMatrices = {}
-        self.initializationModel = InitializationModel(landmarks, 28)  # TODO
-        self.projectYIntoTangentPlane = projectY
+        self.initializationModel = CenterInitializationModel(landmarks, 28)  # TODO
 
     def doProcrustesAnalysis(self):
         # procrustes_analysis.drawLandmarks(self.landmarks, "before")
@@ -203,3 +203,32 @@ class ToothModel:
 
         print("shape b = {}, shape eigenvectors = {}".format(b.shape, self.eigenvectors.shape))
         return reconstructed
+
+
+def buildModels(radiographs, PCAComponents, sampleAmount):
+    # 1.1 Load the provided landmarks into your program
+    landmarks = []
+    for radiograph in radiographs:
+        landmarks += list(radiograph.landmarks.values())
+
+    # 1.2 Pre-process the landmarks to normalize translation, rotation, and scale differences
+    models = []
+    for t in util.TEETH:
+        models.append(
+            ToothModel(
+                name=t,
+                landmarks=[l for l in landmarks if l.toothNumber == t],
+                pcaComponents=PCAComponents,
+                sampleAmount=sampleAmount,
+            )
+                .buildGrayLevelModels()
+                .doProcrustesAnalysis()
+        )
+
+    # 1.3 Analyze the data using a Principal Component Analysis (PCA), exposing shape class variations
+    for model in models:
+        model.doPCA()
+        # model.reconstruct()
+
+    # Build gray level model for each point of the mean landmarks of the models
+    return models
