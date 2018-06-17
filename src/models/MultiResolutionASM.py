@@ -200,7 +200,8 @@ class TeethActiveShapeModel:
             landmark = improvedLandmark
 
             i += 1
-            print("Multi resolution search: resolution {}, iteration {}, distance {:.2f}".format(resolutionLevel, i, d))
+            print("Multi resolution search: resolution {}, iteration {}, shape distance {:.2f}"
+                  .format(resolutionLevel, i, d))
 
         return landmark
 
