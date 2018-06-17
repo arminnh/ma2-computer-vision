@@ -26,7 +26,6 @@ class Landmark:
         if self.toothNumber == -1:
             return self.radiograph.img
 
-
         if self.toothNumber > 4:
             return self.radiograph.imgLowerJaw
         return self.radiograph.imgUpperJaw

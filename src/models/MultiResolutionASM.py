@@ -3,6 +3,7 @@ import scipy.spatial.distance
 from scipy import linalg
 
 import procrustes_analysis
+import util
 from Landmark import Landmark
 
 

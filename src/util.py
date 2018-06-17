@@ -6,7 +6,6 @@ import time
 import numpy as np
 import scipy.interpolate
 
-
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "resources", "data")
 
 RADIOGRAPH_NUMBERS = list(range(1, 15))
@@ -129,7 +128,7 @@ def sampleLine(m, current, pixelsToSample):
     pEnd = (x + xOffset)
 
     # 2 * pixelsToSample + 1 => as in "we have 2k+1 samples which can be put into a vector
-    X = np.linspace(pStart, pEnd, pixelsToSample+1)
+    X = np.linspace(pStart, pEnd, pixelsToSample + 1)
     Y = m * (X - current[0]) + b
 
     X = X.round().astype(int)
@@ -154,9 +153,9 @@ def getNormalSlope(before, current, nextt):
     m = -1 / tangentLineSlope if tangentLineSlope != 0 else 0
     return m
 
+
 def getCentersOfInitModel(landmark):
     points = landmark.getPointsAsTuples()
 
-    splitted = [list(points[40*i:40*(i+1)]) for i in range(4)]
-    return np.mean(splitted,1)
-
+    split = [list(points[40 * i:40 * (i + 1)]) for i in range(4)]
+    return np.mean(split, 1)

@@ -1,10 +1,11 @@
-import os
-import cv2
 import glob
+import os
+
+import cv2
 import numpy as np
 
-
 DATA_DIR = os.path.join(os.path.dirname(__file__), "../../", "resources", "data")
+
 
 def compareSegmentations(numbers):
     numbers = ["%02d" % n for n in numbers] if numbers is not None else []
@@ -12,27 +13,26 @@ def compareSegmentations(numbers):
     ourSegmentationDir = "output/"
 
     for n in numbers:
-        predicted = glob.glob(ourSegmentationDir+"predicted_{}-*.png".format(n))
+        predicted = glob.glob(ourSegmentationDir + "predicted_{}-*.png".format(n))
         tmpGroundTruth = None
         tmpPrediction = None
         for i, pred in enumerate(predicted):
             ourImg = cv2.imread(pred, cv2.IMREAD_GRAYSCALE)
             groundTruth = cv2.imread(truthSegmentationDir + "{}-{}.png".format(n, i), cv2.IMREAD_GRAYSCALE)
 
-            if i ==0:
+            if i == 0:
                 tmpGroundTruth = np.zeros_like(ourImg)
                 tmpPrediction = np.zeros_like(ourImg)
 
             tmpGroundTruth += groundTruth
             tmpPrediction += ourImg
 
-
         # Our colored pixels
         ourIx = np.where(tmpGroundTruth > 0)
         ourPixelsIx = set(zip(ourIx[0], ourIx[1]))
 
         # Our black pixels
-        ourBlackPixels =  np.where(tmpPrediction == 0)
+        ourBlackPixels = np.where(tmpPrediction == 0)
         ourBlackPixels = set(zip(ourBlackPixels[0], ourBlackPixels[1]))
 
         # Ground truth colord pixels
@@ -49,8 +49,8 @@ def compareSegmentations(numbers):
         fn = len(ourBlackPixels - groundBlackPixels)
 
         acc = (tp + tn) / (tp + fp + tn + fn)
-        prec = tp / (tp+fp)
-        rec = tp / (tp+fn)
+        prec = tp / (tp + fp)
+        rec = tp / (tp + fn)
 
         print("Accuracy: {:.2f}%".format(acc * 100))
         print("Precision: {:.2f}%".format(prec * 100))
@@ -60,5 +60,5 @@ def compareSegmentations(numbers):
         finalOverlay = tmpGroundTruth + tmpPrediction
         cv2.imwrite("output/final_{}.png".format(n), finalOverlay)
 
-compareSegmentations(range(1,2))
 
+compareSegmentations(range(1, 2))

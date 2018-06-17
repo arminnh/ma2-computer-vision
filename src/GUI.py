@@ -179,8 +179,8 @@ class GUI:
         for i, (x, y) in enumerate(jawSplitLine):
             if i > 0:
                 cv2.line(self.img, (jawSplitLine[i - 1][0], jawSplitLine[i - 1][1]), (x, y), 255, 2)
-        self.meanSplitLine = int(np.mean(jawSplitLine[:,1]))
-        cv2.line(self.img, (0,self.meanSplitLine), (self.img.shape[1],self.meanSplitLine), 200, 2)
+        self.meanSplitLine = int(np.mean(jawSplitLine[:, 1]))
+        cv2.line(self.img, (0, self.meanSplitLine), (self.img.shape[1], self.meanSplitLine), 200, 2)
 
     def setCurrentImage(self, idx):
         self.currentRadiographIndex = idx
@@ -386,14 +386,14 @@ class GUI:
         self.refreshCurrentImage()
 
     def initIncisorModels(self, modelNr=0):
-        _,x = self.img.shape
+        _, x = self.img.shape
         self.currentToothModel = self.incisorModels[modelNr]
 
         self.currentLandmark = self.incisorModels[modelNr].initLandmark(self.meanSplitLine, x)
         self.drawLandMarkWithNormals(self.currentLandmark, grayLevels=True)
-        #centers = self.incisorModels[model].getCentersOfInitModel(self.currentLandmark)
+        # centers = self.incisorModels[model].getCentersOfInitModel(self.currentLandmark)
 
-        #for c in centers:
+        # for c in centers:
         #    orig = (int(c[0]), int(c[1]))
         #    cv2.circle(self.img, orig, 20, 255, 3)
 
@@ -433,7 +433,7 @@ class GUI:
         self.currentToothModel = currentToothModel
 
         # Get the starting pos of the tooth
-        (x,y) = origins[(currentToothModel.name-1)%len(origins)]
+        (x, y) = origins[(currentToothModel.name - 1) % len(origins)]
 
         # init tooth at that position
         self.currentLandmark = self.currentToothModel.getTranslatedAndInverseScaledMean(x, y)
@@ -452,7 +452,7 @@ class GUI:
         oldModel = self.currentToothModel
 
         # For each model we will get a landmark
-        for i,model in enumerate(self.toothModels):
+        for i, model in enumerate(self.toothModels):
             # Create empty mask
             mask = np.zeros_like(self.currentRadiograph.origImg)
 
@@ -465,7 +465,7 @@ class GUI:
             # Get the current landmark
             landmark = self.currentLandmark
 
-            points = np.asarray([(-offsetX+int(p[0]),-offsetY+int(p[1])) for p in landmark.getPointsAsTuples()])
+            points = np.asarray([(-offsetX + int(p[0]), -offsetY + int(p[1])) for p in landmark.getPointsAsTuples()])
 
             cv2.fillPoly(mask, [points], 255)
 
@@ -475,5 +475,3 @@ class GUI:
             cv2.imwrite('output/predicted_{}-{}.png'.format(self.currentRadiograph.number, i), masked_image)
 
         self.currentToothModel = oldModel
-
-
