@@ -20,8 +20,6 @@ class GUI:
         self.preprocess = False
         self.currentLandmark = None
         self.showEdges = False
-        self.c = 0
-        self.blockSize = 3
 
     def open(self):
         self.createWindow()
@@ -54,47 +52,12 @@ class GUI:
             # Key Listeners
             pressed_key = cv2.waitKey(50)
 
-            if pressed_key == ord("`"):
-                self.c = 0
-                self.blockSize = 3
+            # quit
+            if pressed_key == ord("q"):
+                break
 
-            if pressed_key == ord("1"):
-                self.img = cv2.medianBlur(self.img, 29)
-
-            if pressed_key == ord("2"):
-                self.c += 1
-                print(self.c)
-                self.refreshCurrentImage()
-                self.img = cv2.adaptiveThreshold(self.img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY,
-                                                 self.blockSize, self.c)
-
-            if pressed_key == ord("3"):
-                self.blockSize += 2
-                print(self.blockSize)
-                self.refreshCurrentImage()
-                self.img = cv2.adaptiveThreshold(self.img, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY,
-                                                 self.blockSize, self.c)
-
-            if pressed_key == ord("4"):
-                self.c += 1
-                print(self.c)
-                self.refreshCurrentImage()
-                self.img = cv2.adaptiveThreshold(self.img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,
-                                                 self.blockSize, self.c)
-
-            if pressed_key == ord("5"):
-                self.blockSize += 2
-                print(self.blockSize)
-                self.refreshCurrentImage()
-                self.img = cv2.adaptiveThreshold(self.img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY,
-                                                 self.blockSize, self.c)
-
-            if pressed_key == ord("6"):
-                self.refreshCurrentImage()
-                self.img = cv2.adaptiveThreshold(self.img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 45,
-                                                 5)
-
-            if pressed_key == ord("x") or pressed_key == ord("c"):
+            # select another radiograph
+            elif pressed_key == ord("x") or pressed_key == ord("c"):
                 if len(self.radiographs) > 1:
                     if pressed_key == ord("x"):
                         self.increaseRadiographIndex(-1)
@@ -124,10 +87,6 @@ class GUI:
             elif pressed_key == ord("p"):
                 self.preprocessCurrentRadiograph()
 
-            # quit key listener
-            elif pressed_key == ord("q"):
-                break
-
             elif pressed_key == ord("o"):
                 self.findBetterToothCenters()
 
@@ -136,6 +95,7 @@ class GUI:
 
             elif pressed_key == ord("u"):
                 self.showUpperJaw()
+
             elif pressed_key == ord("i"):
                 self.initIncisorModels()
 

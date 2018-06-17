@@ -188,15 +188,15 @@ class MaskGenerator:
 
 
 if __name__ == '__main__':
-    radiographNumbers = util.RADIOGRAPH_NUMBERS
+    # radiographNumbers = util.RADIOGRAPH_NUMBERS
+    radiographNumbers = list(range(15))
     PCAComponents = util.PCA_COMPONENTS
     sampleAmount = util.SAMPLE_AMOUNT
 
     with util.Timer("Loading images"):
-        radiographNumbers = list(range(15))
         radiographs = Radiograph.getRadiographs(radiographNumbers)
 
-    initModels = InitializationModel.buildModels(radiographs)
+    initModels = InitializationModel.buildModels(radiographs, PCAComponents, sampleAmount)
     with util.Timer("Building active shape models"):
         models = ToothModel.buildModels(radiographs, PCAComponents, sampleAmount)
 

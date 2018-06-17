@@ -25,13 +25,13 @@ if __name__ == '__main__':
 
     model = MultiResolutionASM.buildModel(radiographs, resolutionLevels=resolutionLevels)
 
-    # Reconstruct some images which were not in the training set to check reconstruction performance
-    for r in Radiograph.getRadiographs([13, 14]):
-        setLandmark = Landmark(np.asarray([]))
-
-        for toothNumber, landmark in sorted(r.landmarks.items(), key=lambda i: i[0]):
-            setLandmark.points = np.concatenate((setLandmark.points, landmark.points))
-
+    # # Reconstruct some images which were not in the training set to check reconstruction performance
+    # for r in Radiograph.getRadiographs([13, 14]):
+    #     setLandmark = Landmark(np.asarray([]))
+    #
+    #     for toothNumber, landmark in sorted(r.landmarks.items(), key=lambda i: i[0]):
+    #         setLandmark.points = np.concatenate((setLandmark.points, landmark.points))
+    #
     #     model.reconstruct(setLandmark)
 
     # Load other radiographs for GUI but do not load the ones above again

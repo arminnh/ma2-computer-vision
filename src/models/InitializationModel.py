@@ -3,6 +3,7 @@ import scipy
 from scipy import linalg
 
 import procrustes_analysis
+import util
 from Landmark import Landmark
 
 
@@ -267,7 +268,7 @@ class InitializationModel:
         return self.getTranslatedAndInverseScaledMean(int(x) / 2, y)
 
 
-def buildModels(radiographs):
+def buildModels(radiographs, PCAComponents, sampleAmount):
     upper = []
     lower = []
     all = []
@@ -287,20 +288,20 @@ def buildModels(radiographs):
         lower.append(l)
         all.append(a)
 
-    # upperModel = initModel(1,upper, range(9,28), util.PCA_COMPONENTS, util.SAMPLE_AMOUNT)
-    upperModel = InitializationModel(1, upper, range(0, 40), util.PCA_COMPONENTS, util.SAMPLE_AMOUNT)
+    # upperModel = initModel(1,upper, range(9,28), PCAComponents, sampleAmount)
+    upperModel = InitializationModel(1, upper, range(0, 40), PCAComponents, sampleAmount)
 
     # upperModel.plotLandmarks()
     upperModel = upperModel.buildGrayLevelModels().doProcrustesAnalysis()
     upperModel.doPCA()
-    lowerModel = InitializationModel(5, lower, range(0, 40), util.PCA_COMPONENTS, util.SAMPLE_AMOUNT)
+    lowerModel = InitializationModel(5, lower, range(0, 40), PCAComponents, sampleAmount)
 
-    # lowerModel = initModel(5,lower, list(range(0,10)) + list(range(30, 40)), util.PCA_COMPONENTS, util.SAMPLE_AMOUNT)
+    # lowerModel = initModel(5,lower, list(range(0,10)) + list(range(30, 40)), PCAComponents, sampleAmount)
     # lowerModel.plotLandmarks()
     lowerModel = lowerModel.buildGrayLevelModels().doProcrustesAnalysis()
     lowerModel.doPCA()
 
-    allModel = InitializationModel(-1, all, range(0, 40), util.PCA_COMPONENTS, util.SAMPLE_AMOUNT)
+    allModel = InitializationModel(-1, all, range(0, 40), PCAComponents, sampleAmount)
     allModel = allModel.buildGrayLevelModels().doProcrustesAnalysis()
     allModel.doPCA()
 

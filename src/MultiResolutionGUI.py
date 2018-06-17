@@ -41,7 +41,12 @@ class MultiResolutionGUI:
             # Key Listeners
             pressed_key = cv2.waitKey(50)
 
-            if pressed_key == ord("x") or pressed_key == ord("c"):
+            # quit
+            if pressed_key == ord("q"):
+                break
+
+            # select another radiograph
+            elif pressed_key == ord("x") or pressed_key == ord("c"):
                 if len(self.radiographs) > 1:
                     if pressed_key == ord("x"):
                         self.increaseRadiographIndex(-1)
@@ -49,6 +54,7 @@ class MultiResolutionGUI:
                         self.increaseRadiographIndex(1)
                     cv2.setTrackbarPos("radiograph", self.name, self.currentRadiographIndex)
 
+            # initialize a new landmark at the current resolution level or improve the current landmark for the level
             elif pressed_key == ord("n"):
                 if self.currentLandmark is None:
                     self.initializeLandmark()
@@ -61,12 +67,15 @@ class MultiResolutionGUI:
                     self.refreshCurrentImage()
                     self.drawLandmark(self.currentLandmark, 255)
 
+            # perform a complete multi resolution search
             elif pressed_key == ord("m"):
                 self.multiResolutionSearch()
 
+            # go up in the Gaussian pyramid
             elif pressed_key == ord("u"):
                 cv2.setTrackbarPos("resolution level", self.name, self.currentResolutionLevel + 1)
 
+            # go down in the Gaussian pyramid
             elif pressed_key == ord("d"):
                 cv2.setTrackbarPos("resolution level", self.name, self.currentResolutionLevel - 1)
 
