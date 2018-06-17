@@ -17,26 +17,21 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), "../../", "resources", "data"
 
 class MaskGenerator:
 
-    def __init__(self, radiograph, models, incisorModels):
+    def __init__(self, radiograph, toothModels, initializationModels):
         self.meanSplitLine = int(np.mean(radiograph.jawSplitLine[:, 1]))
         self.currentRadiograph = radiograph
         self.currentToothModel = None
-        self.incisorModels = incisorModels
+        self.initializationModels = initializationModels
         self.img = radiograph.imgPyramid[0]
-        self.toothModels = models
+        self.toothModels = toothModels
         self.currentInitLandmark = None
         self.currentLandmark = None
 
     def initIncisorModels(self, modelNr=0):
         _, x = self.img.shape
-        self.currentToothModel = self.incisorModels[modelNr]
+        self.currentToothModel = self.initializationModels[modelNr]
 
-        self.currentLandmark = self.incisorModels[modelNr].initLandmark(self.meanSplitLine, x)
-        # centers = self.incisorModels[model].getCentersOfInitModel(self.currentLandmark)
-
-        # for c in centers:
-        #    orig = (int(c[0]), int(c[1]))
-        #    cv2.circle(self.img, orig, 20, 255, 3)
+        self.currentLandmark = self.initializationModels[modelNr].initLandmark(self.meanSplitLine, x)
 
     def autoFitToothModel(self):
         currentToothModel = self.currentToothModel
@@ -83,12 +78,7 @@ class MaskGenerator:
         self.findBetterLandmark()
 
     def findBetterLandmark(self):
-        """
-        Execute an iteration of "matching model points to target points"
-        model points are defined by the model, target points by the 'bestLandmark'
-        """
         previousLandmark = self.currentLandmark
-        d = 2
         i = 0
 
         if self.currentToothModel.name <= 4:
@@ -107,7 +97,7 @@ class MaskGenerator:
             previousLandmark = improvedLandmark
 
             i += 1
-            print("Improvement iteration {}, distance {}".format(i, d))
+            # print("Improvement iteration {}, distance {}".format(i, d))
 
         self.currentLandmark = previousLandmark
 
@@ -135,7 +125,7 @@ class MaskGenerator:
         masked_image[np.where(masked_image > 0)] = 255
         return masked_image
 
-    def compareSegmentations(self):
+    def doSearchAndCompareSegmentations(self):
         # get offsets
         (offsetX, offsetY) = self.currentRadiograph.offsets
         truthSegmentationDir = os.path.join(DATA_DIR, "segmentations/")
@@ -161,7 +151,7 @@ class MaskGenerator:
         ourBlackPixels = np.where(tmpPrediction == 0)
         ourBlackPixels = set(zip(ourBlackPixels[0], ourBlackPixels[1]))
 
-        # Ground truth colord pixels
+        # Ground truth colored pixels
         grdTr = np.where(tmpPrediction > 0)
         groundTruthPixelsIx = set(zip(grdTr[0], grdTr[1]))
 
@@ -178,36 +168,55 @@ class MaskGenerator:
         prec = tp / (tp + fp)
         rec = tp / (tp + fn)
 
-        print("Accuracy: {:.2f}%".format(acc * 100))
-        print("Precision: {:.2f}%".format(prec * 100))
-        print("Recall: {:.2f}%".format(rec * 100))
-
         print("tp: {}, fp: {}, tn: {}, fn: {}".format(tp, fp, tn, fn))
+        print("Accuracy = {:.2f}%, Precision = {:.2f}%, Recall = {:.2f}%".format(acc * 100, prec * 100, rec * 100))
+
         finalOverlay = tmpGroundTruth + tmpPrediction
         cv2.imwrite("output/final_{}.png".format(self.currentRadiograph.number), finalOverlay)
+
+        return acc, prec, rec
+
+
+def leaveOneOutCrossValidation(radiographs):
+    print("\nSTARTING LEAVE ONE OUT CROSS VALIDATION.\n")
+    accuracy = 0
+    precision = 0
+    recall = 0
+
+    for i in range(len(radiographs)):
+        trainSet = radiographs[:i] + radiographs[i + 1:]
+        testSet = [radiographs[i]]
+
+        with util.Timer("Building initialization active shape models, leaving radiograph {} out".format(i)):
+            initModels = InitializationModel.buildModels(trainSet, PCAComponents, sampleAmount)
+
+        with util.Timer("Building tooth active shape models, leaving radiograph {} out".format(i)):
+            models = ToothModel.buildModels(trainSet, PCAComponents, sampleAmount)
+
+        with util.Timer("Generating segmentation masks and comparing to ground truth".format(i)):
+            gen = MaskGenerator(testSet[0], models, initModels)
+            acc, prec, rec = gen.doSearchAndCompareSegmentations()
+
+        print()
+        accuracy += acc
+        precision += prec
+        recall += rec
+
+    accuracy /= len(radiographs)
+    precision /= len(radiographs)
+    recall /= len(radiographs)
+    print("Averaged results after LOO cross-validation:")
+    print("Accuracy = {:.2f}%, Precision = {:.2f}%, Recall = {:.2f}%"
+          .format(accuracy * 100, precision * 100, recall * 100))
 
 
 if __name__ == '__main__':
     # radiographNumbers = util.RADIOGRAPH_NUMBERS
-    radiographNumbers = list(range(4))
+    radiographNumbers = list(range(20))
     PCAComponents = util.PCA_COMPONENTS
     sampleAmount = util.SAMPLE_AMOUNT
 
     with util.Timer("Loading images"):
         radiographs = Radiograph.getRadiographs(radiographNumbers)
 
-    initModels = InitializationModel.buildModels(radiographs, PCAComponents, sampleAmount)
-    with util.Timer("Building active shape models"):
-        models = ToothModel.buildModels(radiographs, PCAComponents, sampleAmount)
-
-    for r in radiographs:
-        gen = MaskGenerator(r, models, initModels)
-
-        # Generate 8 different masks
-        # gen.generateMaskForAllTeeth()
-
-        # Generate 1 mask that consists of our predicted teeth and the ground truth
-        # and
-        gen.compareSegmentations()
-
-    # print(models)
+    leaveOneOutCrossValidation(radiographs)
