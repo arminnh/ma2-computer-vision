@@ -20,6 +20,10 @@
 \usepackage{amsmath}
 \usepackage{caption}
 \usepackage{adjustbox}
+\usepackage{enumitem}
+
+% Make lists more compact
+\setitemize{noitemsep, topsep=0pt, parsep=0pt, partopsep=0pt}
 
 \title{Computer Vision: Incisor Segmentation}
 \author{Thierry Deruyttere (r0660485) \& Armin Halilovic (r0679689)}
@@ -27,36 +31,39 @@
 \begin{document}
 \maketitle
 
+
+
 \section{Introduction}
-In this paper, we present our approach for automatic segmentation of incisor teeth in dental radiographs.
-The approach mainly relies on ``Active Shape Modeling'', which is briefly explained in section \ref{sect:asm}.
-Then, in section \ref{sect:preprocessing} we discuss how radiographs are preprocessed before model building and incisor detection is done.
-Afterwards, we discuss two initialization methods we implemented in section \ref{sect:init-estimate}.
-Section \ref{sect:evaluation} the formal performance evaluation procedure used for the results of the incisor segmentation process.
-The experiments and results are be presented in \ref{sect:experiments}.
-We also did some experiments with neural networks. They are discussed in section \ref{sect:nns}.
-Finally, section \ref{sect:conclusion} provides a conclusion of the work done.
+This report describes our approach for automatic model based segmentation of incisor teeth in dental radiographs.
+The approach mainly relies on ``Active Shape Modeling'', which is briefly explained in section~\ref{sect:asm}.
+Then, in section~\ref{sect:preprocessing} we discuss how radiographs are preprocessed before model building and incisor detection is done.
+Afterwards, we discuss two initialization and search methods we implemented and used in section~\ref{sect:init-estimate}.
+Section~\ref{sect:evaluation} describes the formal performance evaluation procedure used for the results of the incisor segmentation process.
+Experiments and results are be presented in~\ref{sect:experiments}.
+We also did some experiments with neural networks, which are discussed in section~\ref{sect:nns}.
+Finally, section~\ref{sect:conclusion} provides a conclusion of the work done.
+
+
 
 \section{Active Shape Modeling (ASM)}
 \label{sect:asm}
-The idea behind ASM is to create a statistical model for a certain object which can be used to segment said object in unseen examples. 
-The way ASM does this is as follows.
-To create such a model, training data is needed. 
-The training data should consist of images combined with landmark annotations.
-These landmark annotations consist of multiple points $({x_i, y_i})$ that indicate the object we want to recognize.
+The idea behind ASM is to create a statistical model for a certain object which can be used to detect said object in unseen examples. 
+The approach is explained in this section.
+To create an active shape model, training data is needed. 
+The training data should consist of images accompanied with landmark annotations.
+These landmark annotations consist of $n$ points $({x_i, y_i})$ that indicate the object to be recognized.
 The full landmark can be represented as a vector 
 \begin{equation}
 \textnormal{\textbf{l}} = (x_1, y_1, x_2, y_2, \ldots, x_n, y_n)^T
 \end{equation}
-A problem with landmark annotations across different images, is that they are not necessarily all at the same position nor do they have the same scale or rotation.
-\subsection{Generalized Procrustes Analysis (GPA)}
-\bigskip
-To cope with this problem we will first project all the landmarks into the same normalized coordinate system. 
-We do this by using ``Generalized Procrustes Analysis''.
-This algorithm can be seen in Algorithm \ref{algo:procr}.
-\bigskip
+A problem with landmark annotations across different images, is that they are not necessarily all at the same position nor do they have the same scale or rotation. This complicates the learning of the shape of the object we wish to detect. A solution for this is discussed below.
 
-\begin{algorithm}[H]
+\subsection{Generalized Procrustes Analysis}
+To train models using landmarks with different positions, scales, and rotations, the landmarks are first projected into the same normalized coordinate system. 
+This is done by applying a ``Generalized Procrustes Analysis''.
+The algorithm that does this can be seen in Algorithm \ref{algo:procr}.
+
+\begin{algorithm}[!tbp]
 \SetKwData{Left}{left}\SetKwData{This}{this}\SetKwData{Up}{up}
 \SetKwFunction{Union}{Union}\SetKwFunction{FindCompress}{FindCompress}
 \SetKwInOut{Input}{input}\SetKwInOut{Output}{output}
@@ -66,7 +73,7 @@ This algorithm can be seen in Algorithm \ref{algo:procr}.
 
 \For{$l$ in landmarks}{
 	$l$ $\leftarrow$ translate $l$ such that its origin is (0,0) by subtracting the mean\;
-    $l$ $\leftarrow$ rescale $l$ such that it has a scale $1$\;
+    $l$ $\leftarrow$ rescale $l$ such that its scale is $1$\;
 }
 $ref$ $\leftarrow$ choose random reference landmark from landmarks\;
 $converged \leftarrow false$\;
@@ -85,59 +92,104 @@ $converged \leftarrow d < threshold$\;
 \end{algorithm}
 
 \subsection{Principal Component Analysis (PCA)}
-Once all the landmarks have been projected into a normalized coordinate system, ASM will apply PCA on these.
-The result of this PCA will be two matrices containing the eigenvectors and eigenvalues.
-To create the statistical model we will store the top-$k$ eigenvectors into a matrix $P$ and we will also save the mean landmark $\bar{l}$.
-By doing this we can reconstruct a landmark $l$ with the following equations.
+\label{subsect:pca}
+Once all the landmarks have been projected into a normalized coordinate system, PCA is applied on them.
+Applying PCA results in two matrices containing the eigenvectors and eigenvalues.
+To create the statistical model, the top-$k$ eigenvectors are collected into a matrix $P$ and the mean landmark $\bar{l}$ is saved.
+Using these eigenvectors and the mean landmark, a landmark $l$ can later be reconstructed with the following equations.
 \begin{equation}
 l \approx \bar{l} + Pb
 \end{equation}
 \begin{equation}
 b = P^T (l - \bar{l})
 \end{equation}
-$b$ is also called the shape parameters.
+The vector $b$ in the equations above holds coefficients which are called the shape parameters.
+
 
 \subsection{Matching the model on a new image}
 When presented with a new image, we can apply the statistical model by first choosing an initial location where to put the model. 
-How we derive this initial location can be read in section \ref{sect:init-estimate}.
-Once this is done we look at a region around each point in this initial estimate.
-For each of these regions we decide a better location for the current . 
-How we look at a region and decide where to move a point can be read in the subsection below.
+How we derive this initial location is explained in section \ref{sect:init-estimate}.
+Once this is done, the search procedure looks at a region around each landmark point in this initial estimate.
+For each of these regions around a landmark points, a better points is chosen to replace the landmark point.
+How these regions are viewed for each landmark point is described in the subsection below.
+Once better landmark points have been chosen, the model can be matched to those points.
+This is done by an iterative algorithm that updates the pose parameters scale, translation and rotation, and the shape parameters $b$~\cite{Cootes1992AnIT}.
 
-\cite{Cootes1992AnIT}.
+\subsection{Grey Level Models}
+\label{subsect:grey-level-models}
+When we fit a model on a new image, we would like to detect the object we look for as well as possible.
+To help this process, we use the training set to build a model that guides the search procedure.
+For each of the landmarks in the training set, we build a grey level profile for each point $({x_i, y_i})$ of the landmark.
+This is done is by sampling multiple points along the normal line for the point $({x_i, y_i})$ of the landmark.
+For each of these sampled points, the grey level of the pixel they lie in is retrieved.
+All of the grey values of these points are then stored in a vector \textbf{$g_i$}.
+To reduce the effects of changes in global intensity, the derivative of each grey level profile is calculated~\cite{cootes1996statistical}.
+The derivative of point $k$ in a grey level profile $j$ is calculated as
+\begin{equation}
+g'_{jk} = g_{jk+1} - g_{jk-1} 
+\end{equation}
+The derived profile will be denoted as $g'_j$. 
+The derived profile is then normalized using the formula
+\begin{equation}
+g_j =\frac{g'_j}{\sum_k |g'_jk|}
+\end{equation}
 
-\subsection{Grey level models}
-Uitlegje
+After the calculation of normalized grey level profiles for all the landmark points in all of the the different landmarks, the mean profile $\bar{g}_j$ is calculated for each landmark point $j$ of the landmarks, along with the covariance matrix $S_j$.
+This is done under the assumption that the distribution of the grey level profiles follow a multivariate Gaussian distribution~\cite{Cootes1992AnIT}.
+By calculating this covariance matrix and mean profile, we create a statistical model for each point.
+
+The fit of a new profile is calculated by the ``Mahalanobis distance'' defined as
+\begin{equation}
+f(g) = (g-\bar{g_j})^TS_j(g-\bar{g_j})
+\end{equation}
+Finding the best new location for a point in the model is thus equivalent to minimizing the above distance metric.
+
+To calculate a new profile $g$ for an unseen image, the model is first placed on an initialization position. Normal lines are then calculated for each point of the model, and grey level profiles are calculated at different points on each of these lines.
+
 
 
 \section{Preprocessing}
 \label{sect:preprocessing}
 In order to improve the speed and efficiency of the segmentation process, images are preprocessed before they are used for model building and detection of teeth.
 
-\subsection{Region of interest cropping}
-First, to improve the speed of the whole process, images are cropped so that only the most relevant regions remain. This reduces the total preprocessing work that has to be done for radiograph.
-
-All of the radiographs we received for this project looked very similar in a broad sense. 
-The centers of the mouths always lied in a certain region of the image, and the scale was consistent across all images.
+\subsection{Region of Interest Cropping}
+First, to improve the speed of the whole process, images are cropped so that only the most relevant region remains.
+This reduces the total preprocessing work that has to be done for a radiograph.
+To determine to which region to crop, we looked at the radiographs that came with this project.
+All of the radiographs looked very similar in a broad sense; the centers of the mouths always lied in a certain region of the image, and the scale was consistent across all images.
 Because of this, we decided for the region of interest (ROI) to be a rectangle around the center of each image.
-Since all images were similar, we have determined the exact location of the ROI experimentally.
+%Since all images were similar, we have determined the exact location of the ROI experimentally.
 The values were chosen so that the ROI for each of the images would contain each of the eight incisor teeth along with a small buffer around the teeth.
 The values we set for the ROI rectangle were 
 \begin{align} 
 (x_{start}, y_{start}) &= (x_{mid} - 375, y_{mid} - 450) \\ 
 (x_{end}, y_{end})     &= (x_{mid} + 375, y_{mid} + 700)
 \end{align}
-This results in a region of 750 by 1150 pixels. A drawback of this hardcoded approach is that a new radiograph which is shifted significantly will cause the segmentation process to not work correctly, since (a part of) the incisor teeth will then be cut off.
+This results in a region of 750 by 1150 pixels.
+A drawback of this hardcoded approach is that a new radiograph which is shifted significantly will cause the segmentation process to not work correctly, since (a part of) the incisor teeth will then be cut off.
 
 \subsection{Filters}
-Filters have been used to make the teeth pop out more in the images.
-This should aid in the model building and tooth detections steps.
-If the difference between the teeth and the mouth tissues is large, grey level models should be much clearer at the edges of the teeth. 
+To preprocess images, we have tested many different filters.
+The goal of using filters is to make teeth more visible in contrast to the rest of the image.
+This should aid in the model building and tooth detection steps.
+Making the teeth more visible than the mouth tissues also has a positive impact on the grey level models.
+If the teeth are more visible than the rest, there will be a large difference in the grey levels at the edges of teeth.
+The filters we eventually used are bilateral and contrast limited adaptive histogram equalization (CLAHE) filters.
+These are applied on each image twice, each in alternating turns, starting with the CLAHE filter.
+\bigskip 
 
-Bilateral and CLAHE filters are applied on the images to ???? TODO: THIERRY PLS beetje uitleg over beide.
-They are applied twice each in alternating turns, starting with the bilateral filter.
-
-We have also considered the use of adaptive threshold filters and Sobel filters to increase the contrast between the teeth and the rest of the images or to make their edges much clearer, but did not manage to use and evaluate them in the time allocated to this project.
+The CLAHE filter is part of the family of adaptive histogram equalization (AHE) algorithms.
+These algorithms are different than the normal histogram equalization algorithms as they compute histograms for different parts of an image instead of computing one histogram for the full image.
+These histograms are then used to redistribute the lightness values over the whole image.
+By doing this, we increase the local contrast and enhance edges in each region of the image.
+However, these AHE algorithms tend to amplify noise in regions where the histogram is highly concentrated~\cite{AHE}. 
+To avoid this we use the CLAHE filter which limits this amplification process.
+CLAHE does this is by clipping the histogram at a predefined threshold.
+The part of the histogram that is above this predefined threshold will then be evenly redistributed over the histogram.
+The bilateral filter is then used to denoise the image by changing the intensity of each pixel by a weighted average of the intensity of the pixels around it.
+The effect of applying these filters can be seen in Figure~\ref{fig:preprocessing} (a), (b) and (c).
+% Ge kunt ni "we have tried many different filters" zeggen en dan maar praten over 2 he
+We have also considered the use of adaptive threshold filters and Sobel filters to increase the contrast between the teeth and the rest of the images or to make their edges much clearer, but did not manage evaluate their effects in the time allocated to this project.
 
 \subsection{Gaussian Pyramid}
 \label{subsect:gaussian-pyramid}
@@ -146,52 +198,49 @@ This is a pyramid of a predetermined number of levels.
 The pyramid starts at level 0, which contains the original image.
 Each higher level then contains a downsampled image of the level before it using a Gaussian average.
 Each pixel at a higher level contains a local average of a pixel neighborhood on the level below it in the pyramid.
-
-
-Figure~\ref{fig:preprocessing} shows a radiograph after the preprocessing step.
-\begin{figure}[!tbp]
+Figure~\ref{fig:preprocessing} (d) shows a radiograph after the preprocessing step.
+\begin{figure}[H]
     \centering
-    \subfloat[]{{\includegraphics[width=5cm]{radiograph-01-preprocessed-level-0.png}}}
+        \subfloat[The cropped image of radiograph ``01.tif''.]{{\includegraphics[width=5cm]{orig-1}}}
     \qquad
-    \subfloat[]{{\includegraphics[width=5cm]{radiograph-01-preprocessed-level-3.png} }}
-    \caption{Left, a radiograph (filename 01.tif) after the preprocessing step. Right, the same radiograph three levels higher in the Gaussian pyramid.}
+    \subfloat[The image after applying CLAHE and bilateral filter once.]{{\includegraphics[width=5cm]{preprocessed-1}}}
+    \qquad
+    \subfloat[The image after applying CLAHE and bilateral filter twice.]{{\includegraphics[width=5cm]{radiograph-01-preprocessed-level-0.png}}}
+    \qquad
+    \subfloat[The image after applying CLAHE and bilateral filter twice and moving three levels higher in the Gaussian pyramid.]{{\includegraphics[width=5cm]{radiograph-01-preprocessed-level-3.png} }}
+    \caption{The effects of applying the different filters.}
   \label{fig:preprocessing}
 \end{figure}
-
-% \begin{figure}[!tbp]
-%   \centering
-%   \begin{minipage}[b]{0.48\textwidth}
-%   	\includegraphics[width=\textwidth]{radiograph-01-preprocessed-level-0.png}
-%   \end{minipage}
-%   \hfill
-%   \begin{minipage}[b]{0.48\textwidth}
-%   	\includegraphics[width=\textwidth]{radiograph-01-preprocessed-level-3.png}
-%   \end{minipage}
-%   \caption{Left, a radiograph (filename 01.tif) after the preprocessing step. Right, the same radiograph three levels higher in the Gaussian pyramid.}
-%   \label{fig:preprocessing}
-% \end{figure}
 
 
 
 \section{Fitting a model to an image}
 \label{sect:init-estimate}
-This section describes two approaches that were used for the fitting of an ASM.
-The first method (subsection~\ref{subsect:upper-lower-incisors}) first goes through an initialization step based on an ASM for the upper four incisor teeth and another one for the lower four incisor teeth. When those models converge, individual teeth are segmented using models for individual teeth.
+This section describes the two approaches that were used for the initial positioning of a tooth model and the following search procedure to fit the model to an image.
+The first approach (subsection~\ref{subsect:upper-lower-incisors}) makes use of an ASM for the upper four incisor teeth and another one for the lower four incisor teeth.
+When those models converge, individual teeth are detected using models for individual teeth.
 The second method (subsection~\ref{subsect:multi-res}) uses a multi resolution ASM for both the initialization and complete incisor detection.
 Both of these methods rely on finding the center of the mouth for the initialization step, which is explained first.
 
 \subsection{Locating the center of a mouth}
 \label{subsect:center of mouth}
-In order to find the vertical center of a mouth, a dynamic programming approach was implemented to find a path that can split the two jaws of the mouth. Since the area between two jaws is always black on the preprocessed radiographs, we opted to find a line that travels through this black area from left to right. Such a line, which we named the ``jaw split line'', is discovered by the Viterbi algorithm. 
-
-The Viterbi algorithm was used to search for the darkest line in a region around the vertical center of each ROI. The algorithm is run on a region in the ROI to make the algorithm run faster and to not make it find lines at the top or bottom of ROIs. The search happens in a region described by the following variables:
+In order to find the $y$ center of a mouth, a dynamic programming approach was implemented to find a line that can split the two jaws of the mouth.
+Since the area between two jaws is one of the darkest regions on the preprocessed radiographs, we opted to find a line that travels through this dark area from left to right.
+Such a line, which we named the ``jaw split line'', is discovered using the Viterbi algorithm. 
+To speed up the search we decided to only search for this ``jaw split line'' in a region around the vertical center of each ROI.
+The region is described by the following variables:
 \begin{align} 
 y_{search\_min} &= y_{roi\_max} / 2 - 300\\ 
 y_{search\_max} &= y_{roi\_max} / 2 + 200
 \end{align}
-The Viterbi search starts on the leftmost x position of each ROI with each of the y values in the region initialized to the intensity of the pixels in the ROI. The algorithm searches for the best path one x position at a time. For each next x position, it loops over each y position and looks at the best (i.e. lowest intensity) previous y position that can reach the current y position. The algorithm has been set to move forward in the path by 10 pixels at each iteration, and to look in a window of 10 previous y positions to find the next best y position. These settings make the algorithm run fast and find good jaw split lines.
-
-Figure~\ref{fig:jawSplitLine} shows two jaw split lines. The left one is the split line in a relatively simple case; the black area between the jaws follows a fairly straight path. In the right one, the black area is not straight at all, but the Viterbi approach still manages to find a good jaw split line in this case.
+The Viterbi search starts on the leftmost $x$ position of each ROI with each of the $y$ values in the region initialized to the intensity of the pixels in the ROI.
+The algorithm searches for the darkest path one $x$ position at a time.
+For each next $x$ position, it loops over each $y$ position and looks at the best (i.e. lowest intensity) previous $y$ position that can reach the current $y$ position.
+The algorithm has been set to move forward in the path by 10 pixels at each iteration, and to look in a window of 10 previous $y$ positions to find the next best $y$ position.
+These settings are used to create a speed up for the algorithm.
+Figure~\ref{fig:jawSplitLine} shows two jaw split lines.
+The left one is the split line in a relatively simple case; the black area between the jaws follows a fairly straight path. 
+However, in the right one the black area is not straight at all, but the Viterbi approach still manages to find a good jaw split line in this case.
 
 \begin{figure}[!tbp]
     \centering
@@ -201,51 +250,61 @@ Figure~\ref{fig:jawSplitLine} shows two jaw split lines. The left one is the spl
     \caption{Left, a simple jaw split line. Right, a more complicated one that follows the curve of the mouth.}
   \label{fig:jawSplitLine}
 \end{figure}
+\bigskip
 
-% \begin{figure}[!tbp]
-%   \centering
-%   \begin{minipage}[b]{0.48\textwidth}
-%   	\includegraphics[width=\textwidth]{jawSplitLine-easy.png}
-%   \end{minipage}
-%   \hfill
-%   \begin{minipage}[b]{0.48\textwidth}
-%   	\includegraphics[width=\textwidth]{jawSplitLine-harder.png}
-%   \end{minipage}
-%   \caption{Left, a simple jaw split line. Right, a more complicated one that follows the curve of the mouth.}
-%   \label{fig:jawSplitLine}
-% \end{figure}
-
-The horizontal center of each mouth is simply approximated by the middle x position of the ROI. This means that the horizontal centers will not be accurate for regions of interest in which the mouth is shifted significantly to the left or to the right. However, we noticed that most of the radiographs are nicely centered horizontally, which makes the middle x position .
-Furthermore, the multi resolution search approach described in subsection~\ref{subsect:multi-res} is able to shift active shape models both horizontally and vertically so that the models can still move to correct positions 
-
-The vertical center of each mouth is approximated by the mean y value of the jaw split line. Note that in contrast to the horizontal center, simply approximating the vertical by the middle y position would be much less accurate. This can be seen in figure~\ref{fig:jawSplitLine}, the mean y position would be well above the vertical center of each mouth. Also the mean y value of the jaw split line is different for the two lines shown in the figure.
+The $x$ center of each mouth is simply approximated by the middle $x$ position of the image.
+This means that the $x$ centers will not be accurate for regions of interest in which the mouth is shifted significantly to the left or to the right.
+However, we noticed that most of the radiographs are nicely centered horizontally, which makes the middle $x$ position a good approximation.
+The vertical center of each mouth is approximated by using the mean $y$ value of the jaw split line.
+Note that in contrast to the $x$ center, simply approximating the $y$ center by the middle y position would be much less accurate.
+This can be seen in figure~\ref{fig:jawSplitLine}, the mean $y$ position would be well above the $y$ center of each mouth.
+The use of the jaw split line allows us to more accurately estimate the $y$ center, even if this $y$ center is different across images.
 
 \subsection{Model for the upper and lower incisors}
 \label{subsect:upper-lower-incisors}
-Iets met twee models laten convergen ofzo en dan daar boven of onder intializatie van een tooth ASM
+The first initialization approach makes use of two statistical models. 
+One for the upper four incisors and one for the lower four incisors.
+To initialize these two models, we first locate the center of the mouth by using the method described above.
+Once the center has been determined, we determine the origin of these models as follows:
+\begin{itemize}
+\item For the upper incisor model, we initialize the center of this model at a distance $d_u$ above the mouth center.
+This distance $d_u$ is defined as the half of the mean length of the upper incisor teeth in the training data.
+\item For the lower incisor model, we initialize the center of this model at a distance $d_l$ below the mouth center.
+This distance $d_l$ is defined as the half of the mean length of the lower incisor teeth in the training data.
+\end{itemize}
+Once these models have been placed we apply the ASM algorithm until convergence.
+The location of these models when they have been converged will be the start location of the individual tooth models.
 
-\subsection{Multi resolution ASM}
+\subsection{Multi Resolution Active Shape Model}
 \label{subsect:multi-res}
-A multi resolution search approach was also implemented as described in~\cite{Cootes1992AnIT}. 
-An active shape model in this case is trained for all eight incisor teeth at once.
+Aside from the initialization model described above, a multi resolution search approach was also implemented as described in~\cite{Cootes1992AnIT}. 
+In this case an ASM is trained for all eight incisor teeth at once.
 Landmarks thus consist of 320 landmark points ($40\ points \times 8\ teeth$).
+This approach makes use of a Gaussian pyramid as described in subsection~\ref{subsect:gaussian-pyramid}. 
+Such a pyramid is built for each train and test image. 
 
-TODO: finish deze text na eten
+The multi resolution active shape model is built as follows.
+First, grey level models (subsection~\ref{subsect:grey-level-models}) are trained for each landmark point at each resolution level in the pyramid. 
+Procrustes analysis is then performed to normalize the landmarks, and to find the mean landmark, scale, and rotation.
+To finish building the model, PCA is performed on the normalized landmarks (subsection~\ref{subsect:pca}) and the resulting eigenvalues and eigenvectors are stored. 
+The mean landmark and the eigenvectors are used in the search procedure to reconstruct landmarks. 
+The eigenvalues are used to impose limits on the shapes of the landmarks that are reconstructed.
 
-This approach relies on a Gaussian pyramid as described in subsection~\ref{subsect:gaussian-pyramid}. 
-A Gaussian pyramid is built for each train and test image.
-First, grey level models are trained for each landmark point at each resolution level in the pyramid. 
-Procrustes analysis is performed to normalize the landmarks, and to find the mean landmark, scale, and rotation.
-PCA is performed on the normalized landmarks
-Then, the search procedure is started at the highest level (i.e. lowest resolution image) in the pyramid. 
-A low resolution version of the trained mean landmark is placed at the center of the mouth (found by the approach described in subsection~\ref{subsect:center of mouth}).
+\subsubsection{Search Procedure}
+For the detection of incisor teeth, the search procedure is started at the highest resolution level (i.e. lowest resolution image) in the Gaussian pyramid.
+A low resolution version of the mean landmark is placed at the center of the mouth (found by the approach described in subsection~\ref{subsect:center of mouth}) and is then iteratively improved (as described in section~\ref{sect:asm}) until convergence or the maximum amount of iterations is reached.
+The grey level model trained for the current resolution level is used in each iteration to find better landmark points.
+Convergence is reached when the shape distance between two successive landmarks is less than 3.
+After convergence, the landmark is scaled up (all points multiplied by 2) and moved one resolution level lower.
+This is repeated until convergence is reached at the lowest level in the pyramid.
+The resulting landmark can then be used for segmentation of teeth.
 
-The multi resolution search approach simplifies the initialization procedure. 
-At the highest level of the Gaussian pyramid, small movements correspond to large movements at the lowest level. 
-Therefore, small movements of a landmark placed on the lowest resolution image correspond to larger movements in lower levels which move the landmark to a broad initial position.
-Movements in each lower level resemble smaller movements which fit the model more precisely to tooth edges.
-
-Figure~\ref{fig:multi-resolution-search-example} shows an example of this search procedure applied to the radiograph with filename ``24.tif''. This radiograph has no landmarks and thus was not used in the training of the model used for incisor detection. Figure (a) shows the start of the search procedure, with the white polygons representing the mean landmark placed on the detected center of the mouth. As described above, the procedure is started at the highest resolution level in the Gaussian pyramid. (b) shows the same landmark after it has converged on the highest resolution level. Then the landmark is scaled up (all points multiplied by 2) so it can be put on the level under it in the pyramid. The landmark is iteratively made to converge at a resolution level and moved to the lower until the lowest level is reached. (c) shows the same landmark that has converged on the original radiograph image.
+An example of the multi resolution search approach can be seen in figure~\ref{fig:multi-resolution-search-example}.
+The radiograph used for the figure has no landmarks and thus was not used in the training of the model used for incisor detection. 
+Figure~\ref{fig:multi-resolution-search-example} (a) shows the start of the search procedure, with the white polygons representing the mean landmark placed on the detected center of the mouth. 
+As described above, the procedure is started at the highest resolution level in the Gaussian pyramid. 
+Figure~\ref{fig:multi-resolution-search-example} (b) shows the same landmark after it has converged on the highest resolution level. 
+Figure~\ref{fig:multi-resolution-search-example} (c) shows the same landmark after convergence on the original radiograph image.
 
 \begin{figure}[!tbp]
   \centering
@@ -258,34 +317,106 @@ Figure~\ref{fig:multi-resolution-search-example} shows an example of this search
   \label{fig:multi-resolution-search-example}
 \end{figure}
 
+The multi resolution search approach simplifies the initialization procedure. 
+At the highest level of the Gaussian pyramid, small movements correspond to large movements at the lowest level. 
+The result of this is that small movements of a landmark on the lowest resolution image can place it on a good initial position for the higher resolution image on the pyramid level below it. In the higher resolution image, the location of the landmark is then refined more and passed further to higher resolution images.
+Furthermore, this means that multi resolution search is able to shift landmarks both horizontally and vertically by a lot so that the models can still move to correct positions when the approximated center of the mouth lies far from the actual center.
+
 \subsubsection{PCA}
-In this approach, landmarks consist of many more points than when modeling teeth individually. This posed a problem for the eigenvalues that were obtained after PCA was performed on the landmarks. Reconstructions of these landmarks were much less accurate and were more crinkly than smooth. An approach used to remedy this was to split the landmarks back up into eight landmarks and perform PCA for each tooth. Reconstructions were then made separately for each tooth and grouped back together into landmarks that contained all eight teeth. However, this cause teeth to overlap often, since the were reconstructed separately. A benefit of performing PCA on all teeth together is that the reconstructed landmarks then force the teeth to not overlap. Another approach to remedy this problem, the one that we ended up using, is to mirror all radiographs and their landmarks in order to double the training data. After performing PCA on the set of original and mirrored radiographs, reconstructions were much smoother, while still being able to adapt to new shapes found in improvement iterations, and still keeping teeth from overlapping.
+In this approach, landmarks consist of many more points than when modeling teeth individually. 
+This posed a problem for the eigenvectors that were obtained after PCA was performed on the landmarks. 
+Reconstructions of these landmarks were much less accurate and were more crinkly than smooth. 
+This effect can be seen in figure~\ref{fig:pca} (a).
+An approach used to remedy this was to split each landmark up into eight landmarks and perform PCA for each tooth. 
+Reconstructions were then made separately for each tooth and grouped back together into landmarks that contained all eight teeth. 
+While this did cause the reconstructions to be much more smooth, it also caused teeth to overlap often, since they were reconstructed separately. 
+A benefit of performing PCA on all teeth together is that the reconstructed landmarks then force the teeth to not overlap. 
 
+Another approach to remedy this problem, the one that we ended up using, is to mirror all radiographs and their landmarks in order to double the training data. 
+After performing PCA on the set of original and mirrored radiographs, reconstructions were much smoother, while still being able to adapt to new shapes found in improvement iterations, and still keeping teeth from overlapping. The result of this is visible in figure~\ref{fig:pca} (b).
+
+\begin{figure}[!tbp]
+  \centering
+  \begin{adjustbox}{center}
+    \subfloat[]{{\includegraphics[width=8cm]{pca-crinkly} }}
+    \subfloat[]{{\includegraphics[width=8cm]{pca-pretty} }}
+  \end{adjustbox}
+  \caption{Reconstructions after PCA is performed on landmarks that consist of all eight teeth. Left, a reconstruction using the learned eigenvectors using all 14 radiographs, right, using all 14 radiographs and their mirrored versions.}
+  \label{fig:pca}
+\end{figure}
+
+\newpage
 \subsubsection{Parameters}
-The following parameters were set for the multi resolution search experiments: \texttt{resolution levels} = 5, \texttt{maximum number of iterations allowed at each level} = 20, \texttt{number pixels on either side of point for grey level model} = 7, \texttt{number of sample points on either side of point for improvement search} = 3, \texttt{PCA components retained} = 25. 
-
-These parameters were chosen based on subjective evaluation of performance. A better way to choose parameters would be by using a parameter optimization method such as grid search or Bayesian optimization.
-
+The following parameters were set for the multi resolution search experiments: 
+\begin{itemize}
+\item resolution levels = 5
+\item maximum number of iterations allowed at each level = 20
+\item number pixels on either side of point for grey level model = 7
+\item number of sample points on either side of point for improvement search = 3
+\item PCA components retained = 25. 
+\end{itemize}
+These parameters were chosen based on subjective evaluation of performance. A better way to choose parameters would be by using a parameter optimization method such as grid search or Bayesian optimization, but in the limited time for this project we did not do this.
 
 \section{Evaluation}
 \label{sect:evaluation}
-Segmentations makes
-TP, FP, TN, FN
-accuracy, precision, recall
+To evaluate the performance of our approaches formally, the landmarks produced by search procedures are used to create segments of teeth.
+These segments are then compared to \textit{ground truth} segments which we received with the assignment.
+For the actual performance metrics, we have decided to use accuracy, precision, and recall.
+These performance metrics are defined in terms of true positives (TP), false positives (FP), true negatives (TN), and false negatives (FN).
+These terms are defined as follows in this project.
+\begin{itemize}
+\item \textbf{True Positive:} The model correctly predicts that a pixel is part of the incisors.
+\item \textbf{False Positive:} The model incorrectly predicts that a pixel is part of the incisors.
+\item \textbf{True Negative:} The model correctly predicts that a pixel is not part of the incisors.
+\item \textbf{False Negative:} The model incorrectly predicts that a pixel is not part of the incisors.
+\end{itemize}
+
+The performance metrics are then defined as follows.
+\begin{align} 
+accuracy &= \frac{TP + TN}{TP + TN + FP + FN} \\ 
+precision &= \frac{TP}{TP + FP} \\ 
+recall &= \frac{TP}{TP + FN}
+\end{align}
+A drawback of using accuracy in this context is that it will always be high.
+This is caused by the fact that most of the pixels in the binary segmentation images are black, which causes TN to be significantly higher than the other counts.
+Since accuracy has TN both in the numerator and denominator, it will always be high.
+Precision and recall avoid this effect by not using TN in their definitions.
+
+\subsection{Leave One Out Cross-Validation}
+\ldots
+
 
 
 \section{Experiments}
-Eerst zeggen dat we de foto's preprocessing met filters.
 \label{sect:experiments}
+For the experiments, we report the average accuracy, precision, and recall of the leave one out cross-validation experiments.
+In the appendix we provide an overlay for some of the test images.
+
 \section{Neural Networks}
 \label{sect:nns}
+Although Neural networks were not part of the assignment we still decided to test them out even with the very limited data we had.
+The last couple of years convolutional neural networks (CNN) have successfully been used in image recognition tasks.
+For this reason we have decided to test two different CNN architectures.
+The first CNN we tried is the YOLO\cite{yolov3} network that can draw bounding boxes around the objects of interest.
+The second CNN we tried is the Mask-RCNN\cite{MASK-RCNN} network which creates masks to annotate the found objects.
+Both networks have been trained on the fourteen training images that came with this project and have been initialized with pretrained weights (YOLO has pretrained darknet weights and Mask-RCNN has pretrained imagenet weights).
+To train each of these networks we manually labeled the two incisor groups present on each of these fourteen images.
+When we tested the YOLO network we didn't get a singly bounding box back, not even on the training dataset.
+With the Mask-RCNN network however we got the following results:
+
+
 
 \section{Conclusion}
 \label{sect:conclusion}
+\ldots
+
+
 
 \newpage
 \section{Appendix}
 \label{sect:appendix}
+\ldots
+
 
 
 \bibliographystyle{plain}
