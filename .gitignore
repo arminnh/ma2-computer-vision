@@ -2,6 +2,11 @@ assignments/1-smoothing_filter/examples/
 project-data/
 .idea/
 
+*.aux
+*.out
+*.bbl
+*.blg
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

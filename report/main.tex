@@ -21,6 +21,7 @@
 \usepackage{caption}
 \usepackage{adjustbox}
 \usepackage{enumitem}
+\usepackage{hyperref}
 
 % Make lists more compact
 \setitemize{noitemsep, topsep=0pt, parsep=0pt, partopsep=0pt}
@@ -49,17 +50,19 @@ Finally, section~\ref{sect:conclusion} provides a conclusion of the work done.
 \label{sect:asm}
 The idea behind ASM is to create a statistical model for a certain object which can be used to detect said object in unseen examples. 
 The approach is explained in this section.
-To create an active shape model, training data is needed. 
+To create such an active shape model, training data is needed. 
 The training data should consist of images accompanied with landmark annotations.
-These landmark annotations consist of $n$ points $({x_i, y_i})$ that indicate the object to be recognized.
+These landmark annotations consist of $n$ points $({x_i, y_i})$ and together all these points indicate the object that is to be recognized.
 The full landmark can be represented as a vector 
 \begin{equation}
 \textnormal{\textbf{l}} = (x_1, y_1, x_2, y_2, \ldots, x_n, y_n)^T
 \end{equation}
-A problem with landmark annotations across different images, is that they are not necessarily all at the same position nor do they have the same scale or rotation. This complicates the learning of the shape of the object we wish to detect. A solution for this is discussed below.
+A problem with landmark annotations across different images, is that they are not necessarily all at the same position nor do they have the same scale or rotation.
+This complicates the learning of the shape of the object we wish to detect.
+A solution for this is discussed below.
 
 \subsection{Generalized Procrustes Analysis}
-To train models using landmarks with different positions, scales, and rotations, the landmarks are first projected into the same normalized coordinate system. 
+To train a model using landmarks with different positions, scales, and rotations, the landmarks are first projected into the same normalized coordinate system. 
 This is done by applying a ``Generalized Procrustes Analysis''.
 The algorithm that does this can be seen in Algorithm \ref{algo:procr}.
 
@@ -105,20 +108,20 @@ b = P^T (l - \bar{l})
 \end{equation}
 The vector $b$ in the equations above holds coefficients which are called the shape parameters.
 
-
 \subsection{Matching the model on a new image}
 When presented with a new image, we can apply the statistical model by first choosing an initial location where to put the model. 
 How we derive this initial location is explained in section \ref{sect:init-estimate}.
 Once this is done, the search procedure looks at a region around each landmark point in this initial estimate.
-For each of these regions around a landmark points, a better points is chosen to replace the landmark point.
+For each of these regions around a landmark points, a better points is chosen to replace the current landmark point.
 How these regions are viewed for each landmark point is described in the subsection below.
 Once better landmark points have been chosen, the model can be matched to those points.
 This is done by an iterative algorithm that updates the pose parameters scale, translation and rotation, and the shape parameters $b$~\cite{Cootes1992AnIT}.
 
 \subsection{Grey Level Models}
 \label{subsect:grey-level-models}
-When we fit a model on a new image, we would like to detect the object we look for as well as possible.
-To help this process, we use the training set to build a model that guides the search procedure.
+When we fit a model on a new unseen image, we would like that this model can detect the object we look for as well as possible.
+%When we fit a model on a new image, we would like to detect the object we look for as well as possible.
+To help this process, we use a training set to build a model that guides the search procedure.
 For each of the landmarks in the training set, we build a grey level profile for each point $({x_i, y_i})$ of the landmark.
 This is done is by sampling multiple points along the normal line for the point $({x_i, y_i})$ of the landmark.
 For each of these sampled points, the grey level of the pixel they lie in is retrieved.
@@ -128,25 +131,22 @@ The derivative of point $k$ in a grey level profile $j$ is calculated as
 \begin{equation}
 g'_{jk} = g_{jk+1} - g_{jk-1} 
 \end{equation}
-The derived profile will be denoted as $g'_j$. 
-The derived profile is then normalized using the formula
+With $g'_j$ the derived profile. 
+This derived profile is then normalized using the formula
 \begin{equation}
-g_j =\frac{g'_j}{\sum_k |g'_jk|}
+\frac{g'_j}{\sum_k |g'_jk|}
 \end{equation}
-
-After the calculation of normalized grey level profiles for all the landmark points in all of the the different landmarks, the mean profile $\bar{g}_j$ is calculated for each landmark point $j$ of the landmarks, along with the covariance matrix $S_j$.
+This normalized profile will be denoted as $g_j$ from here on.
+After these normalized grey level profiles have been calculated for all the landmark points in all of the the different landmarks, the mean profile $\bar{g}_j$ is calculated for each landmark point $j$ of the landmarks, along with the covariance matrix $S_j$.
 This is done under the assumption that the distribution of the grey level profiles follow a multivariate Gaussian distribution~\cite{Cootes1992AnIT}.
 By calculating this covariance matrix and mean profile, we create a statistical model for each point.
-
 The fit of a new profile is calculated by the ``Mahalanobis distance'' defined as
 \begin{equation}
 f(g) = (g-\bar{g_j})^TS_j(g-\bar{g_j})
 \end{equation}
 Finding the best new location for a point in the model is thus equivalent to minimizing the above distance metric.
-
-To calculate a new profile $g$ for an unseen image, the model is first placed on an initialization position. Normal lines are then calculated for each point of the model, and grey level profiles are calculated at different points on each of these lines.
-
-
+To calculate a new profile $g$ for an unseen image, the model is first placed on an initialization position.
+Normal lines are then calculated for each point of the model, and grey level profiles are calculated at different points on each of these lines.
 
 \section{Preprocessing}
 \label{sect:preprocessing}
@@ -169,7 +169,6 @@ This results in a region of 750 by 1150 pixels.
 A drawback of this hardcoded approach is that a new radiograph which is shifted significantly will cause the segmentation process to not work correctly, since (a part of) the incisor teeth will then be cut off.
 
 \subsection{Filters}
-To preprocess images, we have tested many different filters.
 The goal of using filters is to make teeth more visible in contrast to the rest of the image.
 This should aid in the model building and tooth detection steps.
 Making the teeth more visible than the mouth tissues also has a positive impact on the grey level models.
@@ -218,7 +217,7 @@ Figure~\ref{fig:preprocessing} (d) shows a radiograph after the preprocessing st
 \label{sect:init-estimate}
 This section describes the two approaches that were used for the initial positioning of a tooth model and the following search procedure to fit the model to an image.
 The first approach (subsection~\ref{subsect:upper-lower-incisors}) makes use of an ASM for the upper four incisor teeth and another one for the lower four incisor teeth.
-When those models converge, individual teeth are detected using models for individual teeth.
+When those models have converged, the models to detect individual teeth are placed on the centers of the respective teeth in the converged initialization model.
 The second method (subsection~\ref{subsect:multi-res}) uses a multi resolution ASM for both the initialization and complete incisor detection.
 Both of these methods rely on finding the center of the mouth for the initialization step, which is explained first.
 
@@ -273,7 +272,9 @@ This distance $d_u$ is defined as the half of the mean length of the upper incis
 This distance $d_l$ is defined as the half of the mean length of the lower incisor teeth in the training data.
 \end{itemize}
 Once these models have been placed we apply the ASM algorithm until convergence.
-The location of these models when they have been converged will be the start location of the individual tooth models.
+The location of these converged models will then be the start location of the individual tooth models.
+Each individual tooth model will then be placed at the center of this respective tooth in the converged model as its starting point.
+%The individual tooth model that is bein will thus be placed on the respective center of that tooth in this converged model.
 
 \subsection{Multi Resolution Active Shape Model}
 \label{subsect:multi-res}
@@ -282,6 +283,7 @@ In this case an ASM is trained for all eight incisor teeth at once.
 Landmarks thus consist of 320 landmark points ($40\ points \times 8\ teeth$).
 This approach makes use of a Gaussian pyramid as described in subsection~\ref{subsect:gaussian-pyramid}. 
 Such a pyramid is built for each train and test image. 
+\bigskip
 
 The multi resolution active shape model is built as follows.
 First, grey level models (subsection~\ref{subsect:grey-level-models}) are trained for each landmark point at each resolution level in the pyramid. 
@@ -298,6 +300,7 @@ Convergence is reached when the shape distance between two successive landmarks 
 After convergence, the landmark is scaled up (all points multiplied by 2) and moved one resolution level lower.
 This is repeated until convergence is reached at the lowest level in the pyramid.
 The resulting landmark can then be used for segmentation of teeth.
+\bigskip 
 
 An example of the multi resolution search approach can be seen in figure~\ref{fig:multi-resolution-search-example}.
 The radiograph used for the figure has no landmarks and thus was not used in the training of the model used for incisor detection. 
@@ -316,6 +319,7 @@ Figure~\ref{fig:multi-resolution-search-example} (c) shows the same landmark aft
   \caption{The multi resolution ASM search approach applied to the radiograph with filename ``24.tif''.}
   \label{fig:multi-resolution-search-example}
 \end{figure}
+\bigskip
 
 The multi resolution search approach simplifies the initialization procedure. 
 At the highest level of the Gaussian pyramid, small movements correspond to large movements at the lowest level. 
@@ -327,10 +331,13 @@ In this approach, landmarks consist of many more points than when modeling teeth
 This posed a problem for the eigenvectors that were obtained after PCA was performed on the landmarks. 
 Reconstructions of these landmarks were much less accurate and were more crinkly than smooth. 
 This effect can be seen in figure~\ref{fig:pca} (a).
+\bigskip
+
 An approach used to remedy this was to split each landmark up into eight landmarks and perform PCA for each tooth. 
 Reconstructions were then made separately for each tooth and grouped back together into landmarks that contained all eight teeth. 
 While this did cause the reconstructions to be much more smooth, it also caused teeth to overlap often, since they were reconstructed separately. 
 A benefit of performing PCA on all teeth together is that the reconstructed landmarks then force the teeth to not overlap. 
+\bigskip
 
 Another approach to remedy this problem, the one that we ended up using, is to mirror all radiographs and their landmarks in order to double the training data. 
 After performing PCA on the set of original and mirrored radiographs, reconstructions were much smoother, while still being able to adapt to new shapes found in improvement iterations, and still keeping teeth from overlapping. The result of this is visible in figure~\ref{fig:pca} (b).
@@ -382,43 +389,114 @@ This is caused by the fact that most of the pixels in the binary segmentation im
 Since accuracy has TN both in the numerator and denominator, it will always be high.
 Precision and recall avoid this effect by not using TN in their definitions.
 
-\subsection{Leave One Out Cross-Validation}
-\ldots
-
-
-
 \section{Experiments}
 \label{sect:experiments}
-For the experiments, we report the average accuracy, precision, and recall of the leave one out cross-validation experiments.
-In the appendix we provide an overlay for some of the test images.
+For the experiments, we report the accuracy, precision, and recall results of leave one out cross-validation runs. 
+The results are presented in table \ref{tab:experiments-results}. The averages of the performance metrics are given at the bottom of the table.
+Some segmentation overlays can be found in the Appendix (images \ref{fig:results-14-tif} and \ref{fig:results-08-tif}).
+All segmentation overlays can be found in the ``overlays'' directory submitted with this report.
+
+\begin{table}[!tpb]
+\centering
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\cline{1-7}
+Radiograph & \multicolumn{3}{c|}{Initialization model} & \multicolumn{3}{c|}{Multi resolution model} \\ \cline{1-7} 
+  & Accuracy & Precision & Recall & Accuracy & Precision & Recall \\ \cline{1-7} 
+01 & 99.37\% & 86.14\% & 90.94\%  & 98.64\%   & 68.99\% & 88.59\% \\ \cline{1-7} 
+02 & 99.36\% & 91.75\% & 83.49\%  & 98.56\%   & 69.83\% & 81.08\% \\ \cline{1-7} 
+03 & 98.49\% & 83.51\% & 62.60\%  & 98.25\%   & 71.60\% & 70.26\% \\ \cline{1-7} 
+04 & 99.19\% & 90.42\% & 76.18\%  & 98.68\%   & 71.06\% & 80.92\% \\ \cline{1-7} 
+05 & 99.07\% & 86.83\% & 76.44\%  & 97.83\%   & 57.99\% & 63.42\% \\ \cline{1-7} 
+06 & 98.97\% & 93.78\% & 65.73\%  & 96.95\%   & 45.90\% & 83.97\% \\ \cline{1-7} 
+07 & 99.26\% & 93.87\% & 75.60\%  & 98.20\%   & 61.76\% & 75.70\% \\ \cline{1-7} 
+08 & 98.42\% & 54.02\% & 74.42\%  & 98.12\%   & 48.16\% & 77.10\% \\ \cline{1-7} 
+09 & 98.70\% & 73.29\% & 68.29\%  & 98.21\%   & 58.25\% & 77.94\% \\ \cline{1-7} 
+10 & 98.65\% & 78.63\% & 69.15\%  & 98.27\%   & 65.29\% & 77.03\% \\ \cline{1-7} 
+11 & 98.58\% & 90.86\% & 60.79\%  & 97.93\%   & 69.30\% & 60.96\% \\ \cline{1-7} 
+12 & 99.14\% & 68.75\% & 89.59\%  & 97.73\%   & 41.17\% & 82.44\% \\ \cline{1-7} 
+13 & 99.01\% & 86.27\% & 73.28\%  & 98.73\%   & 71.55\% & 83.99\% \\ \cline{1-7} 
+14 & 98.66\% & 94.61\% & 63.51\%  & 98.61\%   & 82.71\% & 74.16\% \\ \cline{1-7} 
+\textbf{Average} & \textbf{98.92\%} & \textbf{83.77\%} & \textbf{73.57\%} & \textbf{98.19\%} & \textbf{63.11\%} & \textbf{76.97\%}\\
+\hline
+\end{tabular}
+\caption{The results of the experiments for search approaches}
+\label{tab:experiments-results}
+\end{table}
 
 \section{Neural Networks}
 \label{sect:nns}
-Although Neural networks were not part of the assignment we still decided to test them out even with the very limited data we had.
-The last couple of years convolutional neural networks (CNN) have successfully been used in image recognition tasks.
-For this reason we have decided to test two different CNN architectures.
-The first CNN we tried is the YOLO\cite{yolov3} network that can draw bounding boxes around the objects of interest.
-The second CNN we tried is the Mask-RCNN\cite{MASK-RCNN} network which creates masks to annotate the found objects.
+Although Neural networks were not part of the assignment, we still decided to test them out even with the very limited data that was given.
+The last couple of years, convolutional neural networks (CNN) have successfully been used in image recognition tasks.
+For this reason, we have decided to test two different CNN architectures.
+The first CNN is the YOLO\cite{yolov3} network which can draw bounding boxes around the objects of interest.
+The second CNN is the Mask-RCNN\cite{MASK-RCNN} network which creates masks to annotate the found objects.
 Both networks have been trained on the fourteen training images that came with this project and have been initialized with pretrained weights (YOLO has pretrained darknet weights and Mask-RCNN has pretrained imagenet weights).
 To train each of these networks we manually labeled the two incisor groups present on each of these fourteen images.
-When we tested the YOLO network we didn't get a singly bounding box back, not even on the training dataset.
-With the Mask-RCNN network however we got the following results:
-
-
+When we tested the YOLO network, we didn't get a single bounding box back, not even on training data.
+With the Mask-RCNN network, however, we got the results presented in \ref{fig:mask-rcnn-up-down}.
+A question we asked ourselves is what would happen if we trained a network to recognize each of the incisor teeth individually.
+The result of this network can be seen in the Appendix in figure \ref{fig:mask-rcnn-all}.
+We can see that even with the very limited data we sometimes still get some pretty good results, certainly for the Mask-RCNN trained to recognize the two groups.
 
 \section{Conclusion}
 \label{sect:conclusion}
-\ldots
+In this document, we explained two approaches we implemented to detect and segment incisor teeth in radiographs. 
+Both approaches were based on active shape models.
+When using active shape models, the initial position of the model is very important.
+This is why we have developed the two approaches.
+One is based on the usage of two models for the upper and lower incisors, the other on a multi resolution active shape model for all eight teeth.
+From the results presented in section~\ref{sect:experiments}, we can conclude that the former model performs better than the latter one.
+We also tried using neural networks which gave interesting results, even with the limited amount of training data we had.
+%A significant difference between using the neural networks and the ASM approaches is the amount of time it took to get the processes running.
+%It took less than two hours to get a neural network that could slightly recognize the incisor teeth, while it took us more than a week to get good results using active shape models.
 
+\section*{Appendix}
+\begin{figure}[H]
+  	\centering
+    \begin{adjustbox}{center}
+        \subfloat[The segmentation overlay for ``14.tif'' with the first initialization method.]{{\includegraphics[width=8cm]{init-model-1-14} } }
+        \subfloat[The segmentation overlay for ``14.tif'' with the second initialization method.]{{\includegraphics[width=8cm]{final_14_multi_resolution} } }
+    \end{adjustbox}
+    \caption{Comparing the two initialization methods for ``14.tif''.}
+    \label{fig:results-14-tif}
+\end{figure}
 
+\begin{figure}[H]
+  	\centering
+    \begin{adjustbox}{center}
+        \subfloat[The segmentation overlay for ``08.tif'' with the first initialization method.]{{\includegraphics[width=8cm]{init-model-1-8} } }
+        \subfloat[The segmentation overlay for ``08.tif'' with the second initialization method.]{{\includegraphics[width=8cm]{final_08_multi_resolution} } }
+    \end{adjustbox}
+    \caption{Comparing the two initialization methods for ``08.tif''.}
+    \label{fig:results-08-tif}
+\end{figure}
 
+\begin{figure}[H]
+    \centering
+        \subfloat[Results of the Mask-RCNN\cite{MASK-RCNN} network on ``15.tif''.]{{\includegraphics[width=5cm]{up-down-tif15}}}
+    \qquad
+    \subfloat[Results of the Mask-RCNN\cite{MASK-RCNN} network on ``18.tif''.]{{\includegraphics[width=5cm]{up-down-tif18}}}
+    \qquad
+    \subfloat[Results of the Mask-RCNN\cite{MASK-RCNN} network on ``26.tif''.]{{\includegraphics[width=5cm]{up-down-tif26}}}
+    \qquad
+    \subfloat[Results of the Mask-RCNN\cite{MASK-RCNN} network on ``28.tif''.]{{\includegraphics[width=5cm]{up-down-tif28} }}
+    \caption{Results of using Mask-RCNN\cite{MASK-RCNN} trained on recognizing the two incisor groups.}
+  \label{fig:mask-rcnn-up-down}
+\end{figure}
+
+\begin{figure}
+    \centering
+        \subfloat[Results of the Mask-RCNN\cite{MASK-RCNN} network on ``15.tif''.]{{\includegraphics[width=5cm]{all-tif15}}}
+    \qquad
+    \subfloat[Results of the Mask-RCNN\cite{MASK-RCNN} network on ``18.tif''.]{{\includegraphics[width=5cm]{all-tif18}}}
+    \qquad
+    \subfloat[Results of the Mask-RCNN\cite{MASK-RCNN} network on ``26.tif''.]{{\includegraphics[width=5cm]{all-tif26}}}
+    \qquad
+    \subfloat[Results of the Mask-RCNN\cite{MASK-RCNN} network on ``28.tif''.]{{\includegraphics[width=5cm]{all-tif28} }}
+    \caption{Results of using Mask-RCNN\cite{MASK-RCNN} trained on recognizing each of the incisor teeth.}
+  \label{fig:mask-rcnn-all}
+\end{figure}
 \newpage
-\section{Appendix}
-\label{sect:appendix}
-\ldots
-
-
-
 \bibliographystyle{plain}
 \bibliography{sample}
 

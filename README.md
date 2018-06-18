@@ -1,5 +1,3 @@
-# ma2-computer-vision
-
 All the segmented overlays can be found in the folder 'overlays'.
 In this folder we have two different folders, one for each of the two initialization models described in the paper.
 For these initialization models we have created two different GUI's such that the user can test both of them.
