@@ -253,7 +253,6 @@ class GUISingleResolution:
                 for profileContainer in profilesForLandmarkPoints[landmarkPointIdx]:
                     grayLevelProfile = profileContainer["grayLevelProfile"]
                     grayLevelProfilePoints = profileContainer["grayLevelProfilePoints"]
-                    print(grayLevelProfile)
                     for z in range(len(grayLevelProfilePoints)):
                         start = (int(grayLevelProfilePoints[z][0]), int(grayLevelProfilePoints[z][1]))
 

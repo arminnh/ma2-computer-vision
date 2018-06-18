@@ -1,31 +1,23 @@
-All the segmented overlays can be found in the folder 'overlays'.
-In this folder we have two different folders, one for each of the two initialization models described in the paper.
-For these initialization models we have created two different GUI's such that the user can test both of them.
-Both scripts to run these GUI's can be found in src/scripts under the name 'gui_initalization_model_search' and
-'gui_multi_resolution_search'.
-To run one of these two scripts just run the following command:
+All tooth segment overlays can be found under 'overlays'. This directory contains two other directories. One for each of the initialization and detection approaches described in the report.
+
+A GUI application has been created for each of the two approaches, so each one of them can be tested interactively. The scripts for these GUIs can be found under src/scripts. They are named 'gui_initalization_model_search.py' for the first approach, and 'gui_multi_resolution_search.py' for the second one.
+To run each of these scripts, simply run the following command:
 
     python3 script_name.py
 
-# User guide for 'gui_initalization_model_search'
+## User guide for 'gui_initalization_model_search'
 When opening the GUI the user can see three things:
 1. The current image.
 2. A slider to select the image the user wants
 3. A slider to select the tooth model the user wants to fit. 0 indicating the first tooth and 7 indicating the last tooth.
 
-If a user wants to try to fit a model himself/herself all he/she needs to do is click on the image at the desired location.
-This will draw an initial landmark at that position.
-To iteratively improve this landmark press on the key 'n' untill the desired result.
-If the placement of the landmark was wrong just click on an other location and restart the process.
+If a user wants to try to fit a model himself/herself, all he/she needs to do is click on the image at the desired location. This will draw an initial landmark at that position. To iteratively improve this landmark, press the 'n' key until the desired result is achieved. If the placement of the landmark was wrong, just click on another location and restart the process.
 
-If the user is interested to see the initial placement model at work (model 1 in the paper) the user can press on the key 'i'.
-This will automatically place the placement model at the correct location.
-To improve on this model the user can press 'n' untill the desired result.
-Then the user can use this converged model as initial placement by clicking on their desired position in this model.
-This will draw the model for a separate tooth at that location. The user can then click on the key 'n' to converge this model.
+If the user is interested to see the initial placement model at work (as described in the paper) the user can press the key 'i'. This will automatically place the initialization model at the correct location. To improve this model the user can press 'n' until the desired result. Then the user can use this converged model as initial placement by clicking on their desired position in this model. This will draw the model for an individual tooth at that location. The user can then press 'n' to converge this model.
 
-If the user wants to automatically segment a tooth press on the key 'a' and wait until the process is done.
-This will automatically put the initialization model, perform ASM with it, then initialize the tooth model on the correct
-location in this converged initialization model.
+To automatically segment a tooth, press 'a' and wait until the process is done. This will automatically place the initialization model, make it converge, and initialize an individual tooth model on the correct location in the converged initialization model.
 
-# User guide for 'gui_multi_resolution_search'
+## User guide for 'gui_multi_resolution_search'
+When opening this GUI, the user will see a low resolution image of a radiograph. Different resolution levels can be chosen using the slider below. At any resolution level, a model can be initialized by clicking on the image. The model can then be improved iteratively using by pressing 'n'. This will cause the model to be fit to the image iteratively until convergence. If the resolution level is changed then a model is present on an image, the model will be rescaled to fit on the new resolution level. The model can then be improved further using 'n'.
+
+To perform the complete multi resolution search algorithm that starts at the highest resolution level, simply press 'm' and observe the results.
