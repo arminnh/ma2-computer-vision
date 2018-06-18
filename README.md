@@ -3,7 +3,10 @@ _Project for the [Computer Vision](https://onderwijsaanbod.kuleuven.be/syllabi/e
 
 This repository presents two approaches towards automatic detection of incisor teeth in dental radiographs. The first approach is based on active shape models for individual teeth. The other approach uses one active shape model for all teeth and fits the model to images using a multi-resolution search algorithm. The [report](report/report.pdf) provides an introduction to active shape modeling and explains both approaches in more detail. It also discusses the performance that was achieved with each model.
 
-A GUI application has been created for each of the two approaches, so each one of them can be tested interactively. The scripts for these GUIs can be found under src/scripts. They are named 'gui_initalization_model_search.py' for the first approach, and 'gui_multi_resolution_search.py' for the second one.
+![Multi resolution tooth detection](report/multi-resolution-tooth-detection.png)
+
+
+GUI applications have been created for each of the two approaches, so each one of them can be tested interactively. The scripts for these GUIs can be found under src/scripts. They are named 'gui_initalization_model_search.py' for the first approach, and 'gui_multi_resolution_search.py' for the second one.
 To run each of these scripts, simply run the following command:
 
     python3 script_name.py
